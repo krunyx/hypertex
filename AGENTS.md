@@ -54,3 +54,17 @@ QtWebEngine이 동작한다 (페이지 스크린숏으로 결과를 눈으로 �
 | H 그림 렌더러 | `htex/tikz/` 아래 전부, `htex/html/render.py`의 `b_picture` 함수 하나, `tests/unit/test_H_*.py`, `notes/H-questions.md` | 사례 21, 23, 25와 예제의 그림을 SVG로 |
 
 `htex/__main__.py`의 명령 추가는 F(`view`)와 G(`serve`, `build`)가 각자 자기 하위 명령만 넣는다(충돌 시 통합 단계에서 합침).
+
+
+## 3단계 담당 구역 (배포와 뷰어 다듬기)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| I 배포 | `packaging/` 아래 전부(새로), `pyproject.toml`, `.github/workflows/` 아래 전부(새로), `htex/__main__.py`(GUI 진입점 추가만), `tests/unit/test_I_*.py`, `notes/I-questions.md` | `pip install .[viewer]`, PyInstaller로 리눅스 실행 파일 빌드·실행 확인, 맥·윈도·리눅스 빌드 워크플로, OS에 `.htex`·`htex://` 등록 파일 |
+| J 뷰어 다듬기 | `htex/viewer/` 아래 전부, 새 파일 `htex/linkres.py`, `htex/web/server.py`·`htex/web/build.py`(다른 문서 링크 번호 연결 부분만), `tests/unit/test_J_*.py`, `notes/J-questions.md` | 탭, 찾기, 확대·축소, 테마 선택, 로컬 파일 자동 새로고침, 다른 문서 링크 번호 표시, 단일 인스턴스·OS 파일 열기 이벤트 |
+
+I와 J 사이의 약속:
+- 실행 진입점은 `htex view [대상…]` 과 GUI 진입점 `htex.__main__:gui_main` (인수 = 파일 경로나 주소 여러 개). 둘 다 `htex.viewer.app.run(targets)` 를 부른다.
+- J는 `htex.viewer.app.run` 이 대상 목록(list[str])을 받도록 하고, 이미 떠 있는 뷰어가 있으면 그쪽에 넘기고 끝나게 하며(단일 인스턴스), macOS의 파일 열기 이벤트(QFileOpenEvent: 파일과 htex:// URL)를 처리한다.
+- I는 OS 등록(macOS Info.plist의 CFBundleURLTypes·CFBundleDocumentTypes, 윈도 레지스트리, 리눅스 .desktop·MIME)이 위 진입점으로 대상을 넘기게 만든다.
+- `htex/web/interact.js`는 실행 파일에 패키지 데이터로 들어가야 한다 (I).
