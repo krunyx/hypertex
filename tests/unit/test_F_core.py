@@ -482,9 +482,11 @@ def test_picture_endpoint_stub_and_renderer():
     rec = core.load(core.local_url(DOCS / "25-parameters.htex"))
     pic = next(b for b in rec.tree["body"] if b.get("kind") == "picture")
     origin = "htexapp://" + rec.address.split("/")[2]
-    # H 가 stub 이면 svg 는 None → 실패 응답
+    # 2단계 통합: 실제 그림 렌더러(H)가 SVG를 낸다. 못 그리는 경우의 422는 아래 가짜 렌더러로 확인.
     r = core.respond(f"htexapp://picture/{rec.key}?node={pic['id']}&omega=2", origin)
-    assert r.fail and r.status == 422
+    assert r.status == 200 and r.text.startswith("<svg")
+    core.picture_renderer = lambda *a: PictureResult(None, ["못 그림"])
+    assert core.respond(f"htexapp://picture/{rec.key}?node={pic['id']}&omega=2", origin).status == 422
     assert core.respond(f"htexapp://picture/{rec.key}?node=n9999", origin).status == 404
 
     seen = {}

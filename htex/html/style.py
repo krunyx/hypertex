@@ -111,7 +111,7 @@ figcaption{font-family:var(--sans-font);font-size:.92rem;color:var(--muted);marg
 .htex-float-name{font-weight:700;color:var(--fg)}
 .htex-image{max-width:100%;height:auto}
 .htex-picture pre{text-align:left;border:1px dashed var(--rule);background:transparent}
-.htex-picture::before{content:"그림 (TikZ, 이 보기에서는 원문으로 표시)";display:block;
+.htex-picture:has(> pre)::before{content:"그림 (TikZ, 이 보기에서는 원문으로 표시)";display:block;
   font-family:var(--sans-font);font-size:.8rem;color:var(--muted);text-align:left}
 .htex-table-wrap{overflow-x:auto;max-width:100%}
 .htex-tabular{border-collapse:collapse;margin:0 auto;font-variant-numeric:tabular-nums}

@@ -468,8 +468,15 @@ def test_interaction(html_out):
 
 
 def test_picture_placeholder(html_out):
-    assert re.search(r'<figure class="htex-picture" id="n32"[^>]*><pre>\\draw \(0,0\) -- \(1,1\) '
-                     r'node \{\$&lt;x&gt;\$\};</pre></figure>', html_out)
+    # 2단계 통합: 그림 렌더러(H)가 그릴 수 있으면 figure 바로 아래 SVG, 못 그리면 원문 <pre>
+    m = re.search(r'<figure class="htex-picture" id="n32"[^>]*>(.*?)</figure>', html_out, re.S)
+    assert m and m.group(1).lstrip().startswith("<svg")
+    assert "<script" not in m.group(1) and "<x>" not in m.group(1)
+    from htex.html import render
+    t = {"hypertex": "2.0", "meta": {"documentclass": "hypertex"}, "labels": {}, "parameters": [],
+         "bibliography": [], "diagnostics": [],
+         "body": [{"kind": "picture", "id": "n1", "source": "\\addplot3[surf] {x*y};"}]}
+    assert re.search(r'<figure class="htex-picture" id="n1"[^>]*><pre>', render(t))
 
 
 def test_errors_and_diagnostics(html_out):
