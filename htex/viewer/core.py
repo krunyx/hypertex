@@ -62,7 +62,10 @@ CSP = ("default-src 'none'; script-src htexapp:; connect-src htexapp:; "
        "frame-ancestors 'none'")
 META_CSP = CSP.replace("; frame-ancestors 'none'", "")   # <meta> 로는 frame-ancestors 를 못 준다
 
-_INTERACT_JS = Path(__file__).resolve().parent.parent / "web" / "interact.js"
+try:
+    from ..web import INTERACT_JS_PATH as _INTERACT_JS      # G 의 상호작용 스크립트
+except ImportError:                                           # pragma: no cover - G 이전
+    _INTERACT_JS = Path(__file__).resolve().parent.parent / "web" / "interact.js"
 
 
 # ====================================================================== 오류
@@ -703,6 +706,7 @@ class ViewerCore:
             if frag is None:
                 return m.group(0).replace('class="htex-transclusion"',
                                           'class="htex-transclusion htex-transclusion-failed"', 1)
+            frag = _FRAG_HEAD.sub("", frag, count=1)
             target = _a(self._absolute(rec, href))
             return (f'<div class="htex-transclusion htex-transcluded"{m.group(1) or ""} '
                     f'data-href="{m.group(2)}">{frag}'
@@ -725,6 +729,9 @@ class ViewerCore:
             target = https_to_htex(target)
         if base.remote and not target.lower().startswith("htex:"):
             raise ViewerError("forbidden", "원격 문서는 로컬 문서를 가리킬 수 없습니다.", 403)
+        if (not base.remote and target.startswith("htexapp://")
+                and urllib.parse.urlsplit(target).netloc != urllib.parse.urlsplit(base.address).netloc):
+            raise ViewerError("forbidden", "다른 폴더의 로컬 문서는 가리킬 수 없습니다.", 403)
         if not (target.lower().startswith("htex:") or target.startswith("htexapp://doc-")):
             raise ViewerError("bad-url", f"문서 주소가 아닙니다: {target}")
         if budget_deadline is not None and self.clock() > budget_deadline:
@@ -853,9 +860,11 @@ class ViewerCore:
                 values[k] = float(v[-1])
             except ValueError:
                 return _fail(400, f"값이 수가 아닙니다: {k}")
+        if node not in _picture_ids(rec.tree):
+            return _fail(404, "그 그림이 없습니다.")
         svg = picture_svg(rec.tree, node, values, self.picture_renderer)
         if svg is None:
-            return _fail(404, "그림을 그리지 못했습니다.")
+            return _fail(422, "그림을 그리지 못했습니다.")     # G 서버와 같은 코드
         headers = {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
                    "X-Content-Type-Options": "nosniff", **self._cors(init)}
         return Response(200, "image/svg+xml", svg.encode("utf-8"), headers)
@@ -886,23 +895,7 @@ class ViewerCore:
 
 
 # ====================================================================== 조각·그림
-def _find_path(blocks: list, node_id: str, trail: list) -> Optional[list]:
-    """node_id 노드까지의 경로(딕셔너리 목록). 블록·행·단계·항목 어디든 찾는다."""
-    for b in blocks or []:
-        if not isinstance(b, dict):
-            continue
-        here = trail + [b]
-        if b.get("id") == node_id:
-            return here
-        for key in ("children", "rows", "steps", "items", "content", "body", "cells", "caption"):
-            v = b.get(key)
-            if isinstance(v, list):
-                found = _find_path(v, node_id, here)
-                if found:
-                    return found
-    return None
-
-
+_FRAG_HEAD = re.compile(r'<div class="htex-fragment-head">.*?</div>\n?', re.S)
 _TAG = re.compile(r"<[A-Za-z][^<>]*>")
 _ID_ATTR = re.compile(r'\s(?:id|for|aria-labelledby|aria-describedby)="[^"]*"')
 _SAME_DOC_HREF = re.compile(r'(\shref=")#')
@@ -920,34 +913,34 @@ def _rewrite_tags(body: str, address: str) -> str:
 
 
 def fragment_html(tree: dict, label: str, address: str) -> Optional[str]:
-    """문서 트리의 라벨 블록 하나 → HTML 조각 (규약 4절).
-    - 식 번호 행 라벨이면 그 행만 담은 수식 블록, 절이면 제목과 앞 두 블록.
-    - id 속성은 지운다 (끼워 넣을 문서의 id 와 겹치지 않게).
-    - 같은 문서 링크(#…)와 상대 주소는 address 기준 절대 주소로 바꾼다."""
-    from ..html.render import _Renderer   # 렌더러 내부는 읽기만 한다
-    tgt = (tree.get("labels") or {}).get(label)
-    if not tgt or not tgt.get("node"):
-        return None
-    path = _find_path(tree.get("body") or [], tgt["node"], [])
-    if not path:
-        return None
-    block_idx = max(i for i, n in enumerate(path) if n.get("kind"))
-    block = dict(path[block_idx])
-    if block_idx < len(path) - 1 and block.get("kind") == "displaymath" and path[-1] in (block.get("rows") or []):
-        block["rows"] = [path[-1]]
-    elif block.get("kind") == "section":
-        kids = block.get("children") or []
-        block["children"] = kids[:2]
-    elif block.get("kind") in (None, "text", "link", "math"):
-        return None
-    r = _Renderer(tree, False, "", lambda u: join_url(address, u))
+    """문서 트리의 라벨 블록 하나 → HTML 조각 (규약 4절). G 의 htex.web.render_fragment 를 쓰고,
+    - 상대 주소는 address 기준으로 (urljoin 은 htex: · htexapp: 를 몰라 join_url 로 직접),
+    - id 류 속성은 지운다 (끼워 넣을 문서의 id 와 겹치지 않게)."""
+    from ..web import render_fragment
     try:
-        body = r.block(block)
+        body = render_fragment(tree, label, doc_href=address, web_fallback=False,
+                               doc_url=lambda u: join_url(address, u))
     except Exception:   # noqa: BLE001 - 조각 하나 실패로 뷰어가 멈추지 않게
         return None
+    if body is None:
+        return None
     body = _rewrite_tags(body, address)
-    return (f'<div class="htex-fragment" data-source="{_a(address)}" data-label="{_a(label)}">'
-            f'{body}</div>')
+    return body.replace('<div class="htex-fragment"',
+                        f'<div class="htex-fragment" data-source="{_a(address)}"', 1)
+
+
+def _picture_ids(tree: dict) -> set[str]:
+    out: set[str] = set()
+    stack: list[Any] = list(tree.get("body") or [])
+    while stack:
+        x = stack.pop()
+        if isinstance(x, dict):
+            if x.get("kind") == "picture" and x.get("id"):
+                out.add(x["id"])
+            stack.extend(v for k, v in x.items() if isinstance(v, (list, dict)) and k != "math")
+        elif isinstance(x, list):
+            stack.extend(x)
+    return out
 
 
 def picture_svg(tree: dict, node_id: str, values: dict[str, float],

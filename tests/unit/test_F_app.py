@@ -54,6 +54,12 @@ SCRIPT = textwrap.dedent(r'''
     def pause(s):
         loop = QEventLoop(); QTimer.singleShot(int(s * 1000), loop.quit); loop.exec()
 
+    def wait_until(cond, t=10):
+        loop = QEventLoop(); timer = QTimer(); timer.setInterval(30)
+        timer.timeout.connect(lambda: cond() and loop.quit()); timer.start()
+        QTimer.singleShot(int(t * 1000), loop.quit); loop.exec(); timer.stop()
+        return bool(cond())
+
     def state():
         return {"title": w.view.title(), "url": w.current_url(), "address": w.address.text(),
                 "diag": w.diag_label.text(), "back": w.act_back.isEnabled(),
@@ -78,8 +84,9 @@ SCRIPT = textwrap.dedent(r'''
     res["remote_link"] = dict(ok=wait_load(lambda: js("document.querySelector('a[data-doc]').click()")),
                               **state())
     res["https_doc"] = dict(ok=wait_load(lambda: w.navigate("https://ex.org/n/a.htex")), **state())
-    res["https_click"] = dict(ok=wait_load(lambda: js("document.querySelector('a.htex-link[href^=\"https:\"]').click()")),
-                              **state())
+    js("document.querySelector('a.htex-link[href^=\"https:\"]').click()")
+    # 가로챈 https 탐색이 먼저 끝나고(취소), 미룬 htex:// 탐색이 뒤따른다: 제목이 바뀔 때까지 기다린다
+    res["https_click"] = dict(ok=wait_until(lambda: w.view.title() == "원격 B"), **state())
     res["fetched"] = [r[0] for r in op.requests]
 
     res["forbidden"] = dict(ok=wait_load(lambda: w.navigate("htexapp://doc-nothere/a.htex")), **state())

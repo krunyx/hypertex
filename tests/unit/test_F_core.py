@@ -416,6 +416,13 @@ def test_fragment_endpoint_local():
     assert core.respond(f"htexapp://fragment/{rec.key}?doc=11-internal-refs.htex&label=nope",
                         origin).status == 404
     assert core.respond(f"htexapp://fragment/{rec.key}?doc=none.htex&label=x", origin).fail
+    # 스크립트는 다른 출처 문서를 절대 주소로 보낸다 (G: document.baseURI 기준)
+    absdoc = rec.address.rsplit("/", 1)[0] + "/11-internal-refs.htex"
+    r = core.respond(f"htexapp://fragment/{rec.key}?doc={absdoc}&label=eq:H", origin)
+    assert r.status == 200 and "(1)" in r.text
+    # 다른 뿌리(사용자가 따로 연 폴더)의 문서는 가리킬 수 없다
+    other = core.local_url(ROOT / "examples" / "oscillator.htex")
+    assert core.respond(f"htexapp://fragment/{rec.key}?doc={other}&label=eq:H", origin).status == 403
     # doc 에 #라벨 이 붙어 와도
     r = core.respond(f"htexapp://fragment/{rec.key}?doc=11-internal-refs.htex%23eq:En", origin)
     assert r.status == 200 and "(2)" in r.text
@@ -477,7 +484,8 @@ def test_picture_endpoint_stub_and_renderer():
     origin = "htexapp://" + rec.address.split("/")[2]
     # H 가 stub 이면 svg 는 None → 실패 응답
     r = core.respond(f"htexapp://picture/{rec.key}?node={pic['id']}&omega=2", origin)
-    assert r.fail and r.status == 404
+    assert r.fail and r.status == 422
+    assert core.respond(f"htexapp://picture/{rec.key}?node=n9999", origin).status == 404
 
     seen = {}
 
@@ -514,3 +522,11 @@ def test_respond_never_raises():
     for u in ("htex://", "htexapp://", "htexapp://zzz/", "nope:x", "htex://ex.org:abc/"):
         r = core.respond(u)
         assert isinstance(r, C.Response)
+
+
+def test_default_interact_js_is_g_script():
+    from htex.web import INTERACT_JS_PATH
+    core = ViewerCore(cache=TreeCache())
+    assert core.interact_js == INTERACT_JS_PATH
+    if INTERACT_JS_PATH.exists():
+        assert core.respond("htexapp://asset/interact.js").body == INTERACT_JS_PATH.read_bytes()
