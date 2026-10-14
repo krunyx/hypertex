@@ -6,11 +6,12 @@
 - 입력: lexer 토큰 전체. 출력: 빌더(C)가 받을 토큰 목록.
 - \\newcommand, \\renewcommand, \\DeclareMathOperator 정의를 소비해 출력에서 없앤다.
   \\DeclareMathOperator{\\Tr}{Tr} 의 \\Tr 는 \\operatorname{Tr} 로 확장한다.
-- 정의 본문이 "자기 자신" 또는 "내장 명령도 아니고 이미 정의된 매크로도 아닌 명령"을
-  참조하면 정의를 거부하고 macro-recursion 진단 (사례 16). 거부된 이름은 정의되지 않은 상태로 남는다.
+- 정의 본문이 자기 자신을 부르거나 이미 정의된 매크로를 통해 순환을 만들면 정의를 거부하고
+  macro-recursion 진단 (사례 16). 모르는 명령을 부르는 것은 허용한다 (2026-10-14 결정: 그 명령은
+  쓰는 자리에서 빌더가 undefined-command로 표시). 거부된 이름은 정의되지 않은 상태로 남는다.
 - 사용자 매크로를 확장한다. 문서 전체 확장 횟수 100,000회, 한 번의 최상위 확장 결과
-  10,000토큰을 넘으면 그 호출만 expansion-limit 진단을 내고 CS 토큰 하나(이름 그대로)를
-  남기지 말고 아무것도 남기지 않는다 (사례 17).
+  10,000토큰을 넘으면 그 호출만 expansion-limit 진단을 내고, 그 자리에 오류 표지 토큰
+  (tokens.error_token)을 남긴다. 빌더가 이것을 빨간 오류 노드로 만든다 (사례 17, 2026-10-14 결정).
 - \\usemacros{주소}: loader로 읽어 그 문서의 전문(\\begin{document} 앞, 또는 첫 본문 명령 앞)의
   정의만 가져온다. 명령 자체는 출력에 남겨 빌더가 meta.macroImports를 채우게 한다 (사례 18).
 - 명세가 제외한 명령(EXCLUDED)은 인수까지 소비하고 excluded-command 진단 (사례 20).
@@ -44,7 +45,7 @@ from typing import TYPE_CHECKING, Callable, Optional
 
 from . import commands
 from .diagnostics import Sink, Span
-from .tokens import T, Token
+from .tokens import T, Token, error_token
 
 if TYPE_CHECKING:
     from .loader import Loader
@@ -247,11 +248,15 @@ class Expander:
         return True
 
     def _abort(self, message: str) -> None:
-        span = self._region.span if self._region is not None else None
+        region = self._region
+        span = region.span if region is not None else None
         self.sink.add("expansion-limit", message, span)
         self._buffer = []
         self.inp.pending.clear()
         self._region = None
+        if region is not None:
+            # 사용자 결정 (2026-10-14): 그 자리를 비우지 않고 빨간 오류로 표시한다 (명세 7절).
+            self._out.append(error_token("expansion-limit", "\\" + region.text, region.span))
 
     def _expand_macro(self, t: Token, m: Macro) -> None:
         args = self._read_macro_args(m)
@@ -262,6 +267,7 @@ class Expander:
                 self.sink.add("expansion-limit",
                               f"문서 전체 확장 횟수 {self.limits.total_expansions}회를 넘었다"
                               f" (\\{t.text})", t.span)
+                self._out.append(error_token("expansion-limit", "\\" + t.text, t.span))
             return
         self.total_expansions += 1
         result: list[Token] = []
@@ -455,10 +461,8 @@ class Expander:
                 self.sink.add("excluded-command",
                               f"\\{name}의 정의가 제외된 명령 \\{r}을 쓴다", at.span)
                 return False
-            if _is_control_word(r):
-                self.sink.add("macro-recursion",
-                              f"\\{name}의 정의가 아직 정의되지 않은 \\{r}을 부른다", at.span)
-                return False
+            # 사용자 결정 (2026-10-14): 모르는 명령을 부르는 정의도 받아들인다.
+            # 그 명령은 쓰는 자리에서 빌더가 undefined-command로 표시한다. 순환만 거부한다.
         if self._reaches(refs, name):
             self.sink.add("macro-recursion", f"\\{name}의 정의가 순환을 만든다", at.span)
             return False

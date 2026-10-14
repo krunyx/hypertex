@@ -8,7 +8,7 @@ from htex.diagnostics import Sink
 from htex.lexer import tokenize
 from htex.loader import Loader
 from htex.macros import Expander, Limits, MacroTable
-from htex.tokens import T, detokenize
+from htex.tokens import T, detokenize, error_token_info
 
 DOCS = Path(__file__).resolve().parent.parent / "docs"
 
@@ -66,12 +66,15 @@ def test_case15_spans_point_to_call_site():
 # ------------------------------------------------------------ 사례 16
 def test_case16_recursion():
     out, sink = run_doc("16-macro-recursion.htex")
-    assert codes(sink) == Counter({"macro-recursion": 3})
-    assert [d.span.line for d in sink.items] == [3, 4, 5]
+    # 2026-10-14 결정: 모르는 명령을 부르는 정의는 받아들이고 순환만 거부한다.
+    # \loopA(정의되지 않은 \loopB 호출)는 정의되고, \loopB(순환)와 \self(자기 호출)가 거부된다.
+    assert codes(sink) == Counter({"macro-recursion": 2})
+    assert [d.span.line for d in sink.items] == [4, 5]
     names = cs_names(out)
     assert "newcommand" not in names
-    assert names.count("loopA") == 1 and names.count("self") == 1   # 빌더가 undefined-command 2건
-    assert "loopB" not in names
+    # $\loopA$ → a\loopB, $\self$ 그대로: 빌더가 undefined-command 2건
+    assert names.count("loopB") == 1 and names.count("self") == 1
+    assert "loopA" not in names
     assert "이 단락 이후의 내용은 정상 렌더링되어야 한다." in detokenize(out)
 
 
@@ -99,7 +102,9 @@ def test_total_limit_inside_one_expansion():
     src = r"\newcommand{\a}{a}\newcommand{\b}{\a\a\a\a\a}\b z"
     out, sink = run(src, limits=Limits(total_expansions=3))
     assert codes(sink) == Counter({"expansion-limit": 1})
-    assert norm(detokenize(out)) == "z"
+    # 2026-10-14 결정: 그 자리에 오류 표지 토큰을 남긴다 (원문 \b)
+    assert error_token_info(out[0]) == ("expansion-limit", "\\b")
+    assert norm(detokenize(out)) in ("\\b z", "\\bz")
 
 
 # ------------------------------------------------------------ 사례 18

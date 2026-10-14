@@ -1,9 +1,5 @@
 {
   "hypertex": "2.0",
-  "source": {
-    "url": "17-expansion-limit.htex",
-    "mode": "native"
-  },
   "meta": {
     "documentclass": "hypertex",
     "title": [
@@ -55,8 +51,13 @@
       "id": "n3",
       "content": [
         {
+          "kind": "error",
+          "code": "expansion-limit",
+          "raw": "\\xe"
+        },
+        {
           "kind": "text",
-          "text": "는 토큰 20,000개로 한 번 확장 결과 상한(10,000토큰)을 넘어 이 지점만 오류가 되어야 한다."
+          "text": " 는 토큰 20,000개로 한 번 확장 결과 상한(10,000토큰)을 넘어 이 지점만 오류가 되어야 한다."
         }
       ]
     },
@@ -65,8 +66,13 @@
       "id": "n4",
       "content": [
         {
+          "kind": "error",
+          "code": "expansion-limit",
+          "raw": "\\xf"
+        },
+        {
           "kind": "text",
-          "text": "도 같은 이유로 오류다."
+          "text": " 도 같은 이유로 오류다."
         }
       ]
     },
@@ -85,12 +91,16 @@
     {
       "severity": "error",
       "code": "expansion-limit",
-      "message": "\\xe의 확장 결과가 10,000토큰을 넘는다"
+      "message": "\\xe의 확장 결과가 10000토큰을 넘었다"
     },
     {
       "severity": "error",
       "code": "expansion-limit",
-      "message": "\\xf의 확장 결과가 10,000토큰을 넘는다"
+      "message": "\\xf의 확장 결과가 10000토큰을 넘었다"
     }
-  ]
+  ],
+  "source": {
+    "url": "17-expansion-limit.htex",
+    "mode": "native"
+  }
 }

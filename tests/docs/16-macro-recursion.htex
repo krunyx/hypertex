@@ -5,8 +5,9 @@
 \newcommand{\self}{x\self}
 
 \begin{document}
-명세 4절에 따라 아직 정의되지 않은 매크로나 자기 자신을 부르는 정의는 거부된다.
-\verb|\loopA|(정의되지 않은 \verb|\loopB| 호출), \verb|\loopB|(거부된 \verb|\loopA| 호출), \verb|\self|(자기 호출) 모두 거부되어야 한다.
+명세 4절에 따라 순환을 만드는 정의는 거부된다. 모르는 명령을 부르는 정의는 받아들인다.
+\verb|\loopA|(아직 정의되지 않은 \verb|\loopB| 호출)는 정의되고, \verb|\loopB|(\verb|\loopA|를 거쳐 순환)와 \verb|\self|(자기 호출)는 거부되어야 한다.
+쓰는 자리의 \verb|\loopB|와 \verb|\self|는 정의되지 않은 명령으로 표시된다.
 사용: $\loopA$, $\self$.
 이 단락 이후의 내용은 정상 렌더링되어야 한다.
 \end{document}

@@ -75,7 +75,7 @@ pgfplots 부분집합: axis, semilogxaxis, semilogyaxis, loglogaxis; 축 옵션(
 
 \newcommand, \renewcommand만 허용.
 1. 인수 최대 9개, 첫 인수 기본값 허용.
-2. 재귀 금지: 정의 본문이 자기 자신이나 아직 정의되지 않은 매크로를 부를 수 없다. 순환이면 정의 거부.
+2. 재귀 금지: 정의 본문이 자기 자신을 부르거나 다른 매크로를 거쳐 순환을 만들면 정의를 거부한다. 모르는 명령을 부르는 정의는 받아들이고, 그 명령은 쓰는 자리에서 오류로 표시한다 (2026-10-14 결정).
 3. 확장 상한: 문서 전체 100,000회, 한 번의 확장 결과 10,000토큰. 넘으면 그 지점만 오류.
 4. 정의 이후에만 유효.
 5. \DeclareMathOperator 허용.
@@ -109,7 +109,7 @@ pgfplots 부분집합: axis, semilogxaxis, semilogyaxis, loglogaxis; 축 옵션(
 | 닫히지 않은 환경 | 다음 \section 또는 문서 끝에서 닫음 |
 | 수식 구문 오류 | 그 수식만 원본 TeX로 |
 | 깨진 \ref | ?? 와 툴팁 |
-| 확장 상한 초과 | 그 호출 지점만 오류 |
+| 확장 상한 초과 | 그 호출 자리에 원문을 빨간 오류로 표시 |
 
 보안: 파일 시스템·셸·네트워크 직접 접근 불가. 외부 자원은 \includegraphics, \usestyle, \usemacros, \transclude로만, HTTPS만. 렌더링 시간 상한(문서당 2초). 스크립트 없음.
 

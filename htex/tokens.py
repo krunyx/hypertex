@@ -43,11 +43,30 @@ class Token:
         return f"{self.type.value}:{self.text!r}@{self.span.line}:{self.span.col}"
 
 
+# 확장기(B)가 빌더(C)에게 "이 자리는 오류로 표시하라"고 알리는 표지 토큰.
+# 제어어 이름에 \x00 이 들어 있어 lexer가 만들 수 없으므로 문서가 흉내 낼 수 없다.
+ERROR_PREFIX = "\x00err:"
+
+
+def error_token(code: str, raw: str, span: Span) -> Token:
+    return Token(T.CS, f"{ERROR_PREFIX}{code}\x00{raw}", span)
+
+
+def error_token_info(tok: Token) -> tuple[str, str] | None:
+    """표지 토큰이면 (진단 코드, 원문), 아니면 None."""
+    if tok.type is T.CS and tok.text.startswith(ERROR_PREFIX):
+        code, _, raw = tok.text[len(ERROR_PREFIX):].partition("\x00")
+        return code, raw
+    return None
+
+
 def detokenize(tokens: list[Token]) -> str:
     """토큰을 다시 TeX 문자열로. 수식의 math.tex, 그림의 source를 만들 때 쓴다."""
     out: list[str] = []
     for i, t in enumerate(tokens):
-        if t.type is T.CS:
+        if t.type is T.CS and t.text.startswith(ERROR_PREFIX):
+            out.append(error_token_info(t)[1])
+        elif t.type is T.CS:
             out.append("\\" + t.text)
             # 제어어 뒤에 글자가 오면 붙어버리므로 공백을 넣는다
             nxt = tokens[i + 1] if i + 1 < len(tokens) else None

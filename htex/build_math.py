@@ -8,7 +8,7 @@ import re
 from typing import Optional
 
 from . import commands as C
-from .tokens import T, Token
+from .tokens import T, Token, error_token_info
 
 # 수식 안에서만 쓰는 내부 환경. 본문에서 만나면 인라인 수식으로 취급한다.
 MATH_INNER_ENVS = frozenset({
@@ -48,7 +48,10 @@ def detok(tokens: list[Token], keep_newlines: bool = False) -> str:
     n = len(tokens)
     for i, t in enumerate(tokens):
         ty = t.type
-        if ty is T.CS:
+        info = error_token_info(t)
+        if info is not None:  # 확장 상한 등 오류 표지는 원문으로 (렌더러가 수식 오류로 표시)
+            out.append(info[1])
+        elif ty is T.CS:
             out.append("\\" + t.text)
             if is_word(t.text) and i + 1 < n:
                 nxt = tokens[i + 1]

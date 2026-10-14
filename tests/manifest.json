@@ -192,13 +192,13 @@
     },
     {
       "id": "16-macro-recursion", "file": "docs/16-macro-recursion.htex", "spec": ["4", "7"],
-      "purpose": "직접·간접 순환과 미정의 매크로 참조 거부",
-      "expect": { "diagnostics": { "exact": { "macro-recursion": 3, "undefined-command": 2 } } }
+      "purpose": "직접·간접 순환 거부, 모르는 명령을 부르는 정의는 허용",
+      "expect": { "diagnostics": { "exact": { "macro-recursion": 2, "undefined-command": 2 } } }
     },
     {
       "id": "17-expansion-limit", "file": "docs/17-expansion-limit.htex", "spec": ["4", "7"],
-      "purpose": "재귀 없는 기하급수적 확장의 국소 오류 처리",
-      "expect": { "diagnostics": { "atLeast": { "expansion-limit": 2 } } }
+      "purpose": "재귀 없는 기하급수적 확장의 국소 오류 처리 (그 자리는 빨간 오류로)",
+      "expect": { "count": { "error": 2 }, "diagnostics": { "exact": { "expansion-limit": 2 } } }
     },
     {
       "id": "18-usemacros", "file": "docs/18-usemacros.htex", "spec": ["4"],

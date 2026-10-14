@@ -10,7 +10,7 @@ from .build_math import (check_math, detok, find_showparams, norm_ws, raw_text,
                          scripts_of, split_top_showparam, undefined_in_math)
 from .build_state import Target, sanitize_label
 from .loader import check_url, classify
-from .tokens import T, Token
+from .tokens import T, Token, error_token_info
 
 STYLES = {"emph": "emph", "textbf": "bold", "textit": "italic", "texttt": "mono", "textsc": "smallcaps"}
 TRANSPARENT = {"textrm", "textsf", "textup", "textnormal", "mbox", "textmd", "textsl"}
@@ -113,6 +113,11 @@ class InlineMixin:
     # ------------------------------------------------------------ 인라인 명령
     def inline_command(self, tok: Token) -> bool:
         """본문 인라인 명령을 처리했으면 True."""
+        info = error_token_info(tok)
+        if info is not None:  # 확장기가 남긴 오류 표지 (진단은 이미 확장기가 냈다)
+            self.adv()
+            self.emit({"kind": "error", "code": info[0], "raw": info[1]})
+            return True
         name = tok.text
         if name in STYLES:
             self.adv()

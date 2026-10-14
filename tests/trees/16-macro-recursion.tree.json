@@ -1,9 +1,5 @@
 {
   "hypertex": "2.0",
-  "source": {
-    "url": "16-macro-recursion.htex",
-    "mode": "native"
-  },
   "meta": {
     "documentclass": "hypertex",
     "title": [
@@ -23,7 +19,7 @@
       "content": [
         {
           "kind": "text",
-          "text": "명세 4절에 따라 아직 정의되지 않은 매크로나 자기 자신을 부르는 정의는 거부된다. "
+          "text": "명세 4절에 따라 순환을 만드는 정의는 거부된다. 모르는 명령을 부르는 정의는 받아들인다. "
         },
         {
           "kind": "code",
@@ -31,7 +27,7 @@
         },
         {
           "kind": "text",
-          "text": "(정의되지 않은 "
+          "text": "(아직 정의되지 않은 "
         },
         {
           "kind": "code",
@@ -39,7 +35,7 @@
         },
         {
           "kind": "text",
-          "text": " 호출), "
+          "text": " 호출)는 정의되고, "
         },
         {
           "kind": "code",
@@ -47,7 +43,7 @@
         },
         {
           "kind": "text",
-          "text": "(거부된 "
+          "text": "("
         },
         {
           "kind": "code",
@@ -55,7 +51,7 @@
         },
         {
           "kind": "text",
-          "text": " 호출), "
+          "text": "를 거쳐 순환)와 "
         },
         {
           "kind": "code",
@@ -63,12 +59,31 @@
         },
         {
           "kind": "text",
-          "text": "(자기 호출) 모두 거부되어야 한다. 사용: "
+          "text": "(자기 호출)는 거부되어야 한다. 쓰는 자리의 "
+        },
+        {
+          "kind": "code",
+          "text": "\\loopB"
+        },
+        {
+          "kind": "text",
+          "text": "와 "
+        },
+        {
+          "kind": "code",
+          "text": "\\self"
+        },
+        {
+          "kind": "text",
+          "text": "는 정의되지 않은 명령으로 표시된다. 사용: "
         },
         {
           "kind": "math",
           "math": {
-            "tex": "\\loopA"
+            "tex": "a\\loopB",
+            "scripts": [
+              "latin"
+            ]
           }
         },
         {
@@ -92,12 +107,7 @@
     {
       "severity": "error",
       "code": "macro-recursion",
-      "message": "\\loopA의 정의가 정의되지 않은 \\loopB를 부른다"
-    },
-    {
-      "severity": "error",
-      "code": "macro-recursion",
-      "message": "\\loopB의 정의가 정의되지 않은 \\loopA를 부른다"
+      "message": "\\loopB의 정의가 순환을 만든다"
     },
     {
       "severity": "error",
@@ -107,12 +117,16 @@
     {
       "severity": "error",
       "code": "undefined-command",
-      "message": "정의되지 않은 명령 \\loopA"
+      "message": "정의되지 않은 명령: \\loopB"
     },
     {
       "severity": "error",
       "code": "undefined-command",
-      "message": "정의되지 않은 명령 \\self"
+      "message": "정의되지 않은 명령: \\self"
     }
-  ]
+  ],
+  "source": {
+    "url": "16-macro-recursion.htex",
+    "mode": "native"
+  }
 }
