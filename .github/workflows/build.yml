@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') && !startsWith(github.ref, 'refs/heads/release/') }}
 
 env:
   PYTHONUTF8: "1"
@@ -76,7 +76,8 @@ jobs:
   build:
     name: build (${{ matrix.os }})
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.build
+    # 릴리스: 태그 v* 를 올리거나, 태그를 올릴 수 없는 환경에서는 브랜치 release/v* 를 올린다 (태그는 release 작업이 만든다).
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/v') || inputs.build
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -108,11 +109,12 @@ jobs:
       - name: 설치
         run: python -m pip install ".[viewer,build]"
       - name: 태그와 버전 일치 확인
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/v')
         shell: bash
         run: |
           v=$(python -c "import htex; print(htex.__version__)")
-          test "v$v" = "${GITHUB_REF_NAME}" || { echo "태그 ${GITHUB_REF_NAME} 와 htex.__version__ $v 가 다르다"; exit 1; }
+          ref="${GITHUB_REF_NAME#release/}"
+          test "v$v" = "$ref" || { echo "태그(또는 release/ 브랜치) $ref 와 htex.__version__ $v 가 다르다"; exit 1; }
       - name: 아이콘
         run: python packaging/icons/make_icons.py
       - name: PyInstaller
@@ -230,7 +232,7 @@ jobs:
   release:
     name: GitHub Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/heads/release/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -242,9 +244,16 @@ jobs:
           merge-multiple: true
       - name: 체크섬
         run: cd release && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: 태그 이름
+        id: tag
+        shell: bash
+        run: echo "name=${GITHUB_REF_NAME#release/}" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*
           draft: true
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          # release/v* 브랜치에서 왔으면 이 커밋에 태그를 새로 만든다 (태그 푸시에서 왔으면 그 태그 그대로)
+          tag_name: ${{ steps.tag.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ contains(steps.tag.outputs.name, '-') }}
