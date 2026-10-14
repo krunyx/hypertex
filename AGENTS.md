@@ -1,4 +1,4 @@
-# 작업 분담 규칙 (1단계)
+# 작업 분담 규칙
 
 이 저장소는 HyperTeX 2.0 기준 구현이다. 명세는 `docs/spec.md`, 계약은 `schema/`와 `tests/manifest.json`이다.
 
@@ -39,3 +39,18 @@ lexer.tokenize ─▶ macros.Expander.expand ─▶ builder.build ─▶ 문서 
 ## 테스트가 가정하는 번호 규칙
 
 `README.md`의 같은 이름 절을 따른다.
+
+
+## 2단계 담당 구역
+
+1단계 규칙(공통 규칙 1–6)은 그대로다. 2단계에서는 `docs/interaction-protocol.md`가 F·G·H 사이의 계약이다.
+PySide6는 설치되어 있고 `QT_QPA_PLATFORM=offscreen QTWEBENGINE_CHROMIUM_FLAGS=--no-sandbox` 로 화면 없이도
+QtWebEngine이 동작한다 (페이지 스크린숏으로 결과를 눈으로 확인할 수 있다).
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| F 전용 뷰어 | `htex/viewer/` 아래 전부, `tests/unit/test_F_*.py`, `notes/F-questions.md` | `htex view` 로 로컬·htex:// 문서 열기, 링크 이동, 히스토리, 미리보기, 슬라이더 연동 |
+| G 웹 폴백 | `htex/web/` 아래 전부(interact.js 포함), `tests/unit/test_G_*.py`, `notes/G-questions.md` | `htex serve`, `htex build`, 상호작용 스크립트 |
+| H 그림 렌더러 | `htex/tikz/` 아래 전부, `htex/html/render.py`의 `b_picture` 함수 하나, `tests/unit/test_H_*.py`, `notes/H-questions.md` | 사례 21, 23, 25와 예제의 그림을 SVG로 |
+
+`htex/__main__.py`의 명령 추가는 F(`view`)와 G(`serve`, `build`)가 각자 자기 하위 명령만 넣는다(충돌 시 통합 단계에서 합침).

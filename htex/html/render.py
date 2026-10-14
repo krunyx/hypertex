@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import html
 import re
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from . import mathml
 from .style import CSS
@@ -75,9 +75,12 @@ _PERCENT = re.compile(r"^[0-9]+(\.[0-9]+)?%$")
 
 # ====================================================================== 렌더러
 class _Renderer:
-    def __init__(self, tree: dict[str, Any], web_fallback: bool):
+    def __init__(self, tree: dict[str, Any], web_fallback: bool,
+                 head_extra: str = "", doc_url: Callable[[str], str] | None = None):
         self.tree = tree
         self.web = web_fallback
+        self.head_extra = head_extra      # 호스트(뷰어·웹 서버)가 넣는 <head> 조각 (신뢰된 HTML)
+        self.doc_url = doc_url            # 다른 문서 주소 바꾸기 (예: 정적 빌드의 .htex → .html)
         self.labels: dict[str, dict[str, Any]] = tree.get("labels") or {}
         self.params = {p["name"]: p.get("default") for p in tree.get("parameters") or []}
         self.bib = tree.get("bibliography") or []
@@ -138,7 +141,10 @@ class _Renderer:
         return "#" + (node or (tgt or {}).get("node") or label)
 
     def url(self, url: Any) -> str | None:
-        return safe_url(url, web_fallback=self.web)
+        u = safe_url(url, web_fallback=self.web)
+        if u is not None and self.doc_url is not None:
+            u = self.doc_url(u)
+        return u
 
     # ------------------------------------------------------------ 문서
     def document(self) -> str:
@@ -165,6 +171,8 @@ class _Renderer:
         for s in meta.get("styles") or []:
             head.append(f'<meta name="htex-style" content="{_a(s)}">')
         head.append(f"<style>{CSS}</style>")
+        if self.head_extra:
+            head.append(self.head_extra)
         head.append("</head>")
 
         body_cls = ["htex"]
@@ -802,6 +810,13 @@ def split_top_level_amp(tex: str) -> list[str] | None:
     return segs
 
 
-def render(tree: dict[str, Any], *, web_fallback: bool = False) -> str:
-    """문서 트리 → 완결된 HTML5 문서 하나. web_fallback 이면 htex:// 주소를 https:// 로 바꾼다."""
-    return _Renderer(tree, web_fallback).document()
+def render(tree: dict[str, Any], *, web_fallback: bool = False, head_extra: str = "",
+           doc_url: Callable[[str], str] | None = None) -> str:
+    """문서 트리 → 완결된 HTML5 문서 하나.
+
+    web_fallback: htex:// 주소를 https:// 로 바꾼다.
+    head_extra: 호스트가 넣는 신뢰된 <head> 조각 (상호작용 스크립트, 그림 주소 meta 등.
+                docs/interaction-protocol.md). 문서 내용에서 오면 안 된다.
+    doc_url: 안전 검사를 통과한 링크·그림 주소를 한 번 더 바꾸는 함수 (예: 정적 빌드의 .htex → .html).
+    """
+    return _Renderer(tree, web_fallback, head_extra, doc_url).document()
