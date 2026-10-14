@@ -655,6 +655,11 @@ class ViewerCore:
             self._remote_text[final] = (now, final, text)
         return text, final
 
+    def has_remote(self, address: str) -> bool:
+        """그 원격 문서의 원문을 이미 가져와 메모리에 두었나 (시간이 지났어도)."""
+        with self._lock:
+            return normalize_htex(address) in self._remote_text
+
     def record_for(self, url: str) -> Optional[DocRecord]:
         base = split_fragment(url)[0]
         if base.lower().startswith("htex:"):
@@ -722,6 +727,8 @@ class ViewerCore:
                 target = self.link_target(rec, doc)
                 if target == rec.address:
                     return rec.tree
+                if not rec.remote and target.lower().startswith("htex:") and not self.has_remote(target):
+                    return None     # 로컬 문서를 열었다고 네트워크에 나가지 않는다 (이미 가져온 것만)
                 return self.load(target).tree
             except (ViewerError, WebPage):
                 return None
