@@ -1,0 +1,116 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "16-macro-recursion.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "매크로 순환 금지"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "명세 4절에 따라 아직 정의되지 않은 매크로나 자기 자신을 부르는 정의는 거부된다. "
+        },
+        {
+          "kind": "code",
+          "text": "\\loopA"
+        },
+        {
+          "kind": "text",
+          "text": "(정의되지 않은 "
+        },
+        {
+          "kind": "code",
+          "text": "\\loopB"
+        },
+        {
+          "kind": "text",
+          "text": " 호출), "
+        },
+        {
+          "kind": "code",
+          "text": "\\loopB"
+        },
+        {
+          "kind": "text",
+          "text": "(거부된 "
+        },
+        {
+          "kind": "code",
+          "text": "\\loopA"
+        },
+        {
+          "kind": "text",
+          "text": " 호출), "
+        },
+        {
+          "kind": "code",
+          "text": "\\self"
+        },
+        {
+          "kind": "text",
+          "text": "(자기 호출) 모두 거부되어야 한다. 사용: "
+        },
+        {
+          "kind": "error",
+          "code": "undefined-command",
+          "raw": "\\loopA"
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "error",
+          "code": "undefined-command",
+          "raw": "\\self"
+        },
+        {
+          "kind": "text",
+          "text": ". 이 단락 이후의 내용은 정상 렌더링되어야 한다."
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "macro-recursion",
+      "message": "\\loopA의 정의가 정의되지 않은 \\loopB를 부른다"
+    },
+    {
+      "severity": "error",
+      "code": "macro-recursion",
+      "message": "\\loopB의 정의가 정의되지 않은 \\loopA를 부른다"
+    },
+    {
+      "severity": "error",
+      "code": "macro-recursion",
+      "message": "\\self의 정의가 자기 자신을 부른다"
+    },
+    {
+      "severity": "error",
+      "code": "undefined-command",
+      "message": "정의되지 않은 명령 \\loopA"
+    },
+    {
+      "severity": "error",
+      "code": "undefined-command",
+      "message": "정의되지 않은 명령 \\self"
+    }
+  ]
+}

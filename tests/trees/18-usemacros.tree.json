@@ -1,0 +1,72 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "18-usemacros.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "매크로 가져오기"
+      }
+    ],
+    "macroImports": [
+      "notation.htex"
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "가져온 매크로: "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left| 0 \\right\\rangle",
+            "scripts": []
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\int f(x)\\,\\mathrm{d} x",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\operatorname{Tr} A",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

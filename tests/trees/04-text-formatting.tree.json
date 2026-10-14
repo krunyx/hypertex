@@ -1,0 +1,211 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "04-text-formatting.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "텍스트 서식"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "styled",
+          "style": "emph",
+          "children": [
+            {
+              "kind": "text",
+              "text": "강조"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "styled",
+          "style": "bold",
+          "children": [
+            {
+              "kind": "text",
+              "text": "굵게"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "styled",
+          "style": "italic",
+          "children": [
+            {
+              "kind": "text",
+              "text": "기울임"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "styled",
+          "style": "mono",
+          "children": [
+            {
+              "kind": "text",
+              "text": "고정폭"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "styled",
+          "style": "smallcaps",
+          "children": [
+            {
+              "kind": "text",
+              "text": "Small Caps"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ". 중첩: "
+        },
+        {
+          "kind": "styled",
+          "style": "bold",
+          "children": [
+            {
+              "kind": "text",
+              "text": "굵게 안의 "
+            },
+            {
+              "kind": "styled",
+              "style": "emph",
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "강조"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n2",
+      "content": [
+        {
+          "kind": "text",
+          "text": "물결표는 줄바꿈 없는 공백이다: 그림 1, 식 (2). 대시: 1–2쪽, 문장—끊김. 강제 줄바꿈은"
+        },
+        {
+          "kind": "linebreak"
+        },
+        {
+          "kind": "text",
+          "text": "여기서 일어난다. 각주를 단다."
+        },
+        {
+          "kind": "footnote",
+          "id": "n3",
+          "number": "1",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n4",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "첫째 각주."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": " 또 단다."
+        },
+        {
+          "kind": "footnote",
+          "id": "n5",
+          "number": "2",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n6",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "둘째 각주에는 수식 "
+                },
+                {
+                  "kind": "math",
+                  "math": {
+                    "tex": "x^2",
+                    "scripts": [
+                      "latin"
+                    ]
+                  }
+                },
+                {
+                  "kind": "text",
+                  "text": "도 있다."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "quote",
+      "id": "n7",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n8",
+          "content": [
+            {
+              "kind": "text",
+              "text": "인용문 블록이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "verbatim",
+      "id": "n9",
+      "text": "\\section{이것은 해석되지 않는다}\n  들여쓰기도   그대로"
+    }
+  ],
+  "diagnostics": []
+}

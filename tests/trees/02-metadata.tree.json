@@ -1,0 +1,81 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "02-metadata.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "classOptions": [
+      "note"
+    ],
+    "title": [
+      {
+        "kind": "text",
+        "text": "메타데이터 시험"
+      }
+    ],
+    "authors": [
+      [
+        {
+          "kind": "text",
+          "text": "홍길동"
+        }
+      ],
+      [
+        {
+          "kind": "text",
+          "text": "Jane Doe"
+        }
+      ]
+    ],
+    "date": "2026-10-14",
+    "keywords": [
+      "메타데이터",
+      "시험",
+      "metadata"
+    ],
+    "abstract": [
+      {
+        "kind": "paragraph",
+        "id": "n1",
+        "content": [
+          {
+            "kind": "text",
+            "text": "제목, 저자, 날짜, 키워드, 초록이 "
+          },
+          {
+            "kind": "styled",
+            "style": "mono",
+            "children": [
+              {
+                "kind": "text",
+                "text": "meta"
+              }
+            ]
+          },
+          {
+            "kind": "text",
+            "text": "에 구조화되어 들어가는지 확인한다."
+          }
+        ]
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n2",
+      "content": [
+        {
+          "kind": "text",
+          "text": "본문 한 단락."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

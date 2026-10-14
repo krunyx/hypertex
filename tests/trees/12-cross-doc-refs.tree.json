@@ -1,0 +1,117 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "12-cross-doc-refs.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "문서 간 참조"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "상대 주소: 같은 폴더의 식 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "doc": "11-internal-refs.htex",
+            "label": "eq:H"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ". 절대 주소: "
+        },
+        {
+          "kind": "link",
+          "linkType": "eqref",
+          "target": {
+            "doc": "htex://example.org/notes/oscillator.htex",
+            "label": "eq:aadag"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ". 절 참조: "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "doc": "11-internal-refs.htex",
+            "label": "sec:eigen"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ". 일반 링크: "
+        },
+        {
+          "kind": "link",
+          "linkType": "href",
+          "target": {
+            "url": "https://arxiv.org"
+          },
+          "children": [
+            {
+              "kind": "text",
+              "text": "arXiv"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "url",
+          "target": {
+            "url": "htex://example.org/notes/"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ". 허용되지 않는 링크: "
+        },
+        {
+          "kind": "error",
+          "code": "insecure-resource",
+          "raw": "\\href{javascript:alert(1)}{위험}",
+          "children": [
+            {
+              "kind": "text",
+              "text": "위험"
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "insecure-resource",
+      "message": "허용되지 않는 주소: javascript:alert(1)"
+    }
+  ]
+}

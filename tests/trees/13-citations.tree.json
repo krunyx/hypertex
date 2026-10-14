@@ -1,0 +1,183 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "13-citations.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "인용"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [
+    {
+      "key": "epr1935",
+      "number": "1",
+      "text": [
+        {
+          "kind": "text",
+          "text": "A. Einstein, B. Podolsky, N. Rosen, Phys. Rev. 47, 777 (1935). doi:10.1103/PhysRev.47.777"
+        }
+      ],
+      "identifier": {
+        "scheme": "doi",
+        "value": "10.1103/PhysRev.47.777"
+      }
+    },
+    {
+      "key": "bell1964",
+      "number": "2",
+      "text": [
+        {
+          "kind": "text",
+          "text": "J. S. Bell, Physics 1, 195 (1964)."
+        }
+      ]
+    }
+  ],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "외부 식별자로 직접 인용: "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "arXiv:2401.01234"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "doi:10.1103/PhysRev.47.777"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "isbn:9780198520115"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "htex://example.org/notes/oscillator.htex"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n2",
+      "content": [
+        {
+          "kind": "text",
+          "text": "BibTeX 키 인용: "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "epr1935"
+            ]
+          },
+          "resolved": {
+            "numbers": [
+              "1"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": " 그리고 여러 개 "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "epr1935",
+              "bell1964"
+            ]
+          },
+          "resolved": {
+            "numbers": [
+              "1",
+              "2"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ". 없는 키: "
+        },
+        {
+          "kind": "link",
+          "linkType": "cite",
+          "target": {
+            "keys": [
+              "nobody2000"
+            ]
+          },
+          "resolved": {
+            "broken": true
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "bibliography",
+      "id": "n3"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "broken-ref",
+      "message": "참고문헌 키 nobody2000을 찾을 수 없다"
+    }
+  ]
+}
