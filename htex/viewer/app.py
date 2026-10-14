@@ -29,7 +29,7 @@ from typing import Iterable, Optional
 
 from PySide6.QtCore import (QBuffer, QByteArray, QEvent, QObject, QSettings, Qt, QTimer, QUrl,
                             QFileSystemWatcher, Signal, Slot)
-from PySide6.QtGui import QAction, QActionGroup, QKeySequence
+from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWebEngineCore import (QWebEnginePage, QWebEngineProfile, QWebEngineSettings,
                                      QWebEngineUrlRequestJob, QWebEngineUrlScheme,
@@ -40,7 +40,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, Q
                                QVBoxLayout, QWidget)
 
 from .. import __version__
-from .core import (DOC_EXTS, History, Response, TreeCache, ViewerCore, ViewerError,
+from .core import (DOC_EXTS, History, Response, TreeCache, ViewerCore, ViewerError, error_page,
                    default_cache_dir, https_to_htex, is_doc_path, split_fragment)
 from .instance import (REPLY_OK, decode_message, encode_message, file_signature, instance_name,
                        local_dependencies, normalize_targets)
@@ -53,6 +53,8 @@ ZOOM_MIN, ZOOM_MAX = 0.5, 3.0
 ZOOM_STEPS = (0.5, 0.67, 0.75, 0.8, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0)
 THEMES = (("system", "시스템 설정"), ("light", "밝게"), ("dark", "어둡게"))
 RELOAD_DEBOUNCE_MS = 300
+DESKTOP_FILE = "org.hypertex.viewer"          # 리눅스 .desktop 이름 (I 의 packaging/linux 와 같게)
+ICON_PATH = Path(__file__).resolve().parent / "icon.png"
 
 _registered = False
 
@@ -156,6 +158,7 @@ class HtexPage(QWebEnginePage):
     def __init__(self, profile, parent=None, tab: Optional["Tab"] = None):
         super().__init__(profile, parent)
         self.tab = tab
+        self.allow_html_once = False
 
     def acceptNavigationRequest(self, url: QUrl, nav_type, is_main_frame: bool) -> bool:  # noqa: N802
         scheme = url.scheme().lower()
@@ -173,6 +176,9 @@ class HtexPage(QWebEnginePage):
             return False          # 로컬 파일은 htexapp://doc-… 로만 (사용자가 연 폴더)
         if scheme == "htexapp" and current in ("http", "https"):
             return False          # 웹 페이지 → 내부 주소 금지
+        if scheme == "data" and self.allow_html_once:      # 뷰어 자신의 setHtml (렌더 프로세스 안내)
+            self.allow_html_once = False
+            return super().acceptNavigationRequest(url, nav_type, is_main_frame)
         if scheme in ("javascript", "data"):
             return False
         return super().acceptNavigationRequest(url, nav_type, is_main_frame)
@@ -214,6 +220,7 @@ class Tab(QWidget):
         self._history_nav: Optional[str] = None
         self.zoom = 1.0
         self.pinned_source = False       # 원문 보기 탭
+        self.crashed_url: Optional[str] = None
         self.view = QWebEngineView(self)
         self.page = HtexPage(win.profile, self.view, tab=self)
         self.page.console_log = []
@@ -246,6 +253,25 @@ class Tab(QWidget):
         self.view.titleChanged.connect(lambda t: (self.history.set_title(t),
                                                   self.title_changed.emit(self, t)))
         self.view.loadFinished.connect(self._on_load_finished)
+        self.page.renderProcessTerminated.connect(self._on_render_died)
+
+    def _on_render_died(self, status, code) -> None:
+        """렌더 프로세스(QtWebEngineProcess)가 죽으면 빈 화면 대신 안내 (정상 종료는 무시)."""
+        St = QWebEnginePage.RenderProcessTerminationStatus
+        if status == St.NormalTerminationStatus:
+            return
+        url = self.current_url()
+        why = {St.CrashedTerminationStatus: "비정상 종료", St.KilledTerminationStatus: "강제 종료",
+               St.AbnormalTerminationStatus: "오류로 종료"}.get(status, "종료")
+        page = error_page(ViewerError("render-process", f"페이지를 그리는 프로세스가 {why}되었습니다 "
+                                      f"(코드 {code}). 새로고침(Ctrl+R)하면 다시 엽니다.", 500), url)
+        self.crashed_url = url
+        # 엔진이 새 렌더 프로세스를 띄울 틈을 주고 안내 페이지 (바로 넣으면 버려진다)
+        def show():
+            self.page.allow_html_once = True
+            self.page.setHtml(self.core.themed(page.text), QUrl("htexapp://crashed/"))
+        QTimer.singleShot(200, show)
+
 
     # ------------------------------------------------------------ 이동
     def current_url(self) -> str:
@@ -276,6 +302,10 @@ class Tab(QWidget):
         self.go_history(self.history.forward())
 
     def reload(self, keep_state: bool = False) -> None:
+        if self.crashed_url and self.current_url().startswith(("htexapp://crashed", "about:")):
+            url, self.crashed_url = self.crashed_url, None
+            self.view.setUrl(QUrl(url))
+            return
         url = self.current_url()
         base = split_fragment(url)[0]
         if url.startswith(("htex:", "htexapp://doc-")):
@@ -311,7 +341,7 @@ class Tab(QWidget):
     # ------------------------------------------------------------ 신호
     def _on_url_changed(self, qurl: QUrl) -> None:
         url = qurl.toString(QUrl.ComponentFormattingOption.FullyEncoded)
-        if not url or url == "about:blank":
+        if not url or url == "about:blank" or url.startswith("htexapp://crashed"):
             return
         if self._history_nav is not None and _same(url, self._history_nav):
             self._history_nav = None
@@ -1159,6 +1189,12 @@ def run(targets: "list[str] | str | None" = None, argv: Optional[list[str]] = No
     app = QApplication.instance()
     if app is None:
         app = HtexApplication(argv if argv is not None else sys.argv[:1])
+    try:
+        QGuiApplication.setDesktopFileName(DESKTOP_FILE)     # 웨이랜드·작업 표시줄이 .desktop 과 묶는다
+    except Exception:   # noqa: BLE001
+        pass
+    if ICON_PATH.is_file():
+        app.setWindowIcon(QIcon(str(ICON_PATH)))
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(ORG_NAME)
     app.setApplicationVersion(__version__)

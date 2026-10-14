@@ -1121,7 +1121,8 @@ def source_page(text: str, address: str, title: str = "") -> str:
     if lines and lines[-1] == "":
         lines.pop()
     width = len(str(max(1, len(lines))))
-    rows = "".join(f'<span class="ln">{i:>{width}}</span>{_e(line)}\n' for i, line in enumerate(lines, 1))
+    rows = "".join(f'<span class="l" style="--w:{width + 2}ch"><span class="ln">{i:>{width}}</span>{_e(line)}\n</span>'
+                   for i, line in enumerate(lines, 1))
     name = address.rsplit("/", 1)[-1] or address
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
@@ -1156,7 +1157,9 @@ body{margin:0;background:var(--bg);color:var(--fg)}
 .htex-source-head code{color:var(--muted);word-break:break-all}
 .htex-source{margin:0;padding:.75rem 1rem 2rem;font:13px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,"D2Coding","Noto Sans Mono CJK KR",monospace;
  white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
-.ln{display:inline-block;color:var(--muted);opacity:.6;margin-right:1.2em;user-select:none;-webkit-user-select:none;text-align:right}
+.l{display:block;padding-left:var(--w);text-indent:calc(-1 * var(--w))}
+.ln{display:inline-block;width:var(--w);text-indent:0;padding-right:2ch;box-sizing:border-box;color:var(--muted);opacity:.6;
+ user-select:none;-webkit-user-select:none;text-align:right}
 """
 
 ERROR_CSS = _THEME_VARS + """

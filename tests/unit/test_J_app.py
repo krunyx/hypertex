@@ -167,6 +167,14 @@ WINDOW = textwrap.dedent(r'''
         live.write_text(live.read_text(encoding="utf-8") + f"\n% {i}\n", encoding="utf-8"); pause(0.03)
     pause(1.2)
     res["debounced"] = t1.auto_reloads - n
+    # 렌더 프로세스가 죽으면 안내 페이지, 새로고침하면 원래 문서
+    import signal
+    w.tabs.setCurrentWidget(t4); pause(0.05)
+    os.kill(t4.page.renderProcessPid(), signal.SIGKILL)
+    wait_until(lambda: t4.title() == "열 수 없음")
+    res["crash"] = [t4.title(), len(t4.history.entries)]
+    w.reload(); wait_until(lambda: t4.title() == "최소 문서")
+    res["crash_reload"] = t4.title()
     w.grab().save(str(OUT.with_suffix(".png")))
     OUT.write_text(json.dumps(res, ensure_ascii=False), encoding="utf-8")
     w.close()
@@ -351,3 +359,8 @@ def test_file_open_event_filter():
     res = json.loads(p.stdout.strip().splitlines()[-1])
     assert res["pending"] == ["/tmp/a b.htex"]
     assert res["got"] == ["htex://ex.org/n/a.htex#eq:1", "/tmp/c.htex"]
+
+
+def test_render_process_crash(run):
+    assert run["crash"] == ["열 수 없음", 1]        # 안내 페이지는 히스토리에 남기지 않는다
+    assert run["crash_reload"] == "최소 문서"
