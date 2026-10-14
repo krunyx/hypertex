@@ -1,0 +1,76 @@
+\documentclass{hypertex}
+\title{조화 진동자 노트}
+\author{HyperTeX 2.0 예제}
+\date{2026-10-14}
+\keywords{양자역학, 조화 진동자, HyperTeX}
+\abstract{HyperTeX 2.0 파서와 HTML 변환기를 처음으로 끝까지 연결해 만든 예제 문서. 수식 번호와 상호참조, 정리 환경, 접힌 증명, 단계별 유도, 매개변수, 한글 수식이 한 문서에 들어 있다.}
+\newcommand{\ket}[1]{\left| #1 \right\rangle}
+\newcommand{\bra}[1]{\left\langle #1 \right|}
+\DeclareMathOperator{\Tr}{Tr}
+\parameter{\omega}{0.5}{3}{1}[step=0.1]
+
+\begin{document}
+\maketitle
+
+\section{해밀토니안}\label{sec:H}
+질량 $m$, 진동수 $\omega$인 1차원 조화 진동자의 해밀토니안은
+\begin{equation}\label{eq:H}
+  H = \frac{p^2}{2m} + \frac{1}{2} m\omega^2 x^2
+\end{equation}
+이다. 사다리 연산자를
+\begin{align}
+  a &= \sqrt{\frac{m\omega}{2\hbar}}\left(x + \frac{i}{m\omega}p\right) \label{eq:a} \\
+  a^\dagger &= \sqrt{\frac{m\omega}{2\hbar}}\left(x - \frac{i}{m\omega}p\right) \label{eq:adag}
+\end{align}
+로 정의하면 $[a, a^\dagger] = 1$이고, 식~\eqref{eq:H}는 $H = \hbar\omega\left(a^\dagger a + \tfrac{1}{2}\right)$로 쓸 수 있다.
+
+\section{고윳값}\label{sec:E}
+\begin{theorem}[에너지 준위]\label{thm:levels}
+$H$의 고윳값은 $E_n = \hbar\omega\left(n + \tfrac{1}{2}\right)$, $n = 0, 1, 2, \ldots$이다.
+\end{theorem}
+
+\begin{proof}[collapsed]
+$N = a^\dagger a$라 하면 $[N, a] = -a$이므로 $a$는 $N$의 고윳값을 1 낮춘다. 노름이 음이 될 수 없으므로 바닥 상태 $\ket{0}$에서 $a\ket{0} = 0$이고, 고윳값은 음이 아닌 정수다.
+\end{proof}
+
+바닥 상태 에너지의 유도:
+\begin{steps}
+  \step $a\ket{0} = 0$ (정리~\ref{thm:levels}의 증명)
+  \step $H\ket{0} = \hbar\omega\left(a^\dagger a + \tfrac{1}{2}\right)\ket{0} = \tfrac{1}{2}\hbar\omega\ket{0}$
+  \step 따라서 $E_0 = \tfrac{1}{2}\hbar\omega$이다.\label{step:E0}
+\end{steps}
+
+열평형 상태에서 분배함수는 $Z = \Tr e^{-\beta H}$이다.
+
+\section{고전적 운동}\label{sec:classical}
+고전적 해는 $x(t) = A\cos(\omega t)$이다. 현재 진동수는 $\omega = \showparam{\omega}$이다.
+
+\begin{figure}
+\begin{tikzpicture}
+  \draw[->] (0,0) -- (6.5,0) node[right] {$t$};
+  \draw[->] (0,-1.2) -- (0,1.2) node[above] {$x$};
+  \draw[thick, blue] plot[domain=0:6.28, samples=200] (\x, {cos(\omega*\x r)});
+\end{tikzpicture}
+\caption{진동수 $\omega$에 따른 변위.}\label{fig:x}
+\end{figure}
+
+\begin{table}
+\caption{처음 세 준위.}\label{tab:levels}
+\begin{tabular}{|c|c|}
+  \hline
+  $n$ & $E_n / \hbar\omega$ \\
+  \hline
+  0 & 1/2 \\
+  1 & 3/2 \\
+  2 & 5/2 \\
+  \hline
+\end{tabular}
+\end{table}
+
+\section{한글 수식}
+수식 안의 한글은 그리스 문자처럼 한 음절이 한 기호다: $가_1 + 나^2 = 다$. 단어로 묶을 때는 $\text{에너지} = \frac{1}{2} m v^2$처럼 쓴다.
+
+\begin{collapse}{참고}
+그림~\ref{fig:x}, 표~\ref{tab:levels}, 단계~\ref{step:E0}, \ref{sec:H}절을 참고하라. 원 논문은 \cite{doi:10.1007/BF01397477}, 관련 프리프린트는 \cite{arXiv:quant-ph/0001234}.
+\end{collapse}
+\end{document}

@@ -1,7 +1,7 @@
 """HTML 출력에 인라인으로 넣는 스타일시트 (명세 8절 한글 조판). (담당: E)
 
 - 한글 본문은 어절 단위 줄바꿈 (word-break: keep-all), 한 어절이 줄보다 길 때만 끊김 (overflow-wrap: anywhere).
-- 라이트·다크 모드 (prefers-color-scheme), 본문 최대 폭 약 70자, 좁은 화면 대응.
+- 라이트·다크 모드 (prefers-color-scheme, 뷰어의 data-theme 선택이 우선), 본문 최대 폭 약 70자, 좁은 화면 대응.
 - 긴 디스플레이 수식·표는 가로 스크롤.
 - 수식 안 한글(.htex-hangul)은 직립 고딕 (기본 Noto Sans KR).
 """
@@ -18,16 +18,19 @@ CSS = r"""
   color-scheme:light dark;
 }
 @media (prefers-color-scheme:dark){
-  :root{--fg:#e6e6e3;--bg:#161618;--muted:#a1a1a6;--rule:#3a3a3e;--accent:#8ab4f8;
-    --panel:#222226;--err:#ff7b72;--err-bg:#3a1d1d;--warn:#e3b341;}
+  :root:not([data-theme="light"]){--fg:#e6e6e3;--bg:#161618;--muted:#a1a1a6;--rule:#3a3a3e;--accent:#8ab4f8;
+    --panel:#222226;--err:#ff7b72;--err-bg:#3a1d1d;--warn:#e3b341;color-scheme:dark}
 }
+:root[data-theme="dark"]{--fg:#e6e6e3;--bg:#161618;--muted:#a1a1a6;--rule:#3a3a3e;--accent:#8ab4f8;
+  --panel:#222226;--err:#ff7b72;--err-bg:#3a1d1d;--warn:#e3b341;color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body-font);
   font-size:1.0625rem;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere;
   line-break:strict;hanging-punctuation:allow-end}
-.htex-doc{max-width:42rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
-@media (max-width:40rem){.htex-doc{padding:1.25rem 1rem 3rem}body{font-size:1rem}}
+.htex-doc{max-width:42rem;margin:0 auto;padding-block:2.5rem 4rem;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+@media (max-width:40rem){.htex-doc{padding-block:1.25rem 3rem;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}body{font-size:1rem}}
 a{color:var(--accent);text-decoration-thickness:.06em;text-underline-offset:.15em}
 a:hover{text-decoration-thickness:.12em}
 h1,h2,h3,h4,h5{font-family:var(--sans-font);line-height:1.35;font-weight:700;

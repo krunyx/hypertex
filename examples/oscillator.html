@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="HyperTeX 2.0 기준 구현 (htex.html)">
+<meta name="color-scheme" content="light dark">
+<title>조화 진동자 노트</title>
+<meta name="keywords" content="양자역학, 조화 진동자, HyperTeX">
+<meta name="author" content="HyperTeX 2.0 예제">
+<meta name="htex-source" content="oscillator.htex">
+<style>:root{
+  --fg:#1d1d1f;--bg:#fdfdfc;--muted:#5f6368;--rule:#d7d7d2;--accent:#1f5fa8;
+  --panel:#f3f3ef;--err:#c4161c;--err-bg:#fdecec;--warn:#8a5a00;
+  --body-font:"Noto Serif KR","Nanum Myeongjo","Batang",Georgia,serif;
+  --sans-font:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono-font:"D2Coding","Noto Sans Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --math-font:"Latin Modern Math","STIX Two Math","Cambria Math",math;
+  --math-hangul-font:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--fg:#e6e6e3;--bg:#161618;--muted:#a1a1a6;--rule:#3a3a3e;--accent:#8ab4f8;
+    --panel:#222226;--err:#ff7b72;--err-bg:#3a1d1d;--warn:#e3b341;color-scheme:dark}
+}
+:root[data-theme="dark"]{--fg:#e6e6e3;--bg:#161618;--muted:#a1a1a6;--rule:#3a3a3e;--accent:#8ab4f8;
+  --panel:#222226;--err:#ff7b72;--err-bg:#3a1d1d;--warn:#e3b341;color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body-font);
+  font-size:1.0625rem;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere;
+  line-break:strict;hanging-punctuation:allow-end}
+.htex-doc{max-width:42rem;margin:0 auto;padding-block:2.5rem 4rem;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+@media (max-width:40rem){.htex-doc{padding-block:1.25rem 3rem;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}body{font-size:1rem}}
+a{color:var(--accent);text-decoration-thickness:.06em;text-underline-offset:.15em}
+a:hover{text-decoration-thickness:.12em}
+h1,h2,h3,h4,h5{font-family:var(--sans-font);line-height:1.35;font-weight:700;
+  margin:2rem 0 .75rem;scroll-margin-top:1rem}
+h1{font-size:1.75rem;margin-top:0}
+h2{font-size:1.4rem}h3{font-size:1.2rem}h4{font-size:1.05rem}
+h5{font-size:1rem;display:inline;margin:0 .6em 0 0}
+.htex-level-4>h5+p{display:inline}
+.htex-secnum{margin-right:.4em;color:var(--muted)}
+p{margin:.9rem 0}
+.htex-header{margin-bottom:2rem;border-bottom:1px solid var(--rule);padding-bottom:1rem}
+.htex-authors,.htex-date{margin:.25rem 0;color:var(--muted);font-family:var(--sans-font)}
+.htex-keywords{font-family:var(--sans-font);font-size:.9rem;color:var(--muted)}
+.htex-keywords ul{display:inline;list-style:none;padding:0;margin:0 0 0 .5em}
+.htex-keywords li{display:inline}
+.htex-keywords li+li::before{content:", "}
+.htex-kw-label{font-weight:700}
+.htex-abstract{background:var(--panel);padding:.25rem 1.25rem;border-radius:.4rem;margin-top:1rem}
+.htex-abstract h2{font-size:1rem;margin:.75rem 0 0}
+.htex-tt,.htex-code,code,pre{font-family:var(--mono-font);font-size:.9em}
+.htex-code{background:var(--panel);padding:.05em .3em;border-radius:.2em}
+.htex-sc{font-variant:small-caps}
+pre{overflow-x:auto;background:var(--panel);padding:.75rem 1rem;border-radius:.4rem;
+  line-height:1.5;word-break:normal;overflow-wrap:normal;white-space:pre}
+blockquote{margin:1rem 0;padding:0 0 0 1rem;border-left:3px solid var(--rule);color:var(--muted)}
+ul,ol,dl{padding-left:1.6rem}
+.htex-list>li>p:first-child{margin-top:0}
+.htex-list>li>p:last-child{margin-bottom:.3rem}
+ol.htex-explicit{list-style:none;padding-left:1rem}
+.htex-itemnum{font-variant-numeric:tabular-nums;margin-right:.2em}
+ol.htex-explicit>li>p:first-child{display:inline}
+dl.htex-description dt{font-weight:700;font-family:var(--sans-font)}
+dl.htex-description dd{margin-left:1.5rem}
+dl.htex-description dd>p:first-child{margin-top:.2rem}
+
+/* 수식 */
+math{font-family:var(--math-font);font-size:1.07em}
+.htex-hangul,mi.htex-hangul,mo.htex-hangul{font-family:var(--math-hangul-font);font-style:normal}
+mtext.htex-hangul-text{font-family:var(--body-font)}
+.htex-display{margin:1rem 0;overflow-x:auto;overflow-y:hidden;max-width:100%;
+  -webkit-overflow-scrolling:touch}
+.htex-eqtable{border-collapse:collapse;width:100%;margin:0}
+.htex-eqtable td{padding:.2rem 0;vertical-align:middle;border:0}
+.htex-eqpad,.htex-eqno{width:3.5rem;min-width:3.5rem}
+.htex-eqno{text-align:right;white-space:nowrap;font-family:var(--body-font);
+  font-variant-numeric:tabular-nums;padding-left:1rem!important}
+.htex-eqcell{white-space:nowrap}
+.htex-eqcell.htex-c{text-align:center}
+.htex-eqcell.htex-r{text-align:right;width:50%}
+.htex-eqcell.htex-l{text-align:left}
+.htex-eqcell.htex-gap{padding-left:2em!important}
+mtd.htex-l{text-align:left}mtd.htex-c{text-align:center}mtd.htex-r{text-align:right}
+mtd.htex-pair-a{padding-right:0}mtd.htex-pair-b{padding-left:0}
+.htex-math-error{color:var(--err);background:var(--err-bg);padding:0 .25em;border-radius:.2em;
+  white-space:pre-wrap}
+.htex-param-error{color:var(--err)}
+
+/* 정리·증명 */
+.htex-theorem{margin:1.25rem 0;padding:.1rem 0 .1rem 1rem;border-left:3px solid var(--accent)}
+.htex-theorem>p:first-child{margin-top:.4rem}
+.htex-thm-head{font-family:var(--sans-font)}
+.htex-env-theorem,.htex-env-lemma,.htex-env-proposition,.htex-env-corollary{font-style:normal}
+.htex-env-definition,.htex-env-example,.htex-env-remark{border-left-color:var(--rule)}
+.htex-proof{margin:1rem 0}
+.htex-proof-head{font-style:italic;font-family:var(--sans-font)}
+.htex-qed{display:block;text-align:right;line-height:1;color:var(--muted)}
+details{margin:1rem 0;padding:.25rem .9rem;border:1px solid var(--rule);border-radius:.4rem}
+details>summary{cursor:pointer;font-family:var(--sans-font);padding:.25rem 0}
+details[open]>summary{border-bottom:1px solid var(--rule);margin-bottom:.4rem}
+.htex-steps{padding-left:1.6rem}
+.htex-step{margin:.4rem 0;padding-left:.25rem}
+.htex-step::marker{color:var(--accent);font-family:var(--sans-font);font-weight:700}
+.htex-step>p:first-child{margin-top:0}
+
+/* 그림·표 */
+figure{margin:1.5rem 0;text-align:center}
+figcaption{font-family:var(--sans-font);font-size:.92rem;color:var(--muted);margin:.5rem 0}
+.htex-float-name{font-weight:700;color:var(--fg)}
+.htex-image{max-width:100%;height:auto}
+.htex-picture pre{text-align:left;border:1px dashed var(--rule);background:transparent}
+.htex-picture::before{content:"그림 (TikZ, 이 보기에서는 원문으로 표시)";display:block;
+  font-family:var(--sans-font);font-size:.8rem;color:var(--muted);text-align:left}
+.htex-table-wrap{overflow-x:auto;max-width:100%}
+.htex-tabular{border-collapse:collapse;margin:0 auto;font-variant-numeric:tabular-nums}
+.htex-tabular td{padding:.3rem .75rem;vertical-align:top}
+.htex-tabular td.htex-l{text-align:left}.htex-tabular td.htex-c{text-align:center}
+.htex-tabular td.htex-r{text-align:right}
+.htex-tabular .htex-rule-left{border-left:1px solid var(--fg)}
+.htex-tabular .htex-rule-right{border-right:1px solid var(--fg)}
+.htex-tabular tr.htex-rule-above>td{border-top:1px solid var(--fg)}
+.htex-tabular tr.htex-rule-below>td{border-bottom:1px solid var(--fg)}
+.htex-transclusion{margin:1rem 0;padding:.5rem 1rem;border:1px dashed var(--accent);
+  border-radius:.4rem;font-family:var(--sans-font);font-size:.92rem}
+
+/* 링크·인용 */
+.htex-broken{color:var(--err);text-decoration:underline dotted;cursor:help}
+.htex-blocked-url{color:var(--muted);text-decoration:line-through}
+.htex-cite{white-space:nowrap}
+.htex-bibliography ol{list-style:none;padding-left:0}
+.htex-bibliography li{padding-left:2.5em;text-indent:-2.5em;margin:.4rem 0}
+.htex-bibnum{font-variant-numeric:tabular-nums;margin-right:.3em}
+.htex-anchor{position:relative;top:-1rem}
+:target{scroll-margin-top:1rem}
+tr:target,li:target,section:target>.htex-heading,div:target{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+
+/* 각주 */
+.htex-fnref{line-height:0}
+.htex-fnref a{text-decoration:none;padding:0 .1em}
+.htex-footnotes{margin-top:3rem;border-top:1px solid var(--rule);font-size:.92rem}
+.htex-footnotes h2{font-size:1rem}
+.htex-footnotes ol{list-style:none;padding-left:0}
+.htex-footnotes li{display:flex;gap:.4em;align-items:baseline}
+.htex-footnotes li>p{margin:.2rem 0}
+.htex-fnback{text-decoration:none}
+
+/* 매개변수 */
+.htex-parameters{font-family:var(--sans-font);font-size:.9rem;background:var(--panel);
+  border-radius:.4rem;padding:.5rem 1rem;margin:0 0 1.5rem}
+.htex-parameters ul{list-style:none;padding:0;margin:.25rem 0 0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}
+.htex-param-label{font-weight:700}
+.htex-param-range{color:var(--muted)}
+math+output.htex-param{margin-left:.28em}
+output.htex-param{font-family:var(--mono-font);font-variant-numeric:tabular-nums}
+
+/* 오류·진단 */
+.htex-error{color:var(--err);font-family:var(--mono-font);font-size:.9em}
+pre.htex-error{background:var(--err-bg);white-space:pre-wrap;overflow-wrap:anywhere}
+code.htex-error{background:var(--err-bg);padding:0 .2em;border-radius:.2em}
+.htex-error-args{margin-left:.15em}
+.htex-diagnostics{font-family:var(--sans-font);font-size:.88rem;margin-top:2rem}
+.htex-diagnostics ul{padding-left:1.2rem}
+.htex-diag-sev{font-weight:700}
+.htex-diag-error .htex-diag-sev{color:var(--err)}
+.htex-diag-warning .htex-diag-sev{color:var(--warn)}
+.htex-diag-pos{color:var(--muted)}
+@media print{
+  :root{--fg:#000;--bg:#fff}
+  details{border:0;padding:0}
+  .htex-diagnostics,.htex-fnback{display:none}
+}</style>
+</head>
+<body class="htex">
+<article class="htex-doc">
+<header class="htex-header"><h1 class="htex-title">조화 진동자 노트</h1><p class="htex-authors"><span class="htex-author">HyperTeX 2.0 예제</span></p><p class="htex-date">2026-10-14</p><div class="htex-keywords"><span class="htex-kw-label">핵심어</span><ul><li>양자역학</li><li>조화 진동자</li><li>HyperTeX</li></ul></div><section class="htex-abstract"><h2>요약</h2><p id="n1">HyperTeX 2.0 파서와 HTML 변환기를 처음으로 끝까지 연결해 만든 예제 문서. 수식 번호와 상호참조, 정리 환경, 접힌 증명, 단계별 유도, 매개변수, 한글 수식이 한 문서에 들어 있다.</p></section></header>
+<aside class="htex-parameters" aria-label="매개변수"><span class="htex-param-label">매개변수 (기본값)</span><ul><li><span class="htex-param-name">ω</span> = <output class="htex-param" data-param="omega" data-min="0.5" data-max="3" data-default="1" data-step="0.1">1</output> <span class="htex-param-range">(0.5–3, 간격 0.1)</span></li></ul></aside>
+<div class="htex-body">
+<section class="htex-section htex-level-1" id="n2"><h2 class="htex-heading"><span class="htex-anchor" id="sec:H"></span><span class="htex-secnum">1</span> 해밀토니안</h2>
+<p id="n3">질량 <math class="htex-math"><semantics><mrow><mi>m</mi></mrow><annotation encoding="application/x-tex">m</annotation></semantics></math>, 진동수 <math class="htex-math"><semantics><mrow><mi>ω</mi></mrow><annotation encoding="application/x-tex">\omega</annotation></semantics></math>인 1차원 조화 진동자의 해밀토니안은</p>
+<div class="htex-display htex-env-equation" id="n4" data-env="equation"><table class="htex-eqtable" role="presentation"><tbody><tr class="htex-eqrow" id="n5" data-tex="H = \frac{p^2}{2m} + \frac{1}{2} m\omega^2 x^2"><td class="htex-eqpad"><span class="htex-anchor" id="eq:H"></span></td><td class="htex-eqcell htex-c" colspan="1"><math class="htex-math" displaystyle="true"><semantics><mrow><mi>H</mi><mo>=</mo><mfrac><msup><mi>p</mi><mn>2</mn></msup><mrow><mn>2</mn><mi>m</mi></mrow></mfrac><mo>+</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>ω</mi><mn>2</mn></msup><msup><mi>x</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">H = \frac{p^2}{2m} + \frac{1}{2} m\omega^2 x^2</annotation></semantics></math></td><td class="htex-eqno">(1)</td></tr></tbody></table></div>
+<p id="n6">이다. 사다리 연산자를</p>
+<div class="htex-display htex-env-align" id="n7" data-env="align"><table class="htex-eqtable" role="presentation"><tbody><tr class="htex-eqrow" id="n8" data-tex="a &amp;= \sqrt{\frac{m\omega}{2\hbar}}\left(x + \frac{i}{m\omega}p\right)"><td class="htex-eqpad"><span class="htex-anchor" id="eq:a"></span></td><td class="htex-eqcell htex-r"><math class="htex-math" displaystyle="true"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math></td><td class="htex-eqcell htex-l"><math class="htex-math" displaystyle="true"><semantics><mrow><mrow></mrow><mo>=</mo><msqrt><mfrac><mrow><mi>m</mi><mi>ω</mi></mrow><mrow><mn>2</mn><mi mathvariant="normal">ℏ</mi></mrow></mfrac></msqrt><mrow><mo stretchy="true" fence="true" form="prefix">(</mo><mi>x</mi><mo>+</mo><mfrac><mi>i</mi><mrow><mi>m</mi><mi>ω</mi></mrow></mfrac><mi>p</mi><mo stretchy="true" fence="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">= \sqrt{\frac{m\omega}{2\hbar}}\left(x + \frac{i}{m\omega}p\right)</annotation></semantics></math></td><td class="htex-eqno">(2)</td></tr><tr class="htex-eqrow" id="n9" data-tex="a^\dagger &amp;= \sqrt{\frac{m\omega}{2\hbar}}\left(x - \frac{i}{m\omega}p\right)"><td class="htex-eqpad"><span class="htex-anchor" id="eq:adag"></span></td><td class="htex-eqcell htex-r"><math class="htex-math" displaystyle="true"><semantics><mrow><msup><mi>a</mi><mo>†</mo></msup></mrow><annotation encoding="application/x-tex">a^\dagger</annotation></semantics></math></td><td class="htex-eqcell htex-l"><math class="htex-math" displaystyle="true"><semantics><mrow><mrow></mrow><mo>=</mo><msqrt><mfrac><mrow><mi>m</mi><mi>ω</mi></mrow><mrow><mn>2</mn><mi mathvariant="normal">ℏ</mi></mrow></mfrac></msqrt><mrow><mo stretchy="true" fence="true" form="prefix">(</mo><mi>x</mi><mo>−</mo><mfrac><mi>i</mi><mrow><mi>m</mi><mi>ω</mi></mrow></mfrac><mi>p</mi><mo stretchy="true" fence="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">= \sqrt{\frac{m\omega}{2\hbar}}\left(x - \frac{i}{m\omega}p\right)</annotation></semantics></math></td><td class="htex-eqno">(3)</td></tr></tbody></table></div>
+<p id="n10">로 정의하면 <math class="htex-math"><semantics><mrow><mo stretchy="false">[</mo><mi>a</mi><mo>,</mo><msup><mi>a</mi><mo>†</mo></msup><mo stretchy="false">]</mo><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">[a, a^\dagger] = 1</annotation></semantics></math>이고, 식 <a class="htex-ref" href="#eq:H" title="식 (1)">(1)</a>는 <math class="htex-math"><semantics><mrow><mi>H</mi><mo>=</mo><mi mathvariant="normal">ℏ</mi><mi>ω</mi><mrow><mo stretchy="true" fence="true" form="prefix">(</mo><msup><mi>a</mi><mo>†</mo></msup><mi>a</mi><mo>+</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo stretchy="true" fence="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">H = \hbar\omega\left(a^\dagger a + \tfrac{1}{2}\right)</annotation></semantics></math>로 쓸 수 있다.</p></section>
+<section class="htex-section htex-level-1" id="n11"><h2 class="htex-heading"><span class="htex-anchor" id="sec:E"></span><span class="htex-secnum">2</span> 고윳값</h2>
+<div class="htex-theorem htex-env-theorem" id="n12" role="group"><p id="n13"><span class="htex-thm-head"><span class="htex-anchor" id="thm:levels"></span><strong class="htex-thm-name">정리 <span class="htex-thm-num">1</span></strong> <span class="htex-thm-note">(에너지 준위)</span>.</span> <math class="htex-math"><semantics><mrow><mi>H</mi></mrow><annotation encoding="application/x-tex">H</annotation></semantics></math>의 고윳값은 <math class="htex-math"><semantics><mrow><msub><mi>E</mi><mi>n</mi></msub><mo>=</mo><mi mathvariant="normal">ℏ</mi><mi>ω</mi><mrow><mo stretchy="true" fence="true" form="prefix">(</mo><mi>n</mi><mo>+</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo stretchy="true" fence="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">E_n = \hbar\omega\left(n + \tfrac{1}{2}\right)</annotation></semantics></math>, <math class="htex-math"><semantics><mrow><mi>n</mi><mo>=</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mo>…</mo></mrow><annotation encoding="application/x-tex">n = 0, 1, 2, \ldots</annotation></semantics></math>이다.</p>
+</div>
+<details class="htex-proof htex-collapsed" id="n14"><summary><em class="htex-proof-head">증명</em></summary><p id="n15"><math class="htex-math"><semantics><mrow><mi>N</mi><mo>=</mo><msup><mi>a</mi><mo>†</mo></msup><mi>a</mi></mrow><annotation encoding="application/x-tex">N = a^\dagger a</annotation></semantics></math>라 하면 <math class="htex-math"><semantics><mrow><mo stretchy="false">[</mo><mi>N</mi><mo>,</mo><mi>a</mi><mo stretchy="false">]</mo><mo>=</mo><mo>−</mo><mi>a</mi></mrow><annotation encoding="application/x-tex">[N, a] = -a</annotation></semantics></math>이므로 <math class="htex-math"><semantics><mrow><mi>a</mi></mrow><annotation encoding="application/x-tex">a</annotation></semantics></math>는 <math class="htex-math"><semantics><mrow><mi>N</mi></mrow><annotation encoding="application/x-tex">N</annotation></semantics></math>의 고윳값을 1 낮춘다. 노름이 음이 될 수 없으므로 바닥 상태 <math class="htex-math"><semantics><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow><annotation encoding="application/x-tex">\left| 0 \right\rangle</annotation></semantics></math>에서 <math class="htex-math"><semantics><mrow><mi>a</mi><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a\left| 0 \right\rangle = 0</annotation></semantics></math>이고, 고윳값은 음이 아닌 정수다.</p><span class="htex-qed" aria-label="증명 끝">∎</span></details>
+<p id="n16">바닥 상태 에너지의 유도:</p>
+<ol class="htex-steps" id="n17" data-steps="3"><li class="htex-step htex-step-1" id="n18" data-step="1"><p id="n19"><math class="htex-math"><semantics><mrow><mi>a</mi><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">a\left| 0 \right\rangle = 0</annotation></semantics></math> (정리 <a class="htex-ref" href="#thm:levels" title="정리 1">1</a>의 증명)</p></li><li class="htex-step htex-step-2" id="n20" data-step="2"><p id="n21"><math class="htex-math"><semantics><mrow><mi>H</mi><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow><mo>=</mo><mi mathvariant="normal">ℏ</mi><mi>ω</mi><mrow><mo stretchy="true" fence="true" form="prefix">(</mo><msup><mi>a</mi><mo>†</mo></msup><mi>a</mi><mo>+</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mo stretchy="true" fence="true" form="postfix">)</mo></mrow><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow><mo>=</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mi mathvariant="normal">ℏ</mi><mi>ω</mi><mrow><mo stretchy="true" fence="true" form="prefix">|</mo><mn>0</mn><mo stretchy="true" fence="true" form="postfix">⟩</mo></mrow></mrow><annotation encoding="application/x-tex">H\left| 0 \right\rangle = \hbar\omega\left(a^\dagger a + \tfrac{1}{2}\right)\left| 0 \right\rangle = \tfrac{1}{2}\hbar\omega\left| 0 \right\rangle</annotation></semantics></math></p></li><li class="htex-step htex-step-3" id="n22" data-step="3"><span class="htex-anchor" id="step:E0"></span><p id="n23">따라서 <math class="htex-math"><semantics><mrow><msub><mi>E</mi><mn>0</mn></msub><mo>=</mo><mstyle displaystyle="false" scriptlevel="0"><mfrac><mn>1</mn><mn>2</mn></mfrac></mstyle><mi mathvariant="normal">ℏ</mi><mi>ω</mi></mrow><annotation encoding="application/x-tex">E_0 = \tfrac{1}{2}\hbar\omega</annotation></semantics></math>이다.</p></li></ol>
+<p id="n24">열평형 상태에서 분배함수는 <math class="htex-math"><semantics><mrow><mi>Z</mi><mo>=</mo><mrow><mi>Tr</mi><mo lspace="0" rspace="0.1667em">⁡</mo></mrow><msup><mi>e</mi><mrow><mo>−</mo><mi>β</mi><mi>H</mi></mrow></msup></mrow><annotation encoding="application/x-tex">Z = \operatorname{Tr}e^{-\beta H}</annotation></semantics></math>이다.</p></section>
+<section class="htex-section htex-level-1" id="n25"><h2 class="htex-heading"><span class="htex-anchor" id="sec:classical"></span><span class="htex-secnum">3</span> 고전적 운동</h2>
+<p id="n26">고전적 해는 <math class="htex-math"><semantics><mrow><mi>x</mi><mo stretchy="false">(</mo><mi>t</mi><mo stretchy="false">)</mo><mo>=</mo><mi>A</mi><mrow><mi>cos</mi><mo lspace="0" rspace="0">⁡</mo></mrow><mo stretchy="false">(</mo><mi>ω</mi><mi>t</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">x(t) = A\cos(\omega t)</annotation></semantics></math>이다. 현재 진동수는 <math class="htex-math"><semantics><mrow><mi>ω</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">\omega =</annotation></semantics></math><output class="htex-param" data-param="omega">1</output>이다.</p>
+<figure class="htex-float htex-figure" id="n27"><span class="htex-anchor" id="fig:x"></span><figure class="htex-picture" id="n28" data-params="omega"><pre>\draw[-&gt;] (0,0) -- (6.5,0) node[right] {$t$};
+\draw[-&gt;] (0,-1.2) -- (0,1.2) node[above] {$x$};
+\draw[thick, blue] plot[domain=0:6.28, samples=200] (\x, {cos(\omega*\x r)});</pre></figure><figcaption><span class="htex-float-name">그림 1</span>: 진동수 <math class="htex-math"><semantics><mrow><mi>ω</mi></mrow><annotation encoding="application/x-tex">\omega</annotation></semantics></math>에 따른 변위.</figcaption></figure>
+<figure class="htex-float htex-table" id="n29"><span class="htex-anchor" id="tab:levels"></span><figcaption><span class="htex-float-name">표 1</span>: 처음 세 준위.</figcaption><div class="htex-table-wrap"><table class="htex-tabular" id="n30"><tbody><tr class="htex-rule-above"><td class="htex-c htex-rule-left"><math class="htex-math"><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></td><td class="htex-c htex-rule-left htex-rule-right"><math class="htex-math"><semantics><mrow><msub><mi>E</mi><mi>n</mi></msub><mo stretchy="false">/</mo><mi mathvariant="normal">ℏ</mi><mi>ω</mi></mrow><annotation encoding="application/x-tex">E_n / \hbar\omega</annotation></semantics></math></td></tr><tr class="htex-rule-above"><td class="htex-c htex-rule-left">0</td><td class="htex-c htex-rule-left htex-rule-right">1/2</td></tr><tr><td class="htex-c htex-rule-left">1</td><td class="htex-c htex-rule-left htex-rule-right">3/2</td></tr><tr class="htex-rule-below"><td class="htex-c htex-rule-left">2</td><td class="htex-c htex-rule-left htex-rule-right">5/2</td></tr></tbody></table></div></figure></section>
+<section class="htex-section htex-level-1" id="n31"><h2 class="htex-heading"><span class="htex-secnum">4</span> 한글 수식</h2>
+<p id="n32">수식 안의 한글은 그리스 문자처럼 한 음절이 한 기호다: <math class="htex-math htex-has-hangul"><semantics><mrow><msub><mi mathvariant="normal" class="htex-hangul">가</mi><mn>1</mn></msub><mo>+</mo><msup><mi mathvariant="normal" class="htex-hangul">나</mi><mn>2</mn></msup><mo>=</mo><mi mathvariant="normal" class="htex-hangul">다</mi></mrow><annotation encoding="application/x-tex">가_1 + 나^2 = 다</annotation></semantics></math>. 단어로 묶을 때는 <math class="htex-math htex-has-hangul"><semantics><mrow><mtext class="htex-hangul-text">에너지</mtext><mo>=</mo><mfrac><mn>1</mn><mn>2</mn></mfrac><mi>m</mi><msup><mi>v</mi><mn>2</mn></msup></mrow><annotation encoding="application/x-tex">\text{에너지} = \frac{1}{2} m v^2</annotation></semantics></math>처럼 쓴다.</p>
+<details class="htex-collapse" id="n33"><summary>참고</summary><p id="n34">그림 <a class="htex-ref" href="#fig:x" title="그림 1">1</a>, 표 <a class="htex-ref" href="#tab:levels" title="표 1">1</a>, 단계 <a class="htex-ref" href="#step:E0" title="단계 3">3</a>, <a class="htex-ref" href="#sec:H" title="1절">1</a>절을 참고하라. 원 논문은 <span class="htex-cite">[<a class="htex-cite-ext" href="https://doi.org/10.1007/BF01397477">doi:10.1007/BF01397477</a>]</span>, 관련 프리프린트는 <span class="htex-cite">[<a class="htex-cite-ext" href="https://arxiv.org/abs/quant-ph/0001234">arXiv:quant-ph/0001234</a>]</span>.</p></details></section>
+</div>
+</article>
+</body>
+</html>
