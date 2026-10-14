@@ -1,4 +1,57 @@
-# HyperTeX 2.0 — 문서 트리 스키마와 테스트 묶음
+# HyperTeX 2.0 기준 구현
+
+HTML 대신 LaTeX 문법의 부분집합으로 쓰는 웹 문서 형식 HyperTeX 2.0의 파이썬 기준 구현이다.
+명세는 `docs/spec.md`, 상호작용 규약은 `docs/interaction-protocol.md`.
+
+## 빠른 시작
+
+파이썬 3.10 이상. 파서·HTML 변환·웹 서버는 표준 라이브러리만 쓴다.
+
+```bash
+cd hypertex
+
+# 문서 → HTML (브라우저로 열기)
+python -m htex html examples/oscillator.htex -o oscillator.html
+
+# 전용 뷰어 (PySide6 필요: python -m pip install PySide6)
+python -m htex view examples/oscillator.htex
+
+# 일반 브라우저용 서버 → http://127.0.0.1:8000/
+python -m htex serve tests/docs
+
+# 정적 웹사이트
+python -m htex build tests/docs -o site
+
+# 문서 트리(JSON) 보기
+python -m htex parse examples/oscillator.htex
+```
+
+기존 `.tex` 파일은 확장자 그대로 열면 호환 모드로 읽는다 (명세 9절).
+
+## 테스트
+
+```bash
+python -m pip install pytest jsonschema
+python -m pytest -q tests/unit          # 단위 테스트 606건
+python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
+python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
+```
+
+## 구성
+
+| 폴더 | 내용 |
+| --- | --- |
+| `htex/` | lexer, macros(매크로 확장), build_*(문서 트리), expr(계산식), picture(그림 검사) |
+| `htex/html/` | 문서 트리 → HTML + MathML |
+| `htex/tikz/` | TikZ·pgfplots 부분집합 → SVG |
+| `htex/web/` | `serve`, `build`, 상호작용 스크립트 interact.js |
+| `htex/viewer/` | PySide6 전용 뷰어 (`htex://` 주소, 히스토리, 미리보기, 슬라이더) |
+| `docs/` | 명세 사본, 문서 트리 표현 규칙, 상호작용 규약 |
+| `notes/` | 구현 담당별 질문과 임시 가정 |
+
+---
+
+# 문서 트리 스키마와 테스트 묶음
 
 명세 초안(HyperTeX 2.0 명세 초안)의 8절 "기준 파서 → 문서 트리 → 여러 렌더러" 구조에서,
 모든 구현이 공유하는 **계약**을 담은 묶음이다. 파서, HTML 변환기, 웹 폴백, 전용 뷰어를
