@@ -7,7 +7,7 @@
 
 - `span` (선택 필드. 정답 트리는 생략해도 된다)
 - 진단의 `message` 문구와 `span`, `node`
-- `math.tex`와 `picture.source`의 공백 차이 (공백 연속은 하나로, 앞뒤 공백 제거 후 비교. `\alpha x`와 `\alpha  x`는 같다)
+- `math.tex`의 공백 (수식 모드 공백은 의미가 없으므로, 제어어 뒤 구분 공백 외에는 무시), `picture.source`의 공백 연속
 - `source.sha256`
 
 그 외는 모두 같아야 한다: 노드 종류, 순서, id, 번호, 라벨, 텍스트, 링크, 진단 코드와 개수.
@@ -90,3 +90,14 @@ displaymath의 각 행, list의 각 항목, steps의 각 단계, footnote. 인�
 - styles, macroImports: 원문 주소 그대로, 허용되지 않는 주소는 넣지 않는다.
 - tikzLibraries: 허용 목록에 있는 것만, 작성 순서. mathExtensions: \usemath 인수.
 - 호환 모드: documentclass는 "hypertex"로 바꾸고 classOptions는 생략. abstract 환경은 meta.abstract로.
+
+## 통합 단계에서 정한 것 (2026-10-14)
+
+파서 출력과 정답 트리를 대조해 어긋난 6건을 다음처럼 정했다.
+
+- 라벨 display: 절 "1절", 부록 절 "부록 A", 식 "식 (1)", 그림 "그림 1", 표 "표 1", 항목 "항목 1", 단계 "단계 3", 정리류 "<이름> <번호>".
+- 수식 안의 정의되지 않은 명령(`$\loopA$`): math 노드를 그대로 두고 undefined-command 진단만 낸다. 렌더러가 그 수식을 원문으로 보여 준다.
+- 비어 있는 선택 배열(`math.scripts`, `params` 등)은 넣지 않고 생략한다.
+- picture.params는 정렬된 목록.
+- `\bibliography{x}`에서 읽을 수 있는 .bbl이 없으면 bibliography 블록을 만들지 않는다 (missing-resource 진단만).
+- `math.tex` 대조는 TeX 수식 공백 규칙으로: 제어어와 뒤따르는 글자 사이의 구분 공백 외의 공백은 무시한다 (`tools/compare.py`).

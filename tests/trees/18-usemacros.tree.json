@@ -31,8 +31,7 @@
         {
           "kind": "math",
           "math": {
-            "tex": "\\left| 0 \\right\\rangle",
-            "scripts": []
+            "tex": "\\left| 0 \\right\\rangle"
           }
         },
         {

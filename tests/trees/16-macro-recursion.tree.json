@@ -66,18 +66,20 @@
           "text": "(자기 호출) 모두 거부되어야 한다. 사용: "
         },
         {
-          "kind": "error",
-          "code": "undefined-command",
-          "raw": "\\loopA"
+          "kind": "math",
+          "math": {
+            "tex": "\\loopA"
+          }
         },
         {
           "kind": "text",
           "text": ", "
         },
         {
-          "kind": "error",
-          "code": "undefined-command",
-          "raw": "\\self"
+          "kind": "math",
+          "math": {
+            "tex": "\\self"
+          }
         },
         {
           "kind": "text",

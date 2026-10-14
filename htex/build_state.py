@@ -271,6 +271,8 @@ class StateMixin:
             entry["number"] = target.number
             if target.kind == "theorem":
                 entry["display"] = f"{target.name} {target.number}".strip()
+            elif target.kind == "section" and target.number[:1].isalpha():
+                entry["display"] = f"부록 {target.number}"   # 통합 단계에서 정함
             else:
                 entry["display"] = DISPLAY[target.kind].format(n=target.number)
         self.labels[name] = entry

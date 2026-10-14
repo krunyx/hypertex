@@ -150,6 +150,16 @@ def test_all_math_commands_in_commands_py_are_handled():
         "middle": r"\left( a \middle| b \right)", "limits": r"\sum\limits_a",
         "nolimits": r"\sum\nolimits_a", "pmod": r"a \pmod{n}", "operatorname": r"\operatorname{tr} A",
         "text": r"\text{a}",
+        # 통합 단계에서 commands.MATH 에 추가된 인수 있는 명령
+        "cfrac": r"\cfrac{a}{b}", "overset": r"\overset{a}{b}", "underset": r"\underset{a}{b}",
+        "stackrel": r"\stackrel{a}{b}", "boxed": r"\boxed{a}", "phantom": r"\phantom{a}",
+        "hphantom": r"\hphantom{a}", "vphantom": r"\vphantom{a}", "smash": r"\smash{a}",
+        "hspace": r"a\hspace{1em}b", "substack": r"\sum_{\substack{a\\b}} c",
+        "xrightarrow": r"a \xrightarrow{f} b", "xleftarrow": r"a \xleftarrow[g]{f} b",
+        "not": r"a \not= b", "mathscr": r"\mathscr{A}",
+        "breve": r"\breve{a}", "check": r"\check{a}", "acute": r"\acute{a}", "grave": r"\grave{a}",
+        "mathring": r"\mathring{a}", "overrightarrow": r"\overrightarrow{AB}",
+        "overleftarrow": r"\overleftarrow{AB}",
     }
     one_arg = {"hat", "bar", "vec", "dot", "ddot", "tilde", "widetilde", "widehat", "overline",
                "underline", "overbrace", "underbrace", "mathbf", "mathrm", "mathit", "mathsf",

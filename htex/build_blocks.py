@@ -797,8 +797,9 @@ class BlockMixin:
     def bibliography_command(self, tok: Token) -> None:
         self.adv()
         names = [x.strip() for x in raw_text(self.read_group()).split(",") if x.strip()]
-        node = {"kind": "bibliography", "id": self.new_id(), "span": span_json(tok)}
-        self.begin_block(node)
+        # 통합 단계에서 정함: 읽을 수 있는 .bbl 이 하나도 없으면 블록을 만들지 않는다 (missing-resource 진단만).
+        before = len(self.bibliography)
+        node = None
         from .lexer import tokenize
         for nm in names:
             base = nm[:-4] if nm.endswith(".bbl") else nm
@@ -810,12 +811,16 @@ class BlockMixin:
                 if t.type is T.CS and t.text == "begin":
                     env, j = env_name_at(toks, i)
                     if env == "thebibliography":
+                        if node is None:
+                            node = {"kind": "bibliography", "id": self.new_id(), "span": span_json(tok)}
+                            self.begin_block(node)
                         with self.stream(toks[j:]):
                             self.read_group()
                             body, _ = self.collect_env("thebibliography")
                         self.parse_bibitems(body)
                         break
-        self.end_block(node)
+        if node is not None:
+            self.end_block(node)
 
 
 # ---------------------------------------------------------------- 순수 도우미

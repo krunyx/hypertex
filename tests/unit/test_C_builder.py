@@ -160,9 +160,10 @@ def test_paragraph_whitespace_and_text_merge():
 
 
 def test_definitions_are_skipped_silently():
+    # 통합 후: 정의는 매크로 확장기(B)가 소비한다. native 모드의 \\def는 제외 명령(명세 3절).
     t = parse("\\newcommand{\\R}{\\mathbb{R}}\\renewcommand\\S[1][x]{#1}"
               "\\DeclareMathOperator{\\Tr}{Tr}\\def\\v{\\mathbf}본문")
-    assert t["diagnostics"] == []
+    assert _diag_codes(t) == ["excluded-command"]
     assert t["body"][0]["content"] == [{"kind": "text", "text": "본문"}]
 
 
@@ -273,7 +274,8 @@ def test_meta_and_libraries():
     assert m["classOptions"] == ["note"] and m["tikzLibraries"] == ["calc"]
     assert m["mathExtensions"] == ["hangulmath"] and m["styles"] == ["https://x.org/s.hsty"]
     assert "macroImports" not in m and m["keywords"] == ["a", "b"]
-    assert _diag_codes(t) == ["unknown-tikz-library"]
+    # 통합 후: \\usemacros{data:x}의 금지 주소 진단은 매크로 확장기(B)가 낸다.
+    assert sorted(_diag_codes(t)) == ["insecure-resource", "unknown-tikz-library"]
 
 
 def test_style_equation_number():

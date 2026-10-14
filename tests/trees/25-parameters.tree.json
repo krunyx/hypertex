@@ -80,8 +80,8 @@
       "id": "n2",
       "source": "\\draw[->] (0,0) -- (6.5,0) node[right] {$t$};\n  \\draw[thick, blue] plot[domain=0:6.28, samples=200]\n        (\\x, {exp(-\\gamma*\\x)*cos(\\omega*\\x r)});",
       "params": [
-        "omega",
-        "gamma"
+        "gamma",
+        "omega"
       ]
     },
     {

@@ -108,7 +108,7 @@ ORD_SYMBOLS = {
     "infty": "∞", "partial": "∂", "nabla": "∇", "hbar": "ℏ", "hslash": "ℏ", "ell": "ℓ",
     "Re": "ℜ", "Im": "ℑ", "aleph": "ℵ", "beth": "ℶ", "wp": "℘", "emptyset": "∅",
     "varnothing": "∅", "angle": "∠", "imath": "ı", "jmath": "ȷ", "top": "⊤", "bot": "⊥",
-    "Box": "□", "triangle": "△", "flat": "♭", "sharp": "♯", "natural": "♮",
+    "Box": "□", "square": "□", "triangle": "△", "flat": "♭", "sharp": "♯", "natural": "♮",
     "clubsuit": "♣", "diamondsuit": "♢", "heartsuit": "♡", "spadesuit": "♠",
     "complement": "∁", "eth": "ð", "mho": "℧", "Finv": "Ⅎ", "Game": "⅁",
 }
@@ -150,7 +150,8 @@ OPERATORS = {
     "nearrow": "↗", "searrow": "↘", "swarrow": "↙", "nwarrow": "↖",
     "hookrightarrow": "↪", "hookleftarrow": "↩", "rightharpoonup": "⇀",
     "rightleftharpoons": "⇌", "leadsto": "⇝", "rightsquigarrow": "⇝",
-    "twoheadrightarrow": "↠", "rightrightarrows": "⇉",
+    "twoheadrightarrow": "↠", "rightrightarrows": "⇉", "leftrightarrows": "⇆",
+    "leftleftarrows": "⇇", "rightleftarrows": "⇄",
     # 점
     "ldots": "…", "dots": "…", "dotsc": "…", "dotso": "…", "dotsb": "⋯", "dotsm": "⋯",
     "dotsi": "⋯", "cdots": "⋯", "vdots": "⋮", "ddots": "⋱", "mathellipsis": "…",
@@ -185,7 +186,7 @@ BIG_OPS = {
 # 함수 이름 (첨자는 옆에)
 FUNCTIONS = {
     "sin", "cos", "tan", "cot", "sec", "csc", "arcsin", "arccos", "arctan", "sinh", "cosh",
-    "tanh", "coth", "exp", "log", "ln", "lg", "dim", "ker", "deg", "arg", "hom",
+    "tanh", "coth", "exp", "log", "ln", "lg", "dim", "ker", "deg", "arg", "hom", "sgn",
 }
 # 함수 이름 (디스플레이에서 첨자가 아래로)
 LIMIT_FUNCTIONS = {
@@ -735,6 +736,33 @@ class _Parser:
                           data_param=pname)
             return El("merror", [El("mtext", ["\\showparam{" + raw + "}"])],
                       class_="htex-param-error")
+        # 통합 단계에서 추가: 빌더(C)가 commands.MATH 에 넣은 명령
+        if name == "boxed":
+            return El("menclose", [self.read_arg()], notation="box")
+        if name == "phantom":
+            return El("mphantom", [self.read_arg()])
+        if name == "hphantom":
+            return El("mpadded", [El("mphantom", [self.read_arg()])], height="0", depth="0")
+        if name == "vphantom":
+            return El("mpadded", [El("mphantom", [self.read_arg()])], width="0")
+        if name == "smash":
+            self.read_optional_raw()
+            return El("mpadded", [self.read_arg()], height="0", depth="0")
+        if name == "hspace":
+            self.at_star()
+            return mspace(_css_length(self.read_raw_group()))
+        if name == "substack":
+            raw = self.read_raw_group()
+            rows = [self.sub(r) for r in _split_rows(raw)]
+            table = El("mtable", [El("mtr", [El("mtd", [r])]) for r in rows], rowspacing="0.1em")
+            return El("mstyle", [table], scriptlevel="1")
+        if name in ("xrightarrow", "xleftarrow"):
+            below = self.read_optional_raw()
+            above = self.read_arg()
+            arrow = mo("→" if name == "xrightarrow" else "←", stretchy="true", minsize="2em")
+            if below is not None and below.strip():
+                return El("munderover", [arrow, self.sub(below), above])
+            return El("mover", [arrow, above])
         if name in ("label", "tag"):
             raise MathError(f"수식 안의 \\{name}")
         if name in ("nonumber", "notag", "hline", "allowbreak", "nobreak", "relax"):
@@ -1045,6 +1073,39 @@ def _plain_text(raw: str) -> str:
         out.append(c)
         i += 1
     return "".join(out)
+
+
+def _css_length(raw: str) -> str:
+    """\\hspace 의 TeX 길이 → CSS 길이. 알 수 없으면 0.5em."""
+    m = re.fullmatch(r"\s*([+-]?(?:\d+\.?\d*|\.\d+))\s*(em|ex|pt|cm|mm|in|mu)\s*", raw or "")
+    if not m:
+        return "0.5em"
+    v, u = float(m.group(1)), m.group(2)
+    if u == "mu":
+        return f"{v / 18:.4g}em"
+    return f"{v:g}{u}"
+
+
+def _split_rows(raw: str) -> list[str]:
+    """최상위(중괄호 바깥)의 \\\\ 로 나눈다."""
+    rows, depth, cur, i = [], 0, [], 0
+    while i < len(raw):
+        if raw.startswith("\\\\", i) and depth == 0:
+            rows.append("".join(cur))
+            cur = []
+            i += 2
+            continue
+        ch = raw[i]
+        if ch == "\\" and i + 1 < len(raw):
+            cur.append(raw[i:i + 2])
+            i += 2
+            continue
+        depth += ch == "{"
+        depth -= ch == "}"
+        cur.append(ch)
+        i += 1
+    rows.append("".join(cur))
+    return [r for r in rows if r.strip()]
 
 
 def format_number(v: Any) -> str:
