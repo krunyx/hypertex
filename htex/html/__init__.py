@@ -19,6 +19,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from .mathml import tex_to_mathml
+from .render import render as _render
 
-def render(tree: dict[str, Any]) -> str:
-    raise NotImplementedError("E가 구현")
+__all__ = ["render", "tex_to_mathml"]
+
+
+def render(tree: dict[str, Any], *, web_fallback: bool = False) -> str:
+    """문서 트리 → 완결된 HTML5 문서 문자열.
+
+    web_fallback=True 이면 htex:// 링크를 https:// 로 바꿔 출력한다 (명세 2절 웹 폴백).
+    기본값(False)은 htex:// 를 그대로 두어 전용 뷰어가 처리하게 한다.
+    """
+    return _render(tree, web_fallback=web_fallback)
