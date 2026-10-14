@@ -1,0 +1,224 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "19-error-tolerance.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "오류 관용"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section",
+      "id": "n1",
+      "level": 1,
+      "number": "1",
+      "title": [
+        {
+          "kind": "text",
+          "text": "정의되지 않은 명령"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n2",
+          "content": [
+            {
+              "kind": "error",
+              "code": "undefined-command",
+              "raw": "\\foobar",
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "인수는 텍스트로 보인다"
+                }
+              ]
+            },
+            {
+              "kind": "text",
+              "text": " 그리고 계속된다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n3",
+      "level": 1,
+      "number": "2",
+      "title": [
+        {
+          "kind": "text",
+          "text": "짝이 맞지 않는 괄호"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n4",
+          "content": [
+            {
+              "kind": "styled",
+              "style": "bold",
+              "children": [
+                {
+                  "kind": "text",
+                  "text": "닫히지 않은 굵은 글씨가 단락 끝에서 자동으로 닫힌다."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "id": "n5",
+          "content": [
+            {
+              "kind": "text",
+              "text": "다음 단락은 굵지 않다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n6",
+      "level": 1,
+      "number": "3",
+      "title": [
+        {
+          "kind": "text",
+          "text": "수식 오류"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n7",
+          "content": [
+            {
+              "kind": "text",
+              "text": "깨진 수식 "
+            },
+            {
+              "kind": "error",
+              "code": "math-syntax",
+              "raw": "$\\frac{1}{$"
+            },
+            {
+              "kind": "text",
+              "text": " 은 원본 소스로 보이고, 정상 수식 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "x+1",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "은 정상이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n8",
+      "level": 1,
+      "number": "4",
+      "title": [
+        {
+          "kind": "text",
+          "text": "닫히지 않은 환경"
+        }
+      ],
+      "children": [
+        {
+          "kind": "list",
+          "id": "n9",
+          "style": "itemize",
+          "items": [
+            {
+              "id": "n10",
+              "children": [
+                {
+                  "kind": "paragraph",
+                  "id": "n11",
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "이 목록은 다음 절에서 닫힌다."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n12",
+      "level": 1,
+      "number": "5",
+      "title": [
+        {
+          "kind": "text",
+          "text": "마지막 절"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n13",
+          "content": [
+            {
+              "kind": "text",
+              "text": "이 절이 보이면 성공이다."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "undefined-command",
+      "message": "정의되지 않은 명령 \\foobar"
+    },
+    {
+      "severity": "error",
+      "code": "unbalanced-brace",
+      "message": "닫히지 않은 {를 단락 끝에서 닫았다"
+    },
+    {
+      "severity": "error",
+      "code": "math-syntax",
+      "message": "수식 구문 오류: \\frac{1}{"
+    },
+    {
+      "severity": "error",
+      "code": "unclosed-environment",
+      "message": "itemize 환경이 닫히지 않아 다음 \\section에서 닫았다"
+    }
+  ]
+}

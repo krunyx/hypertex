@@ -1,0 +1,78 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "20-excluded-commands.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "제외된 명령"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "이 문장은 정상 렌더링되어야 한다."
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\catcode"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\def"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\input"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\include"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\immediate"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\write"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\openin"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\newpage"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\vspace"
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "07-math-multiline.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "여러 줄 수식"
+      }
+    ]
+  },
+  "labels": {
+    "eq:sq": {
+      "node": "n2",
+      "kind": "equation",
+      "number": "1",
+      "display": "식 (1)"
+    },
+    "eq:diff": {
+      "node": "n4",
+      "kind": "equation",
+      "number": "2",
+      "display": "식 (2)"
+    },
+    "eq:g2": {
+      "node": "n7",
+      "kind": "equation",
+      "number": "4",
+      "display": "식 (4)"
+    },
+    "eq:long": {
+      "node": "n9",
+      "kind": "equation",
+      "number": "5",
+      "display": "식 (5)"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "displaymath",
+      "id": "n1",
+      "env": "align",
+      "rows": [
+        {
+          "id": "n2",
+          "number": "1",
+          "label": "eq:sq",
+          "math": {
+            "tex": "(a+b)^2 &= a^2 + 2ab + b^2",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "id": "n3",
+          "math": {
+            "tex": "(a-b)^2 &= a^2 - 2ab + b^2",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "id": "n4",
+          "number": "2",
+          "label": "eq:diff",
+          "math": {
+            "tex": "a^2 - b^2 &= (a+b)(a-b)",
+            "scripts": [
+              "latin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "displaymath",
+      "id": "n5",
+      "env": "gather",
+      "rows": [
+        {
+          "id": "n6",
+          "number": "3",
+          "math": {
+            "tex": "x + y = 1",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "id": "n7",
+          "number": "4",
+          "label": "eq:g2",
+          "math": {
+            "tex": "x - y = 0",
+            "scripts": [
+              "latin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "displaymath",
+      "id": "n8",
+      "env": "multline",
+      "rows": [
+        {
+          "id": "n9",
+          "number": "5",
+          "label": "eq:long",
+          "math": {
+            "tex": "f(x) = a_0 + a_1 x + a_2 x^2 + a_3 x^3 \\\\ + a_4 x^4 + a_5 x^5",
+            "scripts": [
+              "latin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "displaymath",
+      "id": "n10",
+      "env": "align*",
+      "rows": [
+        {
+          "id": "n11",
+          "math": {
+            "tex": "\\text{번호 없음} &= 0",
+            "scripts": [
+              "hangul"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n12",
+      "content": [
+        {
+          "kind": "text",
+          "text": "식 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "eq:sq"
+          },
+          "resolved": {
+            "number": "1",
+            "node": "n2"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "eq:diff"
+          },
+          "resolved": {
+            "number": "2",
+            "node": "n4"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "eq:g2"
+          },
+          "resolved": {
+            "number": "4",
+            "node": "n7"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "eq:long"
+          },
+          "resolved": {
+            "number": "5",
+            "node": "n9"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

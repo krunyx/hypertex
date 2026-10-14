@@ -1,0 +1,78 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "23-pgfplots.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "pgfplots"
+      }
+    ]
+  },
+  "labels": {
+    "fig:damped": {
+      "node": "n1",
+      "kind": "figure",
+      "number": "1",
+      "display": "그림 1"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "float",
+      "id": "n1",
+      "floatType": "figure",
+      "number": "1",
+      "label": "fig:damped",
+      "caption": [
+        {
+          "kind": "text",
+          "text": "감쇠 진동자."
+        }
+      ],
+      "children": [
+        {
+          "kind": "picture",
+          "id": "n2",
+          "source": "\\begin{axis}[xlabel={$t$ (s)}, ylabel={$x(t)$ (m)}, grid=major,\n               legend pos=north east, width=10cm, height=6cm]\n    \\addplot[domain=0:10, samples=200, blue] {exp(-0.2*x)*cos(2*x r)};\n    \\addlegendentry{감쇠 진동}\n    \\addplot[only marks, mark=*, red] coordinates {(0,1) (2,0.4) (4,0.1) (6,-0.2)};\n    \\addlegendentry{측정값}\n  \\end{axis}",
+          "usesPgfplots": true
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n3",
+      "source": "\\begin{semilogyaxis}[xlabel={$n$}, ylabel={$E_n$}]\n    \\addplot table {\n      n  E\n      1  1.0\n      2  10.0\n      3  100.0\n    };\n  \\end{semilogyaxis}",
+      "usesPgfplots": true
+    },
+    {
+      "kind": "paragraph",
+      "id": "n4",
+      "content": [
+        {
+          "kind": "text",
+          "text": "3D는 1.0 범위 밖:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n5",
+      "source": "\\begin{axis}\n    \\addplot3[surf] {x*y};\n  \\end{axis}",
+      "usesPgfplots": true
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "\\addplot3(3D 그래프)는 범위 밖이다"
+    }
+  ]
+}

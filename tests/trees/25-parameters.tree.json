@@ -1,0 +1,153 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "25-parameters.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "매개변수 슬라이더"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [
+    {
+      "name": "omega",
+      "min": 0.5,
+      "max": 3,
+      "default": 1,
+      "step": 0.1
+    },
+    {
+      "name": "gamma",
+      "min": 0,
+      "max": 1,
+      "default": 0.2
+    }
+  ],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "진동수 "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\omega =",
+            "scripts": [
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "showparam",
+          "name": "omega"
+        },
+        {
+          "kind": "text",
+          "text": ", 감쇠 "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\gamma =",
+            "scripts": [
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "showparam",
+          "name": "gamma"
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n2",
+      "source": "\\draw[->] (0,0) -- (6.5,0) node[right] {$t$};\n  \\draw[thick, blue] plot[domain=0:6.28, samples=200]\n        (\\x, {exp(-\\gamma*\\x)*cos(\\omega*\\x r)});",
+      "params": [
+        "omega",
+        "gamma"
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n3",
+      "source": "\\begin{axis}[xlabel={$t$}]\n    \\addplot[domain=0:10, samples=300] {ifthenelse(x < 5, sin(\\omega*x r), 0)};\n  \\end{axis}",
+      "usesPgfplots": true,
+      "params": [
+        "omega"
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n4",
+      "content": [
+        {
+          "kind": "text",
+          "text": "선언되지 않은 매개변수: "
+        },
+        {
+          "kind": "error",
+          "code": "unknown-parameter",
+          "raw": "\\showparam{\\kappa}"
+        },
+        {
+          "kind": "text",
+          "text": ". 문법 오류 식:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n5",
+      "source": "\\draw plot[domain=0:1] (\\x, {sin(\\x r});"
+    },
+    {
+      "kind": "paragraph",
+      "id": "n6",
+      "content": [
+        {
+          "kind": "text",
+          "text": "허용되지 않는 함수:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n7",
+      "source": "\\draw plot[domain=0:1] (\\x, {gamma(\\x)});"
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "unknown-parameter",
+      "message": "선언되지 않은 매개변수 \\kappa"
+    },
+    {
+      "severity": "error",
+      "code": "expression-syntax",
+      "message": "계산식 구문 오류: sin(\\x r"
+    },
+    {
+      "severity": "error",
+      "code": "expression-syntax",
+      "message": "허용되지 않는 함수 gamma"
+    }
+  ]
+}

@@ -1,0 +1,218 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "05-lists.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "목록"
+      }
+    ]
+  },
+  "labels": {
+    "item:first": {
+      "node": "n10",
+      "kind": "item",
+      "number": "1",
+      "display": "항목 1"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "list",
+      "id": "n1",
+      "style": "itemize",
+      "items": [
+        {
+          "id": "n2",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n3",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "사과"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n4",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n5",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "배"
+                }
+              ]
+            },
+            {
+              "kind": "list",
+              "id": "n6",
+              "style": "itemize",
+              "items": [
+                {
+                  "id": "n7",
+                  "children": [
+                    {
+                      "kind": "paragraph",
+                      "id": "n8",
+                      "content": [
+                        {
+                          "kind": "text",
+                          "text": "중첩 항목"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "list",
+      "id": "n9",
+      "style": "enumerate",
+      "items": [
+        {
+          "id": "n10",
+          "number": "1",
+          "label": "item:first",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n11",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "첫째"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n12",
+          "number": "2",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n13",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "둘째"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n14",
+          "number": "3",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n15",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "셋째"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n16",
+      "content": [
+        {
+          "kind": "text",
+          "text": "항목 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "item:first"
+          },
+          "resolved": {
+            "number": "1",
+            "node": "n10"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "을 보라."
+        }
+      ]
+    },
+    {
+      "kind": "list",
+      "id": "n17",
+      "style": "description",
+      "items": [
+        {
+          "id": "n18",
+          "term": [
+            {
+              "kind": "text",
+              "text": "해밀토니안"
+            }
+          ],
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n19",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "계의 전체 에너지 연산자"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n20",
+          "term": [
+            {
+              "kind": "text",
+              "text": "라그랑지안"
+            }
+          ],
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n21",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "운동 에너지에서 위치 에너지를 뺀 것"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

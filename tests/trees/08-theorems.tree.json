@@ -1,0 +1,289 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "08-theorems.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "정리 환경"
+      }
+    ]
+  },
+  "labels": {
+    "def:group": {
+      "node": "n1",
+      "kind": "theorem",
+      "number": "1",
+      "display": "정의 1"
+    },
+    "thm:lagrange": {
+      "node": "n3",
+      "kind": "theorem",
+      "number": "2",
+      "display": "정리 2"
+    },
+    "lem:coset": {
+      "node": "n7",
+      "kind": "theorem",
+      "number": "3",
+      "display": "보조정리 3"
+    },
+    "conj:x": {
+      "node": "n9",
+      "kind": "theorem",
+      "number": "4",
+      "display": "추측 4"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "theorem",
+      "id": "n1",
+      "env": "definition",
+      "name": "정의",
+      "number": "1",
+      "label": "def:group",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n2",
+          "content": [
+            {
+              "kind": "text",
+              "text": "군은 결합법칙, 항등원, 역원을 갖는 이항연산이 주어진 집합이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "theorem",
+      "id": "n3",
+      "env": "theorem",
+      "name": "정리",
+      "number": "2",
+      "note": [
+        {
+          "kind": "text",
+          "text": "라그랑주"
+        }
+      ],
+      "label": "thm:lagrange",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n4",
+          "content": [
+            {
+              "kind": "text",
+              "text": "유한군 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "G",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "의 부분군 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "H",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "에 대해 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "|H|",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "는 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "|G|",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "를 나눈다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "proof",
+      "id": "n5",
+      "collapsed": false,
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n6",
+          "content": [
+            {
+              "kind": "text",
+              "text": "잉여류들이 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "G",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "를 같은 크기로 분할한다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "theorem",
+      "id": "n7",
+      "env": "lemma",
+      "name": "보조정리",
+      "number": "3",
+      "label": "lem:coset",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n8",
+          "content": [
+            {
+              "kind": "text",
+              "text": "두 잉여류는 같거나 서로소다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "theorem",
+      "id": "n9",
+      "env": "conjecture",
+      "name": "추측",
+      "number": "4",
+      "label": "conj:x",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n10",
+          "content": [
+            {
+              "kind": "text",
+              "text": "새로 정의한 정리 환경이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "theorem",
+      "id": "n11",
+      "env": "remark",
+      "name": "참고",
+      "number": "5",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n12",
+          "content": [
+            {
+              "kind": "text",
+              "text": "번호 매김은 정리류가 하나의 카운터를 공유한다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n13",
+      "content": [
+        {
+          "kind": "text",
+          "text": "정리 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "thm:lagrange"
+          },
+          "resolved": {
+            "number": "2",
+            "node": "n3"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", 보조정리 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "lem:coset"
+          },
+          "resolved": {
+            "number": "3",
+            "node": "n7"
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", 추측 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "conj:x"
+          },
+          "resolved": {
+            "number": "4",
+            "node": "n9"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
