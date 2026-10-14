@@ -490,8 +490,26 @@ class _Renderer:
             extra += f' data-params="{_a(" ".join(b["params"]))}"'
         if b.get("usesPgfplots"):
             extra += ' data-pgfplots="true"'
-        return (f'<figure class="htex-picture"{self.id_attr(b)}{extra}>'
-                f'<pre>{_e(b.get("source", ""))}</pre></figure>')
+        # (H) TikZ·pgfplots → SVG. 슬라이더 응답(render_picture_node)과 같은 값·같은 구조가 되도록
+        # 트리의 매개변수 기본값으로 그린다. SVG 는 figure 의 직계 자식 (interact.js 가 그 svg 를 바꿔 끼움).
+        svg, problems = None, []
+        try:
+            from ..tikz import merge_values, render_picture
+            res = render_picture(b.get("source", "") or "", merge_values(self.tree))
+            svg, problems = res.svg, list(res.problems or [])
+        except Exception:  # noqa: BLE001 - 그림 하나가 문서를 멈추지 않는다
+            svg = None
+        if svg is None:
+            return (f'<figure class="htex-picture"{self.id_attr(b)}{extra}>'
+                    f'<pre>{_e(b.get("source", ""))}</pre></figure>')
+        notes = ""
+        if problems:
+            items = "".join(f"<li>{_e(p)}</li>" for p in problems[:10])
+            notes = (f'<details class="htex-picture-notes" style="font-size:.8rem;text-align:left;'
+                     f'font-family:var(--sans-font);color:var(--muted);border:0;padding:0;margin:.25rem 0">'
+                     f'<summary>그림 주석 {len(problems)}건</summary>'
+                     f'<ul>{items}</ul></details>')
+        return f'<figure class="htex-picture"{self.id_attr(b)}{extra}>{svg}{notes}</figure>'
 
     def b_transclusion(self, b: dict[str, Any]) -> str:
         href = self.url(b.get("href"))
