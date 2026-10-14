@@ -81,26 +81,8 @@ def _err(msg: str) -> None:
 
 
 def _call_run(run, targets: list) -> int:
-    """run(targets) 호출. (I·J 사이 약속: run 은 list[str] 를 받는다.)
-
-    호환: J 의 변경이 합쳐지기 전의 run(target: str | None) 이면 첫 번째 대상만 넘긴다.
-    J 결과가 합쳐지면 이 함수는 `return run(targets)` 한 줄로 정리한다."""
-    import inspect
-    try:
-        params = list(inspect.signature(run).parameters.values())
-    except (TypeError, ValueError):
-        params = []
-    first = params[0] if params else None
-    takes_list = first is not None and (
-        first.name in ("targets", "target_list")
-        or "list" in str(first.annotation).lower()
-        or "sequence" in str(first.annotation).lower()
-        or "iterable" in str(first.annotation).lower())
-    if takes_list:
-        return run(targets)
-    if len(targets) > 1:
-        _err("htex: 이 뷰어 버전은 대상을 하나만 엽니다. 첫 번째만 엽니다: %s\n" % targets[0])
-    return run(targets[0] if targets else None)
+    """run(targets) 호출. 뷰어의 run 은 대상 목록(list[str])을 받는다 (I·J 약속, 3단계 통합에서 정리)."""
+    return run(targets)
 
 
 def gui_main(argv=None) -> int:

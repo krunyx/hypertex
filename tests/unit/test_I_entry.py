@@ -44,18 +44,6 @@ def test_call_run_new_signature_by_name_only():
     assert seen == [["a", "b"]]
 
 
-def test_call_run_old_signature(capsys):
-    """J 의 변경 전: run(target: Optional[str]) — 첫 번째만 넘기고 알린다."""
-    seen = []
-
-    def run(target: Optional[str] = None, argv: Optional[list[str]] = None) -> int:
-        seen.append(target)
-        return 0
-    m._call_run(run, ["a.htex", "b.htex"])
-    m._call_run(run, [])
-    assert seen == ["a.htex", None]
-    assert "첫 번째만" in capsys.readouterr().err
-
 
 def test_view_subcommand_many_targets(monkeypatch):
     seen = []
@@ -101,4 +89,4 @@ def test_real_run_signature_is_supported():
     import inspect
     from htex.viewer.app import run
     params = list(inspect.signature(run).parameters)
-    assert params and params[0] in ("target", "targets")
+    assert params and params[0] == "targets"

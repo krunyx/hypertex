@@ -3,6 +3,40 @@
 HTML 대신 LaTeX 문법의 부분집합으로 쓰는 웹 문서 형식 HyperTeX 2.0의 파이썬 기준 구현이다.
 명세는 `docs/spec.md`, 상호작용 규약은 `docs/interaction-protocol.md`.
 
+## 설치
+
+**앱** (GitHub 릴리스에서 내려받기. 태그 `v*`를 올리면 `.github/workflows/build.yml`이 만든다)
+
+| OS | 파일 | 비고 |
+| --- | --- | --- |
+| macOS (Apple Silicon / Intel) | `HyperTeX-<버전>-macos-arm64.dmg` / `-x86_64.dmg` | 열어서 HyperTeX를 응용 프로그램 폴더로 끌기 |
+| Windows 10/11 | `HyperTeX-Setup-<버전>.exe` | 관리자 권한 없이 설치. `.htex` 파일과 `htex://` 링크가 연결된다 |
+| Linux | `HyperTeX-<버전>-x86_64.AppImage` | `chmod +x` 후 실행 |
+| Linux | `HyperTeX-<버전>-linux-x86_64.tar.gz` | 풀고 `./install.sh` → `~/.local`에 설치, `.htex`·`htex://` 연결 (`--uninstall`로 제거) |
+
+**파이썬 패키지** (저장소 폴더에서)
+
+```bash
+pip install .              # 파서·HTML 변환·웹 서버 (의존성 없음): htex html / serve / build
+pip install ".[viewer]"    # + 전용 뷰어 (PySide6): htex view, htex-viewer
+```
+
+pip로 설치한 뷰어를 리눅스 데스크톱에 연결하려면 `packaging/linux/install.sh --pip`.
+직접 빌드·서명·릴리스 방법은 `packaging/README.md`.
+
+### 뷰어 단축키 (macOS는 Ctrl 대신 Cmd)
+
+| 동작 | 키 |
+| --- | --- |
+| 새 탭 / 탭 닫기 / 탭 전환 | Ctrl+T / Ctrl+W / Ctrl+Tab, Ctrl+1…9 |
+| 링크를 새 탭으로 | 가운데 클릭 또는 Ctrl+클릭 |
+| 찾기 | Ctrl+F, 다음 Enter·F3, 이전 Shift+Enter |
+| 확대 / 축소 / 원래 크기 | Ctrl+= / Ctrl+- / Ctrl+0 |
+| 원본(.htex) 보기 | Ctrl+U |
+| 뒤로 / 앞으로 / 새로고침 / 주소창 | Alt+← / Alt+→ / Ctrl+R / Ctrl+L |
+
+테마(시스템·밝게·어둡게)는 보기 메뉴. 열어 둔 로컬 문서는 저장하면 자동으로 다시 그려진다.
+
 ## 빠른 시작
 
 파이썬 3.10 이상. 파서·HTML 변환·웹 서버는 표준 라이브러리만 쓴다.
