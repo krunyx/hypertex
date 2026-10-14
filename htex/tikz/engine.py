@@ -148,7 +148,7 @@ class Engine:
             self.problems.append(msg)
 
     def tick(self) -> None:
-        if time.monotonic() > self.deadline:
+        if time.monotonic() >= self.deadline:   # >= : 윈도 시계는 15ms 단위라 0초 상한에서 같을 수 있다
             self.problem("시간 상한(1초)을 넘어 그때까지 그린 것만 보인다")
             raise _Stop()
 

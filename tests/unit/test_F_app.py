@@ -89,7 +89,8 @@ SCRIPT = textwrap.dedent(r'''
     res["https_click"] = dict(ok=wait_until(lambda: w.view.title() == "원격 B"), **state())
     res["fetched"] = [r[0] for r in op.requests]
 
-    res["forbidden"] = dict(ok=wait_load(lambda: w.navigate("htexapp://doc-nothere/a.htex")), **state())
+    w.navigate("htexapp://doc-nothere/a.htex")
+    res["forbidden"] = dict(ok=wait_until(lambda: w.view.title() == "열 수 없음"), **state())
     res["console"] = [m for m in w.page.console_log if "Content Security Policy" in m[1]
                       and "inline" not in m[1]]
     w.grab().save(str(OUT.with_suffix(".png")))

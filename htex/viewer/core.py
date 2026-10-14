@@ -1123,7 +1123,7 @@ def source_page(text: str, address: str, title: str = "") -> str:
     width = len(str(max(1, len(lines))))
     rows = "".join(f'<span class="l" style="--w:{width + 2}ch"><span class="ln">{i:>{width}}</span>{_e(line)}\n</span>'
                    for i, line in enumerate(lines, 1))
-    name = address.rsplit("/", 1)[-1] or address
+    name = re.split(r"[/\\]", address)[-1] or address   # 윈도 경로(\)도
     return f"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8">
 <meta name="color-scheme" content="light dark">

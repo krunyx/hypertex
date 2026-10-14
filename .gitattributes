@@ -1,0 +1,6 @@
+# 모든 텍스트 파일은 저장소와 체크아웃 모두 LF.
+# 윈도에서 CRLF로 바뀌면 셸 스크립트가 깨지고 문서·정답 파일이 달라진다.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary

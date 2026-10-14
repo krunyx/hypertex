@@ -25,6 +25,7 @@ def test_normalize_relative_and_home(tmp_path, monkeypatch):
     assert I.normalize_target("./sub/../a.htex", tmp_path) == str(tmp_path / "a.htex")
     assert I.normalize_target("a.htex#eq:H", tmp_path) == str(tmp_path / "a.htex") + "#eq:H"
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))   # 윈도의 홈 폴더
     assert I.normalize_target("~/a.htex", Path("/")) == str(tmp_path / "a.htex")
     # 없는 상대 경로도 절대 경로로 (받는 쪽이 '파일 없음' 을 보인다)
     assert I.normalize_target("nope.htex", tmp_path) == str(tmp_path / "nope.htex")
@@ -73,6 +74,7 @@ def test_instance_name(monkeypatch):
     a = I.instance_name()
     assert a.startswith("hypertex-viewer-") and a == I.instance_name()
     monkeypatch.setenv("HOME", "/other/home")
+    monkeypatch.setenv("USERPROFILE", "/other/home")   # 윈도의 홈 폴더
     assert I.instance_name() != a                 # 사용자(홈)마다 다르다
     monkeypatch.setenv("HTEX_VIEWER_INSTANCE", "test/../x y")
     assert I.instance_name() == "test_.._x_y"
