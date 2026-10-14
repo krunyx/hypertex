@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- hardened runtime 에서 QtWebEngine(Chromium) 과 PyInstaller 부트로더가 돌기 위한 권한.
+     공증(notarization)은 hardened runtime(codesign 의 options runtime)을 요구한다. -->
+<plist version="1.0">
+<dict>
+  <!-- V8 JIT -->
+  <key>com.apple.security.cs.allow-jit</key>                      <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key> <true/>
+  <!-- PyInstaller 가 푼 파이썬 확장·Qt 프레임워크를 같은 팀 서명이 아니어도 불러오기 -->
+  <key>com.apple.security.cs.disable-library-validation</key>     <true/>
+  <!-- 네트워크(https 문서 가져오기) — 앱 샌드박스를 켤 때만 의미. 지금은 샌드박스 없이 배포. -->
+  <key>com.apple.security.network.client</key>                    <true/>
+</dict>
+</plist>

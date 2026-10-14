@@ -1,0 +1,6 @@
+# actionlint 설정 (packaging/README.md 의 "워크플로 검사"):
+#   actionlint -config-file packaging/ci/actionlint.yaml .github/workflows/build.yml
+# 오래된 actionlint 가 모르는 GitHub 호스팅 러너 이름을 알려 준다.
+self-hosted-runner:
+  labels:
+    - macos-15-intel

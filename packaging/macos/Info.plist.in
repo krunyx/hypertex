@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- HyperTeX.app 의 Info.plist 추가 항목. PyInstaller BUNDLE 단계(htex-viewer.spec)가 읽어 넣는다.
+     버전(CFBundleShortVersionString·CFBundleVersion)은 spec 이 htex.__version__ 으로 채운다.
+     파일·URL 은 macOS 가 인수가 아니라 Apple 이벤트(QFileOpenEvent)로 넘긴다 → 뷰어가 처리(담당 J). -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>                 <string>HyperTeX</string>
+  <key>CFBundleDisplayName</key>          <string>HyperTeX</string>
+  <key>CFBundleIdentifier</key>           <string>org.hypertex.viewer</string>
+  <key>CFBundlePackageType</key>          <string>APPL</string>
+  <key>LSMinimumSystemVersion</key>       <string>12.0</string>
+  <key>NSHighResolutionCapable</key>      <true/>
+  <key>NSRequiresAquaSystemAppearance</key> <false/>
+  <key>LSApplicationCategoryType</key>    <string>public.app-category.productivity</string>
+  <key>NSHumanReadableCopyright</key>     <string>HyperTeX contributors</string>
+
+  <!-- htex:// 주소 -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>          <string>org.hypertex.url</string>
+      <key>CFBundleURLSchemes</key>       <array><string>htex</string></array>
+      <key>CFBundleTypeRole</key>         <string>Viewer</string>
+    </dict>
+  </array>
+
+  <!-- 문서 종류: .htex 는 기본 앱(Owner), .tex 는 "이 앱으로 열기" 목록에만(Alternate) -->
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>         <string>HyperTeX Document</string>
+      <key>CFBundleTypeRole</key>         <string>Viewer</string>
+      <key>LSHandlerRank</key>            <string>Owner</string>
+      <key>CFBundleTypeIconFile</key>     <string>htex.icns</string>
+      <key>LSItemContentTypes</key>       <array><string>org.hypertex.htex</string></array>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key>         <string>TeX Document</string>
+      <key>CFBundleTypeRole</key>         <string>Viewer</string>
+      <key>LSHandlerRank</key>            <string>Alternate</string>
+      <key>LSItemContentTypes</key>       <array><string>org.tug.tex</string><string>public.tex</string></array>
+    </dict>
+  </array>
+
+  <!-- .htex 의 형식 선언 (이 앱이 소유) -->
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>         <string>org.hypertex.htex</string>
+      <key>UTTypeDescription</key>        <string>HyperTeX Document</string>
+      <key>UTTypeConformsTo</key>         <array><string>public.plain-text</string><string>public.text</string></array>
+      <key>UTTypeIconFile</key>           <string>htex.icns</string>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key> <array><string>htex</string></array>
+        <key>public.mime-type</key>          <array><string>text/x-hypertex</string></array>
+      </dict>
+    </dict>
+  </array>
+
+  <!-- .tex 는 TeX 배포판(MacTeX 등)이 선언할 수 있으므로 "가져온" 선언(Imported)으로 둔다 -->
+  <key>UTImportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>         <string>org.tug.tex</string>
+      <key>UTTypeDescription</key>        <string>TeX Document</string>
+      <key>UTTypeConformsTo</key>         <array><string>public.plain-text</string></array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key> <array><string>tex</string></array>
+        <key>public.mime-type</key>          <array><string>text/x-tex</string></array>
+      </dict>
+    </dict>
+  </array>
+</dict>
+</plist>

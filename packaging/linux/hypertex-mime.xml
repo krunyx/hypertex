@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- shared-mime-info: .htex 파일 형식. 설치는 install.sh 가 한다
+     (~/.local/share/mime/packages/ 에 복사하고 update-mime-database ~/.local/share/mime). -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="text/x-hypertex">
+    <comment>HyperTeX document</comment>
+    <comment xml:lang="ko">HyperTeX 문서</comment>
+    <sub-class-of type="text/plain"/>
+    <generic-icon name="text-x-generic"/>
+    <glob pattern="*.htex" weight="60"/>
+  </mime-type>
+</mime-info>
