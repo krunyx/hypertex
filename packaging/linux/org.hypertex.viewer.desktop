@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=HyperTeX
+GenericName=HyperTeX Viewer
+GenericName[ko]=HyperTeX 문서 뷰어
+Comment=View HyperTeX 2.0 documents (htex:// links, math, figures)
+Comment[ko]=HyperTeX 2.0 문서 보기 (htex:// 링크, 수식, 그림)
+Exec=htex-viewer %U
+TryExec=htex-viewer
+Icon=org.hypertex.viewer
+Terminal=false
+StartupNotify=true
+StartupWMClass=HyperTeX
+Categories=Office;Viewer;Education;Science;
+Keywords=TeX;LaTeX;math;hypertext;htex;
+MimeType=text/x-hypertex;x-scheme-handler/htex;

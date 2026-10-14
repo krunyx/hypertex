@@ -1,15 +1,50 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "htex"
-version = "0.0.1"
-description = "HyperTeX 2.0 reference implementation"
+dynamic = ["version"]
+description = "HyperTeX 2.0 reference implementation: parser, HTML+MathML renderer, web server and viewer"
+readme = "README.md"
 requires-python = ">=3.10"
+keywords = ["latex", "tex", "mathml", "hypertext", "browser"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Text Processing :: Markup :: LaTeX",
+]
+# 파서·변환기·서버는 표준 라이브러리만 쓴다.
 dependencies = []
 
 [project.optional-dependencies]
+# 전용 뷰어 (htex view, htex-viewer). Essentials + WebEngine 만으로 충분하지만
+# PySide6 메타 패키지가 플랫폼별 휠 선택을 가장 안정적으로 해 준다.
+viewer = ["PySide6>=6.5"]
 dev = ["jsonschema>=4", "pytest>=7"]
+# 빌드·배포 도구 (런타임 의존성 아님)
+build = ["build", "pyinstaller>=6.3", "Pillow>=10"]
 
 [project.scripts]
 htex = "htex.__main__:main"
 
+[project.gui-scripts]
+htex-viewer = "htex.__main__:gui_main"
+
+[tool.setuptools.dynamic]
+# 버전은 한곳에서: htex/__init__.py 의 __version__
+version = { attr = "htex.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["htex", "htex.*"]
+
+[tool.setuptools.package-data]
+# .py 가 아닌 패키지 파일 (interact.js 등). 새 종류가 생기면 여기에 추가;
+# tests/unit/test_I_package.py 가 빠진 파일을 잡는다.
+"*" = ["*.js", "*.css", "*.json", "*.svg", "*.png", "*.txt", "*.html", "*.htex", "*.sty"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests/unit"]
+markers = [
+    "slow: 오래 걸리는 테스트 (가상환경 생성·설치 등). 기본 실행에서 빠짐: HTEX_SLOW=1 로 실행",
+]
