@@ -30,24 +30,25 @@ def main() -> int:
         emit(f"{prefix}: 로그 없음", f"{path} 이 없다")
         return 0
     text = path.read_text(encoding="utf-8", errors="replace")
+    # GitHub 은 단계당 오류 주석을 10개까지만 보여 준다: 요약을 먼저 낸다.
+    summary = [ln for ln in text.splitlines() if re.match(r"^(FAILED|ERROR) ", ln)]
+    if summary:
+        emit(f"{prefix}: 요약 ({len(summary)}건)", "\n".join(summary[:60]))
     n = 0
     # 1) 실패한 테스트별 상세 (==== FAILURES ==== 아래 ____ 이름 ____ 블록)
     for m in re.finditer(r"^_{3,} (.+?) _{3,}\n(.*?)(?=^_{3,} |^={3,} )", text, re.S | re.M):
         name, body = m.group(1), m.group(2)
         emit(f"{prefix}: {name}", body)
         n += 1
-        if n >= 10:
+        if n >= 7:
             break
     # 2) pytest-timeout 이 남긴 스택 (+++++ Timeout +++++)
     for m in re.finditer(r"^\++ Timeout \++\n(.*?)(?=^\++ Timeout \++|\Z)", text, re.S | re.M):
         emit(f"{prefix}: 시간 초과", m.group(1)[:MAX])
         n += 1
-    # 3) 요약 줄
-    summary = [ln for ln in text.splitlines() if re.match(r"^(FAILED|ERROR) ", ln)]
+    # 3) 아무것도 못 찾으면 마지막 출력 (멈춘 경우 어느 테스트에서 멈췄는지 보인다)
     tail = "\n".join(text.splitlines()[-30:])
-    if summary:
-        emit(f"{prefix}: 요약", "\n".join(summary[:40]))
-    elif n == 0:
+    if not summary and n == 0:
         emit(f"{prefix}: 마지막 출력", tail)
     return 0
 

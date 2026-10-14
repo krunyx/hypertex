@@ -62,7 +62,8 @@ def test_message_roundtrip():
 @pytest.mark.parametrize("bad", [b"", b"not json\n", b'{"v":2,"cmd":"open","targets":[]}\n',
                                  b'{"v":1,"cmd":"rm","targets":[]}\n', b'{"v":1,"cmd":"open","targets":"x"}\n',
                                  b'{"v":1,"cmd":"open","targets":[1]}\n', b"[1,2]\n", b"\xff\xfe\n",
-                                 b"x" * (I.MAX_MESSAGE + 1)])
+                                 b"x" * (I.MAX_MESSAGE + 1)],
+                         ids=lambda b: repr(b[:24]))  # 윈도 환경 변수 길이 한도 때문에 테스트 이름을 짧게
 def test_message_rejects(bad):
     assert I.decode_message(bad) is None
 

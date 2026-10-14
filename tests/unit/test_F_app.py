@@ -126,7 +126,7 @@ def run(tmp_path_factory):
 def test_open_example(run):
     r = run["open"]
     assert r["ok"] and r["title"] == "조화 진동자 노트"
-    assert r["url"].startswith("htexapp://doc-") and r["address"].endswith("examples/oscillator.htex")
+    assert r["url"].startswith("htexapp://doc-") and r["address"].replace("\\", "/").endswith("examples/oscillator.htex")
     assert r["diag"].startswith("진단: 오류 0")
     assert r["interact"] == "interact"        # 호스트 스크립트는 실행된다
     assert r["inline_blocked"] == 1           # 페이지의 스크립트는 그 하나뿐

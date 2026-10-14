@@ -170,7 +170,7 @@ WINDOW = textwrap.dedent(r'''
     # 렌더 프로세스가 죽으면 안내 페이지, 새로고침하면 원래 문서
     import signal
     w.tabs.setCurrentWidget(t4); pause(0.05)
-    os.kill(t4.page.renderProcessPid(), signal.SIGKILL)
+    os.kill(t4.page.renderProcessPid(), getattr(signal, "SIGKILL", signal.SIGTERM))  # 윈도: SIGTERM = TerminateProcess
     wait_until(lambda: t4.title() == "열 수 없음")
     res["crash"] = [t4.title(), len(t4.history.entries)]
     w.reload(); wait_until(lambda: t4.title() == "최소 문서")
