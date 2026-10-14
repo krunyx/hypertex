@@ -3,7 +3,7 @@
 규칙
 - 제어어: \\ 뒤 ASCII 글자 연속 (\\section). 뒤따르는 공백은 먹는다.
 - 제어기호: \\ 뒤 글자 아닌 문자 하나 (\\\\, \\{, \\%, \\,).
-- %부터 줄 끝까지 주석. 주석 뒤 줄바꿈과 다음 줄 앞 공백도 먹는다.
+- %부터 줄 끝까지 주석. 주석 뒤 줄바꿈과 다음 줄 앞 공백도 먹는다. 그다음 줄이 빈 줄이면 PAR.
 - 빈 줄(공백만 있는 줄 포함) → PAR. 그 외 공백·줄바꿈 연속 → SPACE 하나.
 - \\verb<d>…<d> → VERB, \\begin{verbatim}…\\end{verbatim} → CS(begin) … 대신 VERBATIM 하나.
 """
@@ -93,6 +93,12 @@ def tokenize(src: str, sink: Sink | None = None) -> list[Token]:
                 adv(1)  # 줄바꿈
                 while i < n and src[i] in " \t":
                     adv(1)
+                # 주석 줄 다음 줄이 빈 줄이면 TeX처럼 단락 구분 (a%\n\nb → a PAR b)
+                if i < n and src[i] == "\n":
+                    pstart = Span(line, col)
+                    while i < n and src[i] in " \t\n":
+                        adv(1)
+                    out.append(Token(T.PAR, " ", pstart))
             continue
 
         if c in " \t\n":
