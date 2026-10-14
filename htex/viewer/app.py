@@ -653,7 +653,12 @@ class ViewerWindow(QMainWindow):
     def _act(self, text, tip, keys, slot, add=True) -> QAction:
         a = QAction(text, self)
         a.setToolTip(tip)
-        a.setShortcuts([QKeySequence(k) if isinstance(k, str) else k for k in keys])
+        seqs: list[QKeySequence] = []
+        for k in keys:                       # 표준 키와 겹치면 하나만 (겹치면 Qt 가 '모호한 단축키' 로 무시)
+            q = QKeySequence(k) if isinstance(k, str) else k
+            if not q.isEmpty() and q not in seqs:
+                seqs.append(q)
+        a.setShortcuts(seqs)
         a.setShortcutContext(Qt.ShortcutContext.WindowShortcut)
         a.triggered.connect(slot)
         if add:
@@ -917,8 +922,6 @@ class ViewerWindow(QMainWindow):
         i = self.tabs.indexOf(tab)
         if i >= 0:
             shown = title or "새 탭"
-            if tab.pinned_source and not shown.startswith("원문"):
-                shown = "원문: " + shown
             self.tabs.setTabText(i, shown if len(shown) <= 28 else shown[:27] + "…")
             self.tabs.setTabToolTip(i, title)
         if tab is self.current_tab():
@@ -1067,14 +1070,13 @@ def send_to_running(name: str, targets: list[str], timeout_ms: int = 1500) -> bo
         return False
     try:
         sock.write(encode_message(targets, os.getcwd()))
-        sock.flush()
-        if not sock.waitForBytesWritten(timeout_ms):
-            return False
+        sock.waitForBytesWritten(timeout_ms)      # flush 로 이미 다 썼으면 False 지만 문제없다
         reply = b""
         while REPLY_OK not in reply:
-            if not sock.waitForReadyRead(timeout_ms):
-                break
+            ready = sock.waitForReadyRead(timeout_ms)
             reply += bytes(sock.readAll().data())
+            if not ready:
+                break
         return reply.startswith(REPLY_OK)
     finally:
         sock.abort()
@@ -1082,8 +1084,13 @@ def send_to_running(name: str, targets: list[str], timeout_ms: int = 1500) -> bo
 
 # ====================================================================== macOS 파일 열기 이벤트
 class FileOpenFilter(QObject):
-    """QApplication 이벤트 필터. Finder 의 .htex 열기, htex:// 링크(CFBundleURLTypes) → opened(대상).
-    창이 생기기 전에 온 것은 pending 에 모았다가 창이 생기면 넘긴다."""
+    """Finder 의 .htex 열기, htex:// 링크(CFBundleURLTypes) → opened(대상).
+    창이 생기기 전에 온 것은 pending 에 모았다가 창이 생기면 넘긴다.
+
+    QFileOpenEvent 는 QApplication 객체 자신에게 온다. 그래서 run() 은 앱 전체 이벤트 필터 대신
+    HtexApplication.event() 에서 handle() 을 부른다 (파이썬 앱 전체 이벤트 필터는 QtWebEngine 의 내부 이벤트까지
+    모두 받아 PySide6 6.12 에서 이 환경이 segfault 났다. notes/J-questions.md). 이미 QApplication 이 있어
+    HtexApplication 을 못 쓰면 그 앱 객체에만 거는 필터(eventFilter)로 대신한다."""
 
     opened = Signal(str)
 
@@ -1099,16 +1106,39 @@ class FileOpenFilter(QObject):
             return url.toString(QUrl.ComponentFormattingOption.FullyEncoded)
         return ev.file() or (url.toLocalFile() if url.isValid() else "")
 
+    def handle(self, ev) -> bool:
+        if ev.type() != QEvent.Type.FileOpen:
+            return False
+        t = self.target_of(ev)
+        if t:
+            if self.connected:
+                self.opened.emit(t)
+            else:
+                self.pending.append(t)
+        return True
+
     def eventFilter(self, obj, ev):  # noqa: N802
-        if ev.type() == QEvent.Type.FileOpen:
-            t = self.target_of(ev)
-            if t:
-                if self.connected:
-                    self.opened.emit(t)
-                else:
-                    self.pending.append(t)
-            return True
+        if obj is QApplication.instance() or obj is QCoreApplicationInstance():
+            return self.handle(ev)
         return False
+
+
+def QCoreApplicationInstance():   # noqa: N802 - 테스트(QCoreApplication)용
+    from PySide6.QtCore import QCoreApplication
+    return QCoreApplication.instance()
+
+
+class HtexApplication(QApplication):
+    """QFileOpenEvent 를 받는 QApplication (macOS)."""
+
+    def __init__(self, argv: list[str]):
+        super().__init__(argv)
+        self.file_open = FileOpenFilter(self)
+
+    def event(self, ev):  # noqa: D401
+        if ev.type() == QEvent.Type.FileOpen:
+            return self.file_open.handle(ev)
+        return super().event(ev)
 
 
 # ====================================================================== 실행
@@ -1126,13 +1156,19 @@ def run(targets: "list[str] | str | None" = None, argv: Optional[list[str]] = No
         single_instance = os.environ.get("HTEX_VIEWER_SINGLE", "1") not in ("0", "false", "no")
 
     register_schemes()
-    app = QApplication.instance() or QApplication(argv if argv is not None else sys.argv[:1])
+    app = QApplication.instance()
+    if app is None:
+        app = HtexApplication(argv if argv is not None else sys.argv[:1])
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(ORG_NAME)
     app.setApplicationVersion(__version__)
 
-    file_filter = FileOpenFilter(app)
-    app.installEventFilter(file_filter)
+    if isinstance(app, HtexApplication):
+        file_filter = app.file_open
+    else:                                       # 다른 곳에서 이미 만든 앱: 일찍 온 이벤트는 놓칠 수 있다
+        file_filter = FileOpenFilter(app)
+        if sys.platform == "darwin":
+            app.installEventFilter(file_filter)
 
     server = None
     if single_instance:
