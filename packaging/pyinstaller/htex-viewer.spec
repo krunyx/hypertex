@@ -143,7 +143,8 @@ exe = EXE(                                                          # noqa: F821
     console=False,             # GUI 앱 (windowed)
     icon=icon,
     argv_emulation=False,      # macOS 파일 열기 이벤트는 뷰어(QFileOpenEvent)가 직접 처리 (담당 J)
-    codesign_identity=os.environ.get("HTEX_CODESIGN_IDENTITY") or None,
+    # Developer ID 서명·공증은 빌드 뒤 packaging/macos/sign-and-notarize.sh 가 한다 (여기서는 ad-hoc).
+    codesign_identity=None,
     entitlements_file=(str(ROOT / "packaging" / "macos" / "entitlements.plist")
                        if sys.platform == "darwin" else None),
 )

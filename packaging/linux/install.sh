@@ -18,7 +18,9 @@ DATA=${XDG_DATA_HOME:-"$PREFIX/share"}
 BIN="$PREFIX/bin"
 APPDIR="$PREFIX/lib/hypertex"
 DESKTOP_ID=org.hypertex.viewer.desktop
-ICONS_SRC="$HERE/../icons/png"
+# 저장소(packaging/linux) 또는 릴리스 tar.gz(맨 위 폴더) 어느 쪽에서 실행해도 되게
+if [ -d "$HERE/icons" ]; then ICONS="$HERE/icons"; else ICONS="$HERE/../icons"; fi
+ICONS_SRC="$ICONS/png"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -62,7 +64,8 @@ case "${1:-}" in
     --pip) MODE=pip ;;
     --exec) MODE=exec ;;
     -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
-    "") SRC="$HERE/../../dist/htex-viewer" ;;
+    "") if [ -x "$HERE/htex-viewer/htex-viewer" ]; then SRC="$HERE/htex-viewer"
+        else SRC="$HERE/../../dist/htex-viewer"; fi ;;
     *) SRC=$1 ;;
 esac
 
@@ -97,9 +100,9 @@ for s in 16 24 32 48 64 128 256 512; do
         cp "$ICONS_SRC/htex-$s.png" "$DATA/icons/hicolor/${s}x${s}/apps/org.hypertex.viewer.png"
     fi
 done
-if [ -f "$HERE/../icons/htex.svg" ]; then
+if [ -f "$ICONS/htex.svg" ]; then
     mkdir -p "$DATA/icons/hicolor/scalable/apps"
-    cp "$HERE/../icons/htex.svg" "$DATA/icons/hicolor/scalable/apps/org.hypertex.viewer.svg"
+    cp "$ICONS/htex.svg" "$DATA/icons/hicolor/scalable/apps/org.hypertex.viewer.svg"
 fi
 
 refresh
