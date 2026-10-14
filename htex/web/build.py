@@ -136,6 +136,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
 
     # 4) 문서
     titles: dict[str, str] = {}
+    trees: dict[Path, Any] = {}       # 다른 문서 번호 채우기용 트리 캐시 (J)
     for rel, name in html_names.items():
         rel_dir = rel.rsplit("/", 1)[0] if "/" in rel else ""
         script = rel_href("/" + rel_dir, f"/{ASSET_DIR}/interact.js")
@@ -144,6 +145,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
         try:
             tree = parse_file(root / rel)
             titles[rel] = plain_title(tree)
+            tree = _resolve_links(tree, root, root / rel, parse_file, trees)   # 다른 문서 번호 (J)
             text = render(tree, web_fallback=True, head_extra=head,
                           doc_url=make_doc_url(rel_dir, html_names))
         except Exception as exc:  # noqa: BLE001
@@ -193,6 +195,31 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
         print(f"문서 {len(rep.documents)}개, 파일 {len(rep.copied)}개, 목록 {len(rep.listings)}개 → {out}",
               file=sys.stderr)
     return rep
+
+
+def _resolve_links(tree: dict[str, Any], root: Path, doc_path: Path, parse_file,
+                   trees: dict[Path, Any]) -> dict[str, Any]:
+    """다른 문서 \\ref 의 번호 채우기 (htex.linkres, 담당 J). 사이트 안의 상대 주소 문서만 읽는다
+    (빌드는 네트워크에 접근하지 않는다). 실패하면 라벨 이름 그대로."""
+    from ..linkres import local_doc_for_link, resolve_cross_refs
+
+    def loader(doc: str):
+        p = local_doc_for_link(root, doc_path, doc)
+        if p is None:
+            return None
+        if p == doc_path.resolve():
+            return tree
+        if p not in trees:
+            try:
+                trees[p] = parse_file(p)
+            except Exception:  # noqa: BLE001
+                trees[p] = None
+        return trees[p]
+
+    try:
+        return resolve_cross_refs(tree, loader)
+    except Exception:  # noqa: BLE001
+        return tree
 
 
 def _inside(root: Path, p: Path) -> bool:
