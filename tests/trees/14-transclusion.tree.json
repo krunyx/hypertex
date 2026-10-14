@@ -1,0 +1,52 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "14-transclusion.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "전사"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "다른 문서의 해밀토니안을 이 자리에 그대로 가져온다:"
+        }
+      ]
+    },
+    {
+      "kind": "transclusion",
+      "id": "n2",
+      "href": "11-internal-refs.htex#eq:H"
+    },
+    {
+      "kind": "paragraph",
+      "id": "n3",
+      "content": [
+        {
+          "kind": "text",
+          "text": "정리도 가져올 수 있다:"
+        }
+      ]
+    },
+    {
+      "kind": "transclusion",
+      "id": "n4",
+      "href": "08-theorems.htex#thm:lagrange"
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,207 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "27-compat-article.tex",
+    "mode": "compat"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "A Compatibility-Mode Note"
+      }
+    ],
+    "authors": [
+      [
+        {
+          "kind": "text",
+          "text": "A. Author"
+        }
+      ]
+    ],
+    "abstract": [
+      {
+        "kind": "paragraph",
+        "id": "n1",
+        "content": [
+          {
+            "kind": "text",
+            "text": "An ordinary LaTeX article opened by the viewer in compatibility mode."
+          }
+        ]
+      }
+    ]
+  },
+  "labels": {
+    "sec:intro": {
+      "node": "n2",
+      "kind": "section",
+      "number": "1",
+      "display": "1절"
+    },
+    "eq:newton": {
+      "node": "n5",
+      "kind": "equation",
+      "number": "1",
+      "display": "식 (1)"
+    },
+    "thm:one": {
+      "node": "n6",
+      "kind": "theorem",
+      "number": "1",
+      "display": "Theorem 1"
+    },
+    "sec:appendix": {
+      "node": "n8",
+      "kind": "section",
+      "number": "2",
+      "display": "2절"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section",
+      "id": "n2",
+      "level": 1,
+      "number": "1",
+      "title": [
+        {
+          "kind": "text",
+          "text": "Introduction"
+        }
+      ],
+      "label": "sec:intro",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n3",
+          "content": [
+            {
+              "kind": "text",
+              "text": "Vectors are written "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "\\mathbf{v}",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "."
+            }
+          ]
+        },
+        {
+          "kind": "displaymath",
+          "id": "n4",
+          "env": "equation",
+          "rows": [
+            {
+              "id": "n5",
+              "number": "1",
+              "label": "eq:newton",
+              "math": {
+                "tex": "\\mathbf{F} = m \\mathbf{a}",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "kind": "theorem",
+          "id": "n6",
+          "env": "theorem",
+          "name": "Theorem",
+          "number": "1",
+          "label": "thm:one",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n7",
+              "content": [
+                {
+                  "kind": "text",
+                  "text": "Equation "
+                },
+                {
+                  "kind": "link",
+                  "linkType": "eqref",
+                  "target": {
+                    "label": "eq:newton"
+                  },
+                  "resolved": {
+                    "number": "1",
+                    "node": "n5"
+                  }
+                },
+                {
+                  "kind": "text",
+                  "text": " holds in inertial frames."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n8",
+      "level": 1,
+      "number": "2",
+      "title": [
+        {
+          "kind": "text",
+          "text": "Appendix"
+        }
+      ],
+      "label": "sec:appendix",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n9",
+          "content": [
+            {
+              "kind": "text",
+              "text": "This file is pulled in by "
+            },
+            {
+              "kind": "code",
+              "text": "\\input{appendix}"
+            },
+            {
+              "kind": "text",
+              "text": " in compatibility mode."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "unknown-package",
+      "message": "패키지 inputenc는 지원하지 않아 무시한다"
+    },
+    {
+      "severity": "warning",
+      "code": "unknown-package",
+      "message": "패키지 geometry는 지원하지 않아 무시한다"
+    },
+    {
+      "severity": "warning",
+      "code": "missing-resource",
+      "message": "refs.bbl을 찾을 수 없다"
+    }
+  ]
+}

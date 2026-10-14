@@ -1,0 +1,108 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "22-tikz-limits.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "TikZ 제한"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "text",
+          "text": "허용되지 않는 라이브러리는 경고 후 무시한다."
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n2",
+      "content": [
+        {
+          "kind": "text",
+          "text": "반복 상한(그림당 1,000회) 초과:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n3",
+      "source": "\\foreach \\i in {1,...,2000} { \\draw (0,0) -- (\\i,1); }"
+    },
+    {
+      "kind": "paragraph",
+      "id": "n4",
+      "content": [
+        {
+          "kind": "text",
+          "text": "샘플 상한(1,000점) 초과:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n5",
+      "source": "\\draw plot[domain=0:1, samples=5000] (\\x, {\\x^2});"
+    },
+    {
+      "kind": "paragraph",
+      "id": "n6",
+      "content": [
+        {
+          "kind": "text",
+          "text": "제외된 명령:"
+        }
+      ]
+    },
+    {
+      "kind": "picture",
+      "id": "n7",
+      "source": "\\pgfmathdeclarefunction{f}{1}{\\pgfmathparse{#1^2}}\n  \\draw (0,0) -- (1,1);"
+    },
+    {
+      "kind": "paragraph",
+      "id": "n8",
+      "content": [
+        {
+          "kind": "text",
+          "text": "이 문장은 정상 렌더링되어야 한다."
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "unknown-tikz-library",
+      "message": "허용 목록 밖의 TikZ 라이브러리 decorations.pathmorphing를 무시한다"
+    },
+    {
+      "severity": "error",
+      "code": "tikz-limit",
+      "message": "\\foreach 반복이 그림당 1,000회를 넘는다 (2,000회)"
+    },
+    {
+      "severity": "error",
+      "code": "plot-sample-limit",
+      "message": "samples=5000이 상한 1,000을 넘는다"
+    },
+    {
+      "severity": "error",
+      "code": "excluded-command",
+      "message": "제외된 명령 \\pgfmathdeclarefunction"
+    }
+  ]
+}

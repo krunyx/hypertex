@@ -1,0 +1,267 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "26-hangul.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "한글 조판과 한글 수식"
+      }
+    ],
+    "mathExtensions": [
+      "hangulmath"
+    ]
+  },
+  "labels": {
+    "eq:hangul": {
+      "node": "n8",
+      "kind": "equation",
+      "number": "1",
+      "display": "식 (1)"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section",
+      "id": "n1",
+      "level": 1,
+      "number": "1",
+      "title": [
+        {
+          "kind": "text",
+          "text": "어절 단위 줄바꿈"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n2",
+          "content": [
+            {
+              "kind": "text",
+              "text": "대한민국의 과학기술정책은 대학 연구개발 체계의 구조적 개편과 국가전략기술 분류를 중심으로 논의되어 왔으며, 이 문장은 좁은 화면에서 어절 경계에서만 줄이 바뀌어야 한다. 한 어절이 줄 폭보다 긴 경우의 예외: 가나다라마바사아자차카타파하가나다라마바사아자차카타파하가나다라마바사아자차카타파하."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n3",
+      "level": 1,
+      "number": "2",
+      "title": [
+        {
+          "kind": "text",
+          "text": "한글과 수식의 혼합"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n4",
+          "content": [
+            {
+              "kind": "text",
+              "text": "속도 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "v",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "는 거리 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "d",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "를 시간 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "t",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "로 나눈 값이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n5",
+      "level": 1,
+      "number": "3",
+      "title": [
+        {
+          "kind": "text",
+          "text": "수식 안의 한글"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n6",
+          "content": [
+            {
+              "kind": "text",
+              "text": "그리스 문자와 같은 방식: "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "가_1 + 나^2 = 다",
+                "scripts": [
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": ", 그리고 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "\\alpha_가 + \\beta^나",
+                "scripts": [
+                  "greek",
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": ". 여러 음절은 서로 다른 기호의 곱이다: "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "속력",
+                "scripts": [
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": " 은 "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "속 \\cdot 력",
+                "scripts": [
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": " 과 같다. 단어로 묶을 때: "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "\\text{속력} = \\frac{\\text{거리}}{\\text{시간}}",
+                "scripts": [
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": ", "
+            },
+            {
+              "kind": "math",
+              "math": {
+                "tex": "\\operatorname{최대}(a, b)",
+                "scripts": [
+                  "latin",
+                  "hangul"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "."
+            }
+          ]
+        },
+        {
+          "kind": "displaymath",
+          "id": "n7",
+          "env": "equation",
+          "rows": [
+            {
+              "id": "n8",
+              "number": "1",
+              "label": "eq:hangul",
+              "math": {
+                "tex": "가(x) = \\sum_{나=1}^{다} 나 \\, x^나",
+                "scripts": [
+                  "latin",
+                  "hangul"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "kind": "paragraph",
+          "id": "n9",
+          "content": [
+            {
+              "kind": "text",
+              "text": "식 "
+            },
+            {
+              "kind": "link",
+              "linkType": "eqref",
+              "target": {
+                "label": "eq:hangul"
+              },
+              "resolved": {
+                "number": "1",
+                "node": "n8"
+              }
+            },
+            {
+              "kind": "text",
+              "text": "의 한글 기호는 직립 고딕으로 조판된다."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

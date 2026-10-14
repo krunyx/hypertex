@@ -1,0 +1,207 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "03-sections-numbering.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "절 번호 매김"
+      }
+    ]
+  },
+  "labels": {
+    "sec:one": {
+      "node": "n1",
+      "kind": "section",
+      "number": "1",
+      "display": "1절"
+    },
+    "sec:one-a": {
+      "node": "n2",
+      "kind": "section",
+      "number": "1.1",
+      "display": "1.1절"
+    },
+    "sec:one-a-i": {
+      "node": "n3",
+      "kind": "section",
+      "number": "1.1.1",
+      "display": "1.1.1절"
+    },
+    "sec:two": {
+      "node": "n9",
+      "kind": "section",
+      "number": "2",
+      "display": "2절"
+    },
+    "sec:appA": {
+      "node": "n10",
+      "kind": "section",
+      "number": "A",
+      "display": "부록 A"
+    },
+    "sec:appA-1": {
+      "node": "n11",
+      "kind": "section",
+      "number": "A.1",
+      "display": "부록 A.1"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section",
+      "id": "n1",
+      "level": 1,
+      "number": "1",
+      "title": [
+        {
+          "kind": "text",
+          "text": "첫째 절"
+        }
+      ],
+      "label": "sec:one",
+      "children": [
+        {
+          "kind": "section",
+          "id": "n2",
+          "level": 2,
+          "number": "1.1",
+          "title": [
+            {
+              "kind": "text",
+              "text": "첫째 소절"
+            }
+          ],
+          "label": "sec:one-a",
+          "children": [
+            {
+              "kind": "section",
+              "id": "n3",
+              "level": 3,
+              "number": "1.1.1",
+              "title": [
+                {
+                  "kind": "text",
+                  "text": "깊은 소절"
+                }
+              ],
+              "label": "sec:one-a-i",
+              "children": [
+                {
+                  "kind": "section",
+                  "id": "n4",
+                  "level": 4,
+                  "title": [
+                    {
+                      "kind": "text",
+                      "text": "문단 제목"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "kind": "paragraph",
+                      "id": "n5",
+                      "content": [
+                        {
+                          "kind": "text",
+                          "text": "번호 없는 문단 제목이다."
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "section",
+          "id": "n6",
+          "level": 2,
+          "number": "1.2",
+          "title": [
+            {
+              "kind": "text",
+              "text": "둘째 소절"
+            }
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n7",
+      "level": 1,
+      "title": [
+        {
+          "kind": "text",
+          "text": "번호 없는 절"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n8",
+          "content": [
+            {
+              "kind": "text",
+              "text": "번호가 없어야 하며 다음 절 번호에 영향을 주지 않는다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "section",
+      "id": "n9",
+      "level": 1,
+      "number": "2",
+      "title": [
+        {
+          "kind": "text",
+          "text": "둘째 절"
+        }
+      ],
+      "label": "sec:two",
+      "children": []
+    },
+    {
+      "kind": "section",
+      "id": "n10",
+      "level": 1,
+      "number": "A",
+      "appendix": true,
+      "title": [
+        {
+          "kind": "text",
+          "text": "부록"
+        }
+      ],
+      "label": "sec:appA",
+      "children": [
+        {
+          "kind": "section",
+          "id": "n11",
+          "level": 2,
+          "number": "A.1",
+          "title": [
+            {
+              "kind": "text",
+              "text": "부록 소절"
+            }
+          ],
+          "label": "sec:appA-1",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

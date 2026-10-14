@@ -1,0 +1,137 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "09-figures.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "그림"
+      }
+    ]
+  },
+  "labels": {
+    "fig:orbit": {
+      "node": "n1",
+      "kind": "figure",
+      "number": "1",
+      "display": "그림 1"
+    },
+    "fig:phase": {
+      "node": "n3",
+      "kind": "figure",
+      "number": "2",
+      "display": "그림 2"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "float",
+      "id": "n1",
+      "floatType": "figure",
+      "number": "1",
+      "label": "fig:orbit",
+      "caption": [
+        {
+          "kind": "text",
+          "text": "궤도 그림."
+        }
+      ],
+      "children": [
+        {
+          "kind": "image",
+          "id": "n2",
+          "src": "https://example.org/img/orbit.svg",
+          "width": "60%"
+        }
+      ]
+    },
+    {
+      "kind": "float",
+      "id": "n3",
+      "floatType": "figure",
+      "number": "2",
+      "label": "fig:phase",
+      "caption": [
+        {
+          "kind": "text",
+          "text": "상대 경로 그림."
+        }
+      ],
+      "children": [
+        {
+          "kind": "image",
+          "id": "n4",
+          "src": "figs/phase.png"
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n5",
+      "content": [
+        {
+          "kind": "text",
+          "text": "그림 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "fig:orbit"
+          },
+          "resolved": {
+            "number": "1",
+            "node": "n1"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "와 그림 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "fig:phase"
+          },
+          "resolved": {
+            "number": "2",
+            "node": "n3"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n6",
+      "content": [
+        {
+          "kind": "text",
+          "text": "허용되지 않는 주소: "
+        },
+        {
+          "kind": "error",
+          "code": "insecure-resource",
+          "raw": "\\includegraphics{http://example.org/insecure.png}"
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "insecure-resource",
+      "message": "허용되지 않는 주소: http://example.org/insecure.png"
+    }
+  ]
+}

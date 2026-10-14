@@ -1,0 +1,143 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "15-macros.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "매크로"
+      }
+    ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "paragraph",
+      "id": "n1",
+      "content": [
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left| \\psi \\right\\rangle",
+            "scripts": [
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left\\langle \\phi \\right|",
+            "scripts": [
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left\\langle \\phi \\middle| \\psi \\right\\rangle",
+            "scripts": [
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left\\| x \\right\\|_{2}",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\left\\| x \\right\\|_{\\infty}",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "x \\in \\mathbb{R}",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": ", "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\operatorname{Tr} \\rho = 1",
+            "scripts": [
+              "latin",
+              "greek"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n2",
+      "content": [
+        {
+          "kind": "text",
+          "text": "재정의 이후: "
+        },
+        {
+          "kind": "math",
+          "math": {
+            "tex": "\\mathbf{R}^3",
+            "scripts": [
+              "latin"
+            ]
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

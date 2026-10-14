@@ -1,0 +1,202 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "10-tables.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "표"
+      }
+    ]
+  },
+  "labels": {
+    "tab:mass": {
+      "node": "n1",
+      "kind": "table",
+      "number": "1",
+      "display": "표 1"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "float",
+      "id": "n1",
+      "floatType": "table",
+      "number": "1",
+      "label": "tab:mass",
+      "caption": [
+        {
+          "kind": "text",
+          "text": "입자의 질량."
+        }
+      ],
+      "children": [
+        {
+          "kind": "tabular",
+          "id": "n2",
+          "columns": [
+            {
+              "align": "l",
+              "ruleLeft": true
+            },
+            {
+              "align": "c",
+              "ruleLeft": true
+            },
+            {
+              "align": "r",
+              "ruleLeft": true,
+              "ruleRight": true
+            }
+          ],
+          "rows": [
+            {
+              "ruleAbove": true,
+              "cells": [
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "입자"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "기호"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "질량 (MeV)"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ruleAbove": true,
+              "cells": [
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "전자"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "math",
+                      "math": {
+                        "tex": "e^-",
+                        "scripts": [
+                          "latin"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "0.511"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "cells": [
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "뮤온"
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "math",
+                      "math": {
+                        "tex": "\\mu^-",
+                        "scripts": [
+                          "greek"
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "105.7"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "ruleAbove": true,
+              "ruleBelow": true,
+              "cells": [
+                {
+                  "colspan": 3,
+                  "align": "c",
+                  "content": [
+                    {
+                      "kind": "text",
+                      "text": "렙톤"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n3",
+      "content": [
+        {
+          "kind": "text",
+          "text": "표 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "tab:mass"
+          },
+          "resolved": {
+            "number": "1",
+            "node": "n1"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "를 보라."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

@@ -1,0 +1,195 @@
+{
+  "hypertex": "2.0",
+  "source": {
+    "url": "24-interaction.htex",
+    "mode": "native"
+  },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [
+      {
+        "kind": "text",
+        "text": "상호작용"
+      }
+    ]
+  },
+  "labels": {
+    "thm:main": {
+      "node": "n1",
+      "kind": "theorem",
+      "number": "1",
+      "display": "정리 1"
+    },
+    "step:last": {
+      "node": "n12",
+      "kind": "step",
+      "number": "3",
+      "display": "단계 3"
+    }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "theorem",
+      "id": "n1",
+      "env": "theorem",
+      "name": "정리",
+      "number": "1",
+      "label": "thm:main",
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n2",
+          "content": [
+            {
+              "kind": "math",
+              "math": {
+                "tex": "\\sum_{k=1}^n k = \\frac{n(n+1)}{2}",
+                "scripts": [
+                  "latin"
+                ]
+              }
+            },
+            {
+              "kind": "text",
+              "text": "."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "proof",
+      "id": "n3",
+      "collapsed": true,
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n4",
+          "content": [
+            {
+              "kind": "text",
+              "text": "수학적 귀납법으로 보인다. 이 증명은 처음에 접혀 있다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "collapse",
+      "id": "n5",
+      "title": [
+        {
+          "kind": "text",
+          "text": "참고: 가우스의 일화"
+        }
+      ],
+      "children": [
+        {
+          "kind": "paragraph",
+          "id": "n6",
+          "content": [
+            {
+              "kind": "text",
+              "text": "어린 가우스가 1부터 100까지의 합을 빠르게 구했다는 이야기."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "steps",
+      "id": "n7",
+      "steps": [
+        {
+          "id": "n8",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n9",
+              "content": [
+                {
+                  "kind": "math",
+                  "math": {
+                    "tex": "\\displaystyle S = 1 + 2 + \\cdots + n",
+                    "scripts": [
+                      "latin"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n10",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n11",
+              "content": [
+                {
+                  "kind": "math",
+                  "math": {
+                    "tex": "\\displaystyle S = n + (n-1) + \\cdots + 1",
+                    "scripts": [
+                      "latin"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "n12",
+          "label": "step:last",
+          "children": [
+            {
+              "kind": "paragraph",
+              "id": "n13",
+              "content": [
+                {
+                  "kind": "math",
+                  "math": {
+                    "tex": "\\displaystyle 2S = n(n+1)",
+                    "scripts": [
+                      "latin"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "paragraph",
+      "id": "n14",
+      "content": [
+        {
+          "kind": "text",
+          "text": "마지막 단계 "
+        },
+        {
+          "kind": "link",
+          "linkType": "ref",
+          "target": {
+            "label": "step:last"
+          },
+          "resolved": {
+            "number": "3",
+            "node": "n12"
+          }
+        },
+        {
+          "kind": "text",
+          "text": "."
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}
