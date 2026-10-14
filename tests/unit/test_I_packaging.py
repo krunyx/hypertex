@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import configparser
 import plistlib
+import os
 import re
+import sys
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
@@ -118,13 +120,16 @@ def test_xml_comments_have_no_double_hyphen():
                                     "macos/make-dmg.sh", "macos/sign-and-notarize.sh"])
 def test_shell_scripts_parse(script):
     p = PK / script
-    assert p.stat().st_mode & 0o111, f"{script} 실행 권한"
+    if os.name != "nt":  # 윈도 파일 시스템에는 실행 권한 비트가 없다 (git 의 실행 표시는 아래 테스트가 본다)
+        assert p.stat().st_mode & 0o111, f"{script} 실행 권한"
     if shutil.which("sh"):
         assert subprocess.run(["sh", "-n", str(p)]).returncode == 0
 
 
 def test_linux_install_user_scope(tmp_path):
     """임시 HOME 에 --pip 모드(등록만)로 설치·제거. 관리자 권한 없이 ~/.local 아래에만 쓴다."""
+    if sys.platform != "linux":
+        pytest.skip("리눅스 데스크톱 등록 스크립트")
     if not shutil.which("sh"):
         pytest.skip("sh 없음")
     home = tmp_path / "home"
@@ -188,3 +193,14 @@ def test_workflow_yaml():
         name = s.get("name", "")
         if any(k in name for k in ("서명", "공증", "인증서")):
             assert "HAS_" in s.get("if", ""), name
+
+
+def test_shell_scripts_executable_in_git():
+    """체크아웃한 OS와 무관하게 git 에 실행 표시(100755)로 들어가 있어야 리눅스·맥에서 바로 실행된다."""
+    import shutil as _sh
+    if not _sh.which("git") or not (PK.parent / ".git").exists():
+        pytest.skip("git 저장소 아님")
+    out = subprocess.run(["git", "ls-files", "-s", "packaging/linux", "packaging/macos"], cwd=PK.parent,
+                         capture_output=True, text=True).stdout
+    modes = {ln.split("\t")[1]: ln.split()[0] for ln in out.splitlines() if ln.endswith(".sh")}
+    assert modes and all(m == "100755" for m in modes.values()), modes
