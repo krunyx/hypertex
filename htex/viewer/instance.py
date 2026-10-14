@@ -75,6 +75,8 @@ def normalize_target(text: str, cwd: Optional[Path] = None) -> str:
 
 
 def _looks_like_domain(s: str) -> bool:
+    if "/" not in s and s.lower().endswith((".htex", ".tex")):
+        return False            # 'a.htex' 는 파일 이름이다 ('example.org/a.htex' 는 주소)
     return bool(re.match(r"^[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)+(:[0-9]+)?(/|$)", s)) and not s.startswith(".")
 
 

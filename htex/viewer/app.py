@@ -825,7 +825,16 @@ class ViewerWindow(QMainWindow):
             else:
                 hints.setColorScheme(Qt.ColorScheme.Dark if self.theme == "dark" else Qt.ColorScheme.Light)
         except Exception:   # noqa: BLE001
-            pass
+            return
+        # 플랫폼 스타일이 색 구성표를 따르지 않으면(리눅스 일부, offscreen) Fusion 팔레트로 맞춘다
+        want = {"dark": Qt.ColorScheme.Dark, "light": Qt.ColorScheme.Light}.get(self.theme)
+        global _palette_overridden
+        if want is not None and hints.colorScheme() != want:
+            app.setPalette(_dark_palette() if want == Qt.ColorScheme.Dark else app.style().standardPalette())
+            _palette_overridden = True
+        elif _palette_overridden:
+            app.setPalette(app.style().standardPalette())
+            _palette_overridden = False
 
     def view_source(self) -> None:
         tab = self.current_tab()
@@ -963,6 +972,25 @@ class ViewerWindow(QMainWindow):
         for tab in self.tab_list():
             tab.watcher.removePaths(tab.watcher.files() + tab.watcher.directories())
         super().closeEvent(ev)
+
+
+_palette_overridden = False
+
+
+def _dark_palette():
+    from PySide6.QtGui import QColor, QPalette
+    p = QPalette()
+    R, C = QPalette.ColorRole, QColor
+    for role, col in ((R.Window, "#1f2023"), (R.WindowText, "#e6e6e3"), (R.Base, "#161618"),
+                      (R.AlternateBase, "#26272b"), (R.ToolTipBase, "#26272b"), (R.ToolTipText, "#e6e6e3"),
+                      (R.Text, "#e6e6e3"), (R.Button, "#2a2b2f"), (R.ButtonText, "#e6e6e3"),
+                      (R.BrightText, "#ff8a7a"), (R.Highlight, "#3b6fd1"), (R.HighlightedText, "#ffffff"),
+                      (R.Link, "#8ab4f8"), (R.PlaceholderText, "#8a8d93"), (R.Mid, "#3a3a3e"),
+                      (R.Dark, "#121214"), (R.Light, "#3a3b40")):
+        p.setColor(role, C(col))
+    for role in (R.Text, R.ButtonText, R.WindowText):
+        p.setColor(QPalette.ColorGroup.Disabled, role, C("#6b6e74"))
+    return p
 
 
 def _read_theme() -> str:

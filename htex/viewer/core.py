@@ -581,7 +581,11 @@ class ViewerCore:
         return p
 
     def display_address(self, url: str) -> str:
-        """주소 표시줄에 보일 주소. 로컬 문서는 파일 경로."""
+        """주소 표시줄에 보일 주소. 로컬 문서는 파일 경로, 원문 보기는 "원문: <문서 주소>"."""
+        if url.startswith("htexapp://source/"):
+            rec = self._record_from_path(urllib.parse.urlsplit(url).path)
+            if rec is not None:
+                return "원문: " + self.display_address(rec.address)
         if url.startswith("htexapp://doc-"):
             base, frag = split_fragment(url)
             try:
