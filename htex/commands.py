@@ -22,6 +22,11 @@ TEXT = {
     "hline", "multicolumn", "nonumber", "notag", "textwidth", "linewidth",
     "ldots", "dots", "LaTeX", "TeX", "today", "quad", "qquad",
     "{", "}", "%", "$", "&", "#", "_", " ", ",", ";", ":", "!", "-",
+    # C가 추가: 본문 기호·악센트·여러 줄 수식 보조 (빌더가 처리한다)
+    "[", "]", "(", ")", "/", "@", "'", "`", "^", "\"", "~", "=", ".", "|",
+    "textbackslash", "textasciitilde", "textasciicircum", "textendash", "textemdash",
+    "S", "P", "copyright", "dag", "ddag", "slash", "par", "and",
+    "textup", "textnormal", "mbox", "tag", "cline",
 }
 
 # 환경 이름
@@ -64,8 +69,16 @@ displaystyle textstyle scriptstyle limits nolimits
 binom dbinom tbinom pmod bmod mod
 quad qquad
 dagger ddagger prime
+mathscr overset underset stackrel cfrac substack phantom hphantom vphantom smash boxed
+bigcup bigcap bigoplus bigotimes bigvee bigwedge sqcup uplus wedge vee lnot colon vdash models
+therefore because lesssim gtrsim leftrightarrows hookrightarrow xrightarrow xleftarrow not
+imath jmath top bot triangle square Box diamond flat sharp natural dots dotsc dotsb dotsm
+digamma varkappa leqslant geqslant nleq ngeq subsetneq supsetneq triangleq coloneqq
+hspace mathring breve check acute grave overrightarrow overleftarrow Pr arg sgn
+lbrace rbrace lbrack rbrack
 """.split()
 
+GREEK = frozenset(_GREEK)
 MATH = set(_GREEK) | set(_MATH_SYMBOLS)
 
 BUILTIN = PREAMBLE | TEXT | MATH
