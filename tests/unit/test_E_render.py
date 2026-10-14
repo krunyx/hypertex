@@ -358,7 +358,13 @@ def test_render_synthetic_tree():
 @pytest.mark.parametrize("path", TREES, ids=[p.name for p in TREES])
 def test_render_reference_trees(path):
     tree = json.loads(path.read_text(encoding="utf-8"))
-    assert_good_html(tree, path.name.replace(".tree.json", ""))
+    out, p = assert_good_html(tree, path.name.replace(".tree.json", ""))
+    for tag, a in p.tags:
+        for key in ("href", "src"):
+            if a.get(key) is not None:
+                assert safe_url(a[key]) == a[key], (tag, key, a[key])
+    # 실제 트리의 수식은 모두 MathML 로 변환되어야 한다 (수식 구문 오류는 이미 error 노드)
+    assert "htex-math-error" not in out.split("<style>")[0] + out.split("</style>")[1]
 
 
 # ---------------------------------------------------------------- 세부 동작

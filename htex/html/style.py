@@ -149,6 +149,7 @@ tr:target,li:target,section:target>.htex-heading,div:target{background:color-mix
 .htex-parameters ul{list-style:none;padding:0;margin:.25rem 0 0;display:flex;flex-wrap:wrap;gap:.25rem 1.5rem}
 .htex-param-label{font-weight:700}
 .htex-param-range{color:var(--muted)}
+math+output.htex-param{margin-left:.28em}
 output.htex-param{font-family:var(--mono-font);font-variant-numeric:tabular-nums}
 
 /* 오류·진단 */
