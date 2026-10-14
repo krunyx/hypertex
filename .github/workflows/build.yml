@@ -55,15 +55,19 @@ jobs:
         run: python -m pip install ".[viewer,dev]" pytest-timeout
       - name: 단위 테스트
         shell: bash
+        timeout-minutes: 15
         env:
           QT_QPA_PLATFORM: offscreen
           QTWEBENGINE_CHROMIUM_FLAGS: --no-sandbox
-        # 테스트 하나가 3분을 넘으면 스택을 남기고 끝낸다 (thread 방식은 윈도에서도 동작).
+        # 테스트 하나가 2분을 넘으면 스택을 남기고 끝낸다 (thread 방식은 윈도에서도 동작).
+        # 출력은 파이프가 아니라 파일로: 테스트가 남긴 하위 프로세스가 파이프를 붙잡아 단계가 끝나지 않는 것을 막는다.
         run: |
-          set -o pipefail
-          python -m pytest -q -rfE --timeout=180 --timeout-method=thread tests/unit 2>&1 | tee pytest.log
+          python -m pytest -v -rfE --timeout=120 --timeout-method=thread tests/unit > pytest.log 2>&1
+          status=$?
+          tail -5 pytest.log
+          exit $status
       - name: 실패 내용을 주석으로
-        if: failure()
+        if: failure() || cancelled()
         shell: bash
         run: python .github/ci_annotate.py pytest.log "${{ matrix.os }} py${{ matrix.python }}"
       - name: 테스트 문서 묶음
