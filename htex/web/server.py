@@ -203,9 +203,30 @@ class Handler(BaseHTTPRequestHandler):
         if with_html:
             def render_html(tree: dict[str, Any], p: Path) -> str:
                 from ..html import render
+                tree = self.resolve_links(tree, p)      # 다른 문서 참조 번호 (J)
                 return render(tree, web_fallback=True, head_extra=head_extra_for(url_path(root, p)))
             return self.server.cache.get(target, render_html)
         return self.server.cache.get(target, None)
+
+    def resolve_links(self, tree: dict[str, Any], doc_path: Path) -> dict[str, Any]:
+        """다른 문서 \\ref 의 번호 채우기 (htex.linkres, 담당 J). 같은 루트 안의 상대 주소 문서만 읽는다
+        (htex://·https:// 는 서버가 대신 가져오지 않는다: SSRF 방지). 실패하면 라벨 이름 그대로."""
+        from ..linkres import local_doc_for_link, resolve_cross_refs
+
+        root = self.server.root
+
+        def loader(doc: str):
+            p = local_doc_for_link(root, doc_path, doc)
+            if p is None:
+                return None
+            if p == doc_path.resolve():
+                return tree
+            return self.load_doc(p, False).tree
+
+        try:
+            return resolve_cross_refs(tree, loader)
+        except Exception:  # noqa: BLE001
+            return tree
 
     def serve_document(self, target: Path) -> None:
         ent = self.load_doc(target, True)

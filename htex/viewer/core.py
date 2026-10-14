@@ -11,6 +11,11 @@ Qt 쪽(app.py)은 요청 주소를 받아 `ViewerCore.respond(url, initiator)` �
 - 그림 주소  htexapp://picture/<문서키>?node=…&이름=값…   (규약 3절)
 - 조각 주소  htexapp://fragment/<문서키>?doc=…&label=…   (규약 4절, doc 은 문서키 문서 기준 상대 주소도 됨)
 - 스크립트   htexapp://asset/interact.js                    (G 의 htex/web/interact.js)
+- 원문 보기  htexapp://source/<문서키>                      (J: 원문을 escape 한 읽기 전용 HTML)
+
+테마 (J): core.theme 이 "light"/"dark" 이면 문서·오류·원문 페이지의 <html> 에 data-theme 을 넣는다
+(렌더러 CSS 가 지원). "" 이면 넣지 않는다(시스템 설정, prefers-color-scheme).
+다른 문서 참조 번호 (J): page_html 이 htex.linkres 로 다른 문서 \\ref 의 번호를 채운다(resolve_links).
 
 보안 규칙
 - 원격은 https 만 (리다이렉트도). 크기 상한 5MB, 시간 제한.
@@ -486,6 +491,7 @@ class DocRecord:
     remote: bool
     elapsed: float = 0.0
     html: Optional[str] = None
+    source: str = ""             # 원문 (원문 보기용)
 
     @property
     def diagnostics(self) -> list[dict]:
@@ -518,7 +524,8 @@ class ViewerCore:
                  parse: Callable[..., dict] = parse_text, render_limit: float = RENDER_LIMIT,
                  transclude_budget: float = TRANSCLUDE_BUDGET,
                  picture_renderer: Optional[Callable[..., Any]] = None,
-                 interact_js: Optional[Path] = None, clock: Callable[[], float] = time.monotonic):
+                 interact_js: Optional[Path] = None, clock: Callable[[], float] = time.monotonic,
+                 link_budget: float = 1.0):
         self.fetcher = fetcher or Fetcher()
         self.cache = cache if cache is not None else TreeCache()
         self.parse = parse
@@ -527,6 +534,8 @@ class ViewerCore:
         self.picture_renderer = picture_renderer
         self.interact_js = interact_js or _INTERACT_JS
         self.clock = clock
+        self.link_budget = link_budget
+        self.theme = ""              # "", "light", "dark" (J)
         self.roots: dict[str, Path] = {}
         self.records: "OrderedDict[str, DocRecord]" = OrderedDict()
         self.by_address: dict[str, str] = {}
@@ -621,7 +630,7 @@ class ViewerCore:
             tree = run_with_limit(lambda: self.parse(text, url=parse_url, base_dir=base_dir),
                                   self.render_limit)
             self.cache.put(address, sha, tree, disk=remote)
-        rec = DocRecord(key, address, tree, remote, elapsed=self.clock() - t0)
+        rec = DocRecord(key, address, tree, remote, elapsed=self.clock() - t0, source=text)
         with self._lock:
             self.records[key] = rec
             self.by_address[address] = key
@@ -679,11 +688,48 @@ class ViewerCore:
         if rec.html is not None:
             return rec.html
         from ..html import render
-        page = run_with_limit(lambda: render(rec.tree, head_extra=self.head_extra(rec)),
+        tree = self.resolve_links(rec)
+        page = run_with_limit(lambda: render(tree, head_extra=self.head_extra(rec)),
                               self.render_limit)
         page = self._fill_transclusions(rec, page)
         rec.html = page
         return page
+
+    def link_target(self, base: "DocRecord", doc: str) -> str:
+        """base 문서 기준 다른 문서 주소 doc → 불러올 수 있는 문서 주소. 접근 규칙을 어기면 ViewerError."""
+        target = join_url(base.address, doc) if doc else base.address
+        target = split_fragment(target)[0]
+        if target.lower().startswith("https:"):
+            target = https_to_htex(target)
+        if target.lower().startswith("htex:"):
+            target = normalize_htex(target)
+        if base.remote and not target.lower().startswith("htex:"):
+            raise ViewerError("forbidden", "원격 문서는 로컬 문서를 가리킬 수 없습니다.", 403)
+        if (not base.remote and target.startswith("htexapp://")
+                and urllib.parse.urlsplit(target).netloc != urllib.parse.urlsplit(base.address).netloc):
+            raise ViewerError("forbidden", "다른 폴더의 로컬 문서는 가리킬 수 없습니다.", 403)
+        if not (target.lower().startswith("htex:") or target.startswith("htexapp://doc-")):
+            raise ViewerError("bad-url", f"문서 주소가 아닙니다: {target}")
+        return target
+
+    def resolve_links(self, rec: "DocRecord") -> dict:
+        """다른 문서 \\ref 의 번호 채우기 (htex.linkres, J). 다른 문서는 이 core 의 캐시·가져오기로 불러오고,
+        실패(네트워크, 접근 금지, 시간 예산 1초 초과)는 조용히 넘어간다 → 라벨 이름이 보인다."""
+        from ..linkres import resolve_cross_refs
+
+        def loader(doc: str) -> Optional[dict]:
+            try:
+                target = self.link_target(rec, doc)
+                if target == rec.address:
+                    return rec.tree
+                return self.load(target).tree
+            except (ViewerError, WebPage):
+                return None
+
+        try:
+            return resolve_cross_refs(rec.tree, loader, budget=self.link_budget)
+        except Exception:   # noqa: BLE001 - 번호 채우기 실패로 문서가 안 보이면 안 된다
+            return rec.tree
 
     _TRANSCLUSION = re.compile(
         r'<div class="htex-transclusion"( id="[^"]*")? data-href="([^"]*)">.*?</div>', re.S)
@@ -762,16 +808,22 @@ class ViewerCore:
                     return self._respond_picture(parts, init)
                 if host == "fragment":
                     return self._respond_fragment(parts, init)
+                if host == "source":
+                    return self._respond_source(parts, init)
             return _fail(404, "알 수 없는 주소입니다.")
         except Exception as e:   # noqa: BLE001 - 뷰어가 멈추지 않게
-            return error_page(ViewerError("internal", f"내부 오류: {type(e).__name__}: {e}", 500), url)
+            return self._error(ViewerError("internal", f"내부 오류: {type(e).__name__}: {e}", 500), url)
+
+    def themed(self, page: str) -> str:
+        """<html> 에 data-theme (J). 시스템 설정이면 그대로."""
+        return with_theme(page, self.theme)
 
     def _page_response(self, rec: DocRecord, url: str) -> Response:
         try:
             page = self.page_html(rec)
         except ViewerError as e:
-            return error_page(e, url)
-        return Response(200, "text/html", page.encode("utf-8"),
+            return self._error(e, url)
+        return Response(200, "text/html", self.themed(page).encode("utf-8"),
                         {"Content-Security-Policy": CSP, "X-Content-Type-Options": "nosniff",
                          "Referrer-Policy": "no-referrer"}, record=rec)
 
@@ -779,7 +831,7 @@ class ViewerCore:
         try:
             address = normalize_htex(split_fragment(url)[0])
         except ViewerError as e:
-            return error_page(e, url)
+            return self._error(e, url)
         path = urllib.parse.urlsplit(address).path
         ext = posixpath.splitext(urllib.parse.unquote(path))[1].lower()
         if ext in IMAGE_TYPES:
@@ -797,7 +849,7 @@ class ViewerCore:
         except WebPage as w:
             return Response(302, redirect=w.url)
         except ViewerError as e:
-            return error_page(e, url)
+            return self._error(e, url)
         if rec.address != address:          # 리다이렉트로 주소가 바뀌었다
             frag = split_fragment(url)[1]
             return Response(302, redirect=rec.address + ("#" + frag if frag else ""))
@@ -806,11 +858,11 @@ class ViewerCore:
     def _respond_local(self, url: str, host: str, init: str, reload: bool) -> Response:
         # 로컬 문서에는 사용자가 직접 연 것(initiator 없음)이나 같은 뿌리의 문서만 닿는다.
         if init and init != f"htexapp://{host}":
-            return error_page(ViewerError("forbidden", "다른 출처에서 로컬 파일을 열 수 없습니다.", 403), url)
+            return self._error(ViewerError("forbidden", "다른 출처에서 로컬 파일을 열 수 없습니다.", 403), url)
         try:
             path = self.local_path(split_fragment(url)[0])
         except ViewerError as e:
-            return error_page(e, url)
+            return self._error(e, url)
         ext = path.suffix.lower()
         if ext in IMAGE_TYPES:
             try:
@@ -824,8 +876,30 @@ class ViewerCore:
         try:
             rec = self.load(split_fragment(url)[0], reload=reload)
         except ViewerError as e:
-            return error_page(e, url)
+            return self._error(e, url)
         return self._page_response(rec, url)
+
+    def _error(self, err: ViewerError, url: str = "") -> Response:
+        r = error_page(err, url)
+        if self.theme:
+            r.body = self.themed(r.text).encode("utf-8")
+        return r
+
+    def _respond_source(self, parts, init: str) -> Response:
+        """원문 보기 (J): 원문을 escape 해 <pre> 로. 스크립트는 아무것도 실행되지 않는다(CSP default-src 'none')."""
+        rec = self._record_from_path(parts.path)
+        if rec is None:
+            return _fail(404, "문서를 찾을 수 없습니다.")
+        if init.startswith("htex:") and not rec.remote:
+            return _fail(403, "허용되지 않는 요청입니다.")
+        page = source_page(rec.source, self.display_address(rec.address), rec.title)
+        return Response(200, "text/html", self.themed(page).encode("utf-8"),
+                        {"Content-Security-Policy": SOURCE_CSP, "X-Content-Type-Options": "nosniff"})
+
+    def source_url(self, url: str) -> Optional[str]:
+        """문서 주소 → 그 문서의 원문 보기 주소 (불러온 문서가 아니면 None)."""
+        rec = self.record_for(url)
+        return f"htexapp://source/{rec.key}" if rec is not None else None
 
     def _respond_asset(self, path: str) -> Response:
         if path.strip("/") != "interact.js":
@@ -1013,6 +1087,42 @@ def error_page(err: ViewerError, url: str = "") -> Response:
                     {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"})
 
 
+_HTML_TAG = re.compile(r"<html\b([^>]*)>", re.I)
+
+
+def with_theme(page: str, theme: str) -> str:
+    """첫 <html …> 태그에 data-theme 을 넣는다 (light/dark 만, 이미 있으면 바꾼다)."""
+    if theme not in ("light", "dark"):
+        return page
+
+    def fix(m: re.Match) -> str:
+        attrs = re.sub(r'\sdata-theme="[^"]*"', "", m.group(1))
+        return f'<html{attrs} data-theme="{theme}">'
+    return _HTML_TAG.sub(fix, page, count=1)
+
+
+SOURCE_CSP = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
+
+
+def source_page(text: str, address: str, title: str = "") -> str:
+    """원문 보기 페이지 (읽기 전용, 고정폭, 줄 번호). 원문은 모두 escape 한다."""
+    lines = text.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    width = len(str(max(1, len(lines))))
+    rows = "".join(f'<span class="ln">{i:>{width}}</span>{_e(line)}\n' for i, line in enumerate(lines, 1))
+    name = address.rsplit("/", 1)[-1] or address
+    return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="{_a("default-src 'none'; style-src 'unsafe-inline'")}">
+<title>원문: {_e(name)}</title>
+<style>{SOURCE_CSS}</style></head>
+<body><header class="htex-source-head"><strong>원문 (읽기 전용)</strong> <code>{_e(address)}</code>{(" · " + _e(title)) if title else ""}</header>
+<pre class="htex-source">{rows}</pre></body></html>
+"""
+
+
 VIEWER_CSS = """
 .htex-transclusion.htex-transcluded{border:0;border-left:3px solid var(--accent,currentColor);
  border-radius:0 6px 6px 0;padding:.3rem 1rem .5rem;font-family:inherit;font-size:inherit}
@@ -1022,9 +1132,23 @@ VIEWER_CSS = """
 .htex-transclusion-failed{opacity:.75}
 """
 
-ERROR_CSS = """
-:root{color-scheme:light dark;--fg:#1f2328;--muted:#656d76;--bg:#fbfaf7;--accent:#b42318}
-@media (prefers-color-scheme:dark){:root{--fg:#e6e6e6;--muted:#9aa1a9;--bg:#16171a;--accent:#ff8a7a}}
+_THEME_VARS = """
+:root{color-scheme:light dark;--fg:#1f2328;--muted:#656d76;--bg:#fbfaf7;--accent:#b42318;--rule:#d8d6d0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--fg:#e6e6e6;--muted:#9aa1a9;--bg:#16171a;--accent:#ff8a7a;--rule:#33353a}}
+:root[data-theme="dark"]{color-scheme:dark;--fg:#e6e6e6;--muted:#9aa1a9;--bg:#16171a;--accent:#ff8a7a;--rule:#33353a}
+:root[data-theme="light"]{color-scheme:light}"""
+
+SOURCE_CSS = _THEME_VARS + """
+body{margin:0;background:var(--bg);color:var(--fg)}
+.htex-source-head{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--rule);
+ padding:.5rem 1rem;font:13px/1.5 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
+.htex-source-head code{color:var(--muted);word-break:break-all}
+.htex-source{margin:0;padding:.75rem 1rem 2rem;font:13px/1.55 ui-monospace,"SF Mono",Menlo,Consolas,"D2Coding","Noto Sans Mono CJK KR",monospace;
+ white-space:pre-wrap;overflow-wrap:anywhere;tab-size:4}
+.ln{display:inline-block;color:var(--muted);opacity:.6;margin-right:1.2em;user-select:none;-webkit-user-select:none;text-align:right}
+"""
+
+ERROR_CSS = _THEME_VARS + """
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif}
 main{max-width:40rem;margin:12vh auto;padding:0 1.5rem}
 h1{font-size:1.5rem;margin:.2em 0 .6em}
