@@ -1,0 +1,33 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage[colorlinks]{hyperref}
+\usepackage{geometry}
+\newtheorem{theorem}{Theorem}
+\def\vect{\mathbf}
+
+\title{A Compatibility-Mode Note}
+\author{A. Author}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+An ordinary LaTeX article opened by the viewer in compatibility mode.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+Vectors are written $\vect{v}$.
+\begin{equation}\label{eq:newton}
+  \vect{F} = m \vect{a}
+\end{equation}
+\begin{theorem}\label{thm:one}
+Equation \eqref{eq:newton} holds in inertial frames.
+\end{theorem}
+
+\input{appendix}
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

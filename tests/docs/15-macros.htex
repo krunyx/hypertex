@@ -1,0 +1,15 @@
+\documentclass{hypertex}
+\title{매크로}
+\newcommand{\ket}[1]{\left| #1 \right\rangle}
+\newcommand{\bra}[1]{\left\langle #1 \right|}
+\newcommand{\braket}[2]{\left\langle #1 \middle| #2 \right\rangle}
+\newcommand{\norm}[2][2]{\left\| #2 \right\|_{#1}}
+\newcommand{\R}{\mathbb{R}}
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+$\ket{\psi}$, $\bra{\phi}$, $\braket{\phi}{\psi}$, $\norm{x}$, $\norm[\infty]{x}$, $x \in \R$, $\Tr \rho = 1$.
+
+\renewcommand{\R}{\mathbf{R}}
+재정의 이후: $\R^3$.
+\end{document}

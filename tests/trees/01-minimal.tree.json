@@ -1,0 +1,30 @@
+{
+  "hypertex": "2.0",
+  "source": { "url": "01-minimal.htex", "mode": "native" },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [ { "kind": "text", "text": "최소 문서" } ]
+  },
+  "labels": {},
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section", "id": "n1", "level": 1, "number": "1",
+      "span": { "line": 4, "col": 1 },
+      "title": [ { "kind": "text", "text": "시작" } ],
+      "children": [
+        {
+          "kind": "paragraph", "id": "n2",
+          "span": { "line": 5, "col": 1 },
+          "content": [
+            { "kind": "text", "text": "HyperTeX 2.0 문서의 가장 작은 형태다. " },
+            { "kind": "code", "text": "\\begin{document}" },
+            { "kind": "text", "text": "를 생략했다." }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": []
+}

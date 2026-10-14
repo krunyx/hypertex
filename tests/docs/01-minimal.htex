@@ -1,0 +1,5 @@
+\documentclass{hypertex}
+\title{최소 문서}
+
+\section{시작}
+HyperTeX 2.0 문서의 가장 작은 형태다. \verb|\begin{document}|를 생략했다.

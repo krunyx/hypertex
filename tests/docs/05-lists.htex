@@ -1,0 +1,24 @@
+\documentclass{hypertex}
+\title{목록}
+
+\begin{document}
+\begin{itemize}
+  \item 사과
+  \item 배
+  \begin{itemize}
+    \item 중첩 항목
+  \end{itemize}
+\end{itemize}
+
+\begin{enumerate}
+  \item 첫째\label{item:first}
+  \item 둘째
+  \item 셋째
+\end{enumerate}
+항목 \ref{item:first}을 보라.
+
+\begin{description}
+  \item[해밀토니안] 계의 전체 에너지 연산자
+  \item[라그랑지안] 운동 에너지에서 위치 에너지를 뺀 것
+\end{description}
+\end{document}

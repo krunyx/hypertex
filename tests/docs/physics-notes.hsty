@@ -1,0 +1,9 @@
+% HyperTeX 2.0 스타일 파일: 키-값만 허용, 매크로·실행 코드 불가 (명세 6절)
+body.font         = "Noto Serif KR"
+math.font         = "Latin Modern Math"
+math.hangul.font  = "Noto Sans KR"
+equation.number   = "(section.equation)"
+theorem.style     = boxed
+accent.color      = #1f5fa8
+cjk.latin.space   = 0.25em
+cjk.math.space    = 0.25em

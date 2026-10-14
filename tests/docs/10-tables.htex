@@ -1,0 +1,20 @@
+\documentclass{hypertex}
+\title{표}
+
+\begin{document}
+\begin{table}
+  \caption{입자의 질량.}\label{tab:mass}
+  \begin{tabular}{|l|c|r|}
+    \hline
+    입자 & 기호 & 질량 (MeV) \\
+    \hline
+    전자 & $e^-$ & 0.511 \\
+    뮤온 & $\mu^-$ & 105.7 \\
+    \hline
+    \multicolumn{3}{|c|}{렙톤} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+표 \ref{tab:mass}를 보라.
+\end{document}

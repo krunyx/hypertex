@@ -1,0 +1,7 @@
+\documentclass{hypertex}
+\title{매크로 가져오기}
+\usemacros{notation.htex}
+
+\begin{document}
+가져온 매크로: $\ket{0}$, $\int f(x)\,\dd x$, $\Tr A$.
+\end{document}

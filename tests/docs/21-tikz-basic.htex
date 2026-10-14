@@ -1,0 +1,25 @@
+\documentclass{hypertex}
+\title{TikZ 기본}
+\usetikzlibrary{arrows.meta, calc, positioning}
+
+\begin{document}
+\begin{figure}
+\begin{tikzpicture}
+  \draw[help lines] (-2,-2) grid (2,2);
+  \draw[-{Stealth}] (-2.2,0) -- (2.2,0) node[right] {$x$};
+  \draw[-{Stealth}] (0,-2.2) -- (0,2.2) node[above] {$y$};
+  \draw[thick, blue] (0,0) circle (1.5);
+  \coordinate (P) at (30:1.5);
+  \fill[red] (P) circle (2pt) node[above right] {$P=(r\cos\theta, r\sin\theta)$};
+  \draw[dashed] (0,0) -- (P) -- ($(P)!1!(P |- 0,0)$);
+  \draw (0.5,0) arc (0:30:0.5) node[midway, right] {$\theta$};
+  \node[draw, rounded corners, below=of P] {상태 $\psi$};
+\end{tikzpicture}
+\caption{극좌표.}\label{fig:polar}
+\end{figure}
+
+\begin{tikzpicture}
+  \foreach \i in {0,...,5} { \draw (\i,0) circle (0.2); }
+  \draw[domain=0:6.28, samples=100, smooth] plot (\x, {sin(\x r)});
+\end{tikzpicture}
+\end{document}

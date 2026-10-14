@@ -1,0 +1,10 @@
+\documentclass{hypertex}
+\title{문서 간 참조}
+
+\begin{document}
+상대 주소: 같은 폴더의 식 \ref{11-internal-refs.htex#eq:H}.
+절대 주소: \eqref{htex://example.org/notes/oscillator.htex#eq:aadag}.
+절 참조: \ref{11-internal-refs.htex#sec:eigen}.
+일반 링크: \href{https://arxiv.org}{arXiv}, \url{htex://example.org/notes/}.
+허용되지 않는 링크: \href{javascript:alert(1)}{위험}.
+\end{document}

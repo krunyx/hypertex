@@ -1,0 +1,22 @@
+\documentclass{hypertex}
+\title{오류 관용}
+
+\begin{document}
+\section{정의되지 않은 명령}
+\foobar{인수는 텍스트로 보인다} 그리고 계속된다.
+
+\section{짝이 맞지 않는 괄호}
+\textbf{닫히지 않은 굵은 글씨가 단락 끝에서 자동으로 닫힌다.
+
+다음 단락은 굵지 않다.
+
+\section{수식 오류}
+깨진 수식 $\frac{1}{$ 은 원본 소스로 보이고, 정상 수식 $x+1$은 정상이다.
+
+\section{닫히지 않은 환경}
+\begin{itemize}
+  \item 이 목록은 다음 절에서 닫힌다.
+
+\section{마지막 절}
+이 절이 보이면 성공이다.
+\end{document}

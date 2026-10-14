@@ -1,0 +1,13 @@
+\documentclass[note]{hypertex}
+\HyperTeXversion{2.0}
+\title{메타데이터 시험}
+\author{홍길동}
+\author{Jane Doe}
+\date{2026-10-14}
+\keywords{메타데이터, 시험, metadata}
+\abstract{제목, 저자, 날짜, 키워드, 초록이 \texttt{meta}에 구조화되어 들어가는지 확인한다.}
+
+\begin{document}
+\maketitle
+본문 한 단락.
+\end{document}

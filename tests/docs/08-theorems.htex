@@ -1,0 +1,31 @@
+\documentclass{hypertex}
+\title{정리 환경}
+\newtheorem{conjecture}{추측}
+
+\begin{document}
+\begin{definition}\label{def:group}
+군은 결합법칙, 항등원, 역원을 갖는 이항연산이 주어진 집합이다.
+\end{definition}
+
+\begin{theorem}[라그랑주]\label{thm:lagrange}
+유한군 $G$의 부분군 $H$에 대해 $|H|$는 $|G|$를 나눈다.
+\end{theorem}
+
+\begin{proof}
+잉여류들이 $G$를 같은 크기로 분할한다.
+\end{proof}
+
+\begin{lemma}\label{lem:coset}
+두 잉여류는 같거나 서로소다.
+\end{lemma}
+
+\begin{conjecture}\label{conj:x}
+새로 정의한 정리 환경이다.
+\end{conjecture}
+
+\begin{remark}
+번호 매김은 정리류가 하나의 카운터를 공유한다.
+\end{remark}
+
+정리 \ref{thm:lagrange}, 보조정리 \ref{lem:coset}, 추측 \ref{conj:x}.
+\end{document}

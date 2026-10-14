@@ -1,0 +1,16 @@
+\documentclass{hypertex}
+\title{절 번호 매김}
+
+\begin{document}
+\section{첫째 절}\label{sec:one}
+\subsection{첫째 소절}\label{sec:one-a}
+\subsubsection{깊은 소절}\label{sec:one-a-i}
+\paragraph{문단 제목} 번호 없는 문단 제목이다.
+\subsection{둘째 소절}
+\section*{번호 없는 절}
+번호가 없어야 하며 다음 절 번호에 영향을 주지 않는다.
+\section{둘째 절}\label{sec:two}
+\appendix
+\section{부록}\label{sec:appA}
+\subsection{부록 소절}\label{sec:appA-1}
+\end{document}

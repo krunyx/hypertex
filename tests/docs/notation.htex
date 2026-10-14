@@ -1,0 +1,9 @@
+\documentclass{hypertex}
+\title{공용 기호 정의}
+\newcommand{\ket}[1]{\left| #1 \right\rangle}
+\newcommand{\dd}{\mathrm{d}}
+\DeclareMathOperator{\Tr}{Tr}
+
+\begin{document}
+이 본문은 \verb|\usemacros|로 가져갈 때 무시된다.
+\end{document}

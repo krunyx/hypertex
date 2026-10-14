@@ -1,0 +1,17 @@
+\documentclass{hypertex}
+\title{스타일 파일}
+\usestyle{physics-notes.hsty}
+\usestyle{http://example.org/insecure.hsty}
+
+\begin{document}
+\section{번호 형식}
+스타일 파일이 식 번호를 절 번호와 묶는다.
+\begin{equation}\label{eq:s1}
+  a = b
+\end{equation}
+\section{둘째 절}
+\begin{equation}\label{eq:s2}
+  c = d
+\end{equation}
+식 \ref{eq:s1}과 \ref{eq:s2}.
+\end{document}

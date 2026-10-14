@@ -1,0 +1,18 @@
+\documentclass{hypertex}
+\title{그림}
+
+\begin{document}
+\begin{figure}
+  \includegraphics[width=0.6\textwidth]{https://example.org/img/orbit.svg}
+  \caption{궤도 그림.}\label{fig:orbit}
+\end{figure}
+
+\begin{figure}
+  \includegraphics{figs/phase.png}
+  \caption{상대 경로 그림.}\label{fig:phase}
+\end{figure}
+
+그림 \ref{fig:orbit}와 그림 \ref{fig:phase}.
+
+허용되지 않는 주소: \includegraphics{http://example.org/insecure.png}
+\end{document}

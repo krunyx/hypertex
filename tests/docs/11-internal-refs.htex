@@ -1,0 +1,19 @@
+\documentclass{hypertex}
+\title{문서 안 참조}
+
+\begin{document}
+\section{에너지}\label{sec:energy}
+조화 진동자의 해밀토니안은
+\begin{equation}\label{eq:H}
+  H = \frac{p^2}{2m} + \frac{1}{2} m\omega^2 x^2
+\end{equation}
+이다.
+
+\section{고윳값}\label{sec:eigen}
+식 \eqref{eq:H}의 고윳값은
+\begin{equation}\label{eq:En}
+  E_n = \hbar\omega\left(n + \tfrac{1}{2}\right)
+\end{equation}
+이며 자세한 유도는 \ref{sec:energy}절에 있다.
+없는 라벨 \ref{eq:missing}은 깨진 링크로 표시된다.
+\end{document}

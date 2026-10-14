@@ -1,0 +1,25 @@
+\documentclass{hypertex}
+\title{수식 기본}
+
+\begin{document}
+본문 수식 $E = mc^2$와 $\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}$.
+
+번호 없는 디스플레이:
+\[ \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6} \]
+
+번호 있는 식:
+\begin{equation}\label{eq:schrodinger}
+  i\hbar \frac{\partial}{\partial t}\Psi = \hat{H}\Psi
+\end{equation}
+
+별표 환경은 번호가 없다:
+\begin{equation*}
+  \nabla \cdot \mathbf{E} = \frac{\rho}{\varepsilon_0}
+\end{equation*}
+
+\begin{equation}\label{eq:cases}
+  |x| = \begin{cases} x & x \ge 0 \\ -x & x < 0 \end{cases}
+\end{equation}
+
+행렬: $\begin{pmatrix} a & b \\ c & d \end{pmatrix}$, 식 \eqref{eq:schrodinger}와 식 \ref{eq:cases}.
+\end{document}

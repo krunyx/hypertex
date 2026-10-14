@@ -1,0 +1,23 @@
+\documentclass{hypertex}
+\title{상호작용}
+
+\begin{document}
+\begin{theorem}\label{thm:main}
+$\sum_{k=1}^n k = \frac{n(n+1)}{2}$.
+\end{theorem}
+
+\begin{proof}[collapsed]
+수학적 귀납법으로 보인다. 이 증명은 처음에 접혀 있다.
+\end{proof}
+
+\begin{collapse}{참고: 가우스의 일화}
+어린 가우스가 1부터 100까지의 합을 빠르게 구했다는 이야기.
+\end{collapse}
+
+\begin{steps}
+  \step $\displaystyle S = 1 + 2 + \cdots + n$
+  \step $\displaystyle S = n + (n-1) + \cdots + 1$
+  \step $\displaystyle 2S = n(n+1)$\label{step:last}
+\end{steps}
+마지막 단계 \ref{step:last}.
+\end{document}

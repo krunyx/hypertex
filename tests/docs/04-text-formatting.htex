@@ -1,0 +1,21 @@
+\documentclass{hypertex}
+\title{텍스트 서식}
+
+\begin{document}
+\emph{강조}, \textbf{굵게}, \textit{기울임}, \texttt{고정폭}, \textsc{Small Caps}.
+중첩: \textbf{굵게 안의 \emph{강조}}.
+
+물결표는 줄바꿈 없는 공백이다: 그림~1, 식~(2).
+대시: 1--2쪽, 문장---끊김.
+강제 줄바꿈은\\ 여기서 일어난다.
+각주를 단다.\footnote{첫째 각주.} 또 단다.\footnote{둘째 각주에는 수식 $x^2$도 있다.}
+
+\begin{quote}
+인용문 블록이다.
+\end{quote}
+
+\begin{verbatim}
+\section{이것은 해석되지 않는다}
+  들여쓰기도   그대로
+\end{verbatim}
+\end{document}

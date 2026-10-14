@@ -1,0 +1,68 @@
+{
+  "hypertex": "2.0",
+  "source": { "url": "11-internal-refs.htex", "mode": "native" },
+  "meta": {
+    "documentclass": "hypertex",
+    "title": [ { "kind": "text", "text": "문서 안 참조" } ]
+  },
+  "labels": {
+    "sec:energy": { "node": "n1", "kind": "section", "number": "1", "display": "1절" },
+    "eq:H":       { "node": "n4", "kind": "equation", "number": "1", "display": "식 (1)" },
+    "sec:eigen":  { "node": "n6", "kind": "section", "number": "2", "display": "2절" },
+    "eq:En":      { "node": "n9", "kind": "equation", "number": "2", "display": "식 (2)" }
+  },
+  "parameters": [],
+  "bibliography": [],
+  "body": [
+    {
+      "kind": "section", "id": "n1", "level": 1, "number": "1", "label": "sec:energy",
+      "title": [ { "kind": "text", "text": "에너지" } ],
+      "children": [
+        { "kind": "paragraph", "id": "n2", "content": [ { "kind": "text", "text": "조화 진동자의 해밀토니안은" } ] },
+        {
+          "kind": "displaymath", "id": "n3", "env": "equation",
+          "rows": [
+            { "id": "n4", "number": "1", "label": "eq:H",
+              "math": { "tex": "H = \\frac{p^2}{2m} + \\frac{1}{2} m\\omega^2 x^2", "scripts": ["latin", "greek"] } }
+          ]
+        },
+        { "kind": "paragraph", "id": "n5", "content": [ { "kind": "text", "text": "이다." } ] }
+      ]
+    },
+    {
+      "kind": "section", "id": "n6", "level": 1, "number": "2", "label": "sec:eigen",
+      "title": [ { "kind": "text", "text": "고윳값" } ],
+      "children": [
+        {
+          "kind": "paragraph", "id": "n7",
+          "content": [
+            { "kind": "text", "text": "식 " },
+            { "kind": "link", "linkType": "eqref", "target": { "label": "eq:H" }, "resolved": { "number": "1", "node": "n4" } },
+            { "kind": "text", "text": "의 고윳값은" }
+          ]
+        },
+        {
+          "kind": "displaymath", "id": "n8", "env": "equation",
+          "rows": [
+            { "id": "n9", "number": "2", "label": "eq:En",
+              "math": { "tex": "E_n = \\hbar\\omega\\left(n + \\tfrac{1}{2}\\right)", "scripts": ["latin", "greek"] } }
+          ]
+        },
+        {
+          "kind": "paragraph", "id": "n10",
+          "content": [
+            { "kind": "text", "text": "이며 자세한 유도는 " },
+            { "kind": "link", "linkType": "ref", "target": { "label": "sec:energy" }, "resolved": { "number": "1", "node": "n1" } },
+            { "kind": "text", "text": "절에 있다. 없는 라벨 " },
+            { "kind": "link", "linkType": "ref", "target": { "label": "eq:missing" }, "resolved": { "broken": true } },
+            { "kind": "text", "text": "은 깨진 링크로 표시된다." }
+          ]
+        }
+      ]
+    }
+  ],
+  "diagnostics": [
+    { "severity": "warning", "code": "broken-ref", "message": "라벨 eq:missing을 찾을 수 없다",
+      "span": { "line": 18, "col": 7 } }
+  ]
+}

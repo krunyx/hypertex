@@ -1,0 +1,15 @@
+\documentclass{hypertex}
+\title{인용}
+
+\begin{document}
+외부 식별자로 직접 인용: \cite{arXiv:2401.01234}, \cite{doi:10.1103/PhysRev.47.777},
+\cite{isbn:9780198520115}, \cite{htex://example.org/notes/oscillator.htex}.
+
+BibTeX 키 인용: \cite{epr1935} 그리고 여러 개 \cite{epr1935,bell1964}.
+없는 키: \cite{nobody2000}.
+
+\begin{thebibliography}{9}
+\bibitem{epr1935} A. Einstein, B. Podolsky, N. Rosen, Phys. Rev. 47, 777 (1935). doi:10.1103/PhysRev.47.777
+\bibitem{bell1964} J. S. Bell, Physics 1, 195 (1964).
+\end{thebibliography}
+\end{document}

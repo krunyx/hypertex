@@ -1,0 +1,22 @@
+\documentclass{hypertex}
+\title{한글 조판과 한글 수식}
+\usemath{hangulmath}
+
+\begin{document}
+\section{어절 단위 줄바꿈}
+대한민국의 과학기술정책은 대학 연구개발 체계의 구조적 개편과 국가전략기술 분류를 중심으로 논의되어 왔으며, 이 문장은 좁은 화면에서 어절 경계에서만 줄이 바뀌어야 한다.
+한 어절이 줄 폭보다 긴 경우의 예외: 가나다라마바사아자차카타파하가나다라마바사아자차카타파하가나다라마바사아자차카타파하.
+
+\section{한글과 수식의 혼합}
+속도 $v$는 거리 $d$를 시간 $t$로 나눈 값이다.
+
+\section{수식 안의 한글}
+그리스 문자와 같은 방식: $가_1 + 나^2 = 다$, 그리고 $\alpha_가 + \beta^나$.
+여러 음절은 서로 다른 기호의 곱이다: $속력$ 은 $속 \cdot 력$ 과 같다.
+단어로 묶을 때: $\text{속력} = \frac{\text{거리}}{\text{시간}}$, $\operatorname{최대}(a, b)$.
+
+\begin{equation}\label{eq:hangul}
+  가(x) = \sum_{나=1}^{다} 나 \, x^나
+\end{equation}
+식 \eqref{eq:hangul}의 한글 기호는 직립 고딕으로 조판된다.
+\end{document}

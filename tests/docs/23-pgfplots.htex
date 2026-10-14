@@ -1,0 +1,35 @@
+\documentclass{hypertex}
+\title{pgfplots}
+
+\begin{document}
+\begin{figure}
+\begin{tikzpicture}
+  \begin{axis}[xlabel={$t$ (s)}, ylabel={$x(t)$ (m)}, grid=major,
+               legend pos=north east, width=10cm, height=6cm]
+    \addplot[domain=0:10, samples=200, blue] {exp(-0.2*x)*cos(2*x r)};
+    \addlegendentry{감쇠 진동}
+    \addplot[only marks, mark=*, red] coordinates {(0,1) (2,0.4) (4,0.1) (6,-0.2)};
+    \addlegendentry{측정값}
+  \end{axis}
+\end{tikzpicture}
+\caption{감쇠 진동자.}\label{fig:damped}
+\end{figure}
+
+\begin{tikzpicture}
+  \begin{semilogyaxis}[xlabel={$n$}, ylabel={$E_n$}]
+    \addplot table {
+      n  E
+      1  1.0
+      2  10.0
+      3  100.0
+    };
+  \end{semilogyaxis}
+\end{tikzpicture}
+
+3D는 1.0 범위 밖:
+\begin{tikzpicture}
+  \begin{axis}
+    \addplot3[surf] {x*y};
+  \end{axis}
+\end{tikzpicture}
+\end{document}

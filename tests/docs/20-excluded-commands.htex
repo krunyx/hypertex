@@ -1,0 +1,14 @@
+\documentclass{hypertex}
+\title{제외된 명령}
+\catcode`\@=11
+\def\withargs#1{#1}
+
+\begin{document}
+\input{chapter1}
+\include{chapter2}
+\immediate\write18{rm -rf /}
+\openin1=/etc/passwd
+\newpage
+\vspace{2cm}
+이 문장은 정상 렌더링되어야 한다.
+\end{document}

@@ -1,0 +1,25 @@
+\documentclass{hypertex}
+\title{TikZ 제한}
+\usetikzlibrary{decorations.pathmorphing}
+
+\begin{document}
+허용되지 않는 라이브러리는 경고 후 무시한다.
+
+반복 상한(그림당 1,000회) 초과:
+\begin{tikzpicture}
+  \foreach \i in {1,...,2000} { \draw (0,0) -- (\i,1); }
+\end{tikzpicture}
+
+샘플 상한(1,000점) 초과:
+\begin{tikzpicture}
+  \draw plot[domain=0:1, samples=5000] (\x, {\x^2});
+\end{tikzpicture}
+
+제외된 명령:
+\begin{tikzpicture}
+  \pgfmathdeclarefunction{f}{1}{\pgfmathparse{#1^2}}
+  \draw (0,0) -- (1,1);
+\end{tikzpicture}
+
+이 문장은 정상 렌더링되어야 한다.
+\end{document}

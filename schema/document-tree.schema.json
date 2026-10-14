@@ -1,0 +1,1352 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "htex://hypertex.org/schema/document-tree/2.0",
+  "title": "HyperTeX 2.0 문서 트리",
+  "description": "파서가 .htex를 해석한 결과. 매크로 확장, 번호 매김, 라벨 해석이 모두 끝난 상태이며, 모든 렌더러(HTML 변환기, 웹 폴백, 전용 뷰어)가 이 구조만 보고 그린다.",
+  "type": "object",
+  "required": [
+    "hypertex",
+    "meta",
+    "labels",
+    "parameters",
+    "bibliography",
+    "body",
+    "diagnostics"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "hypertex": {
+      "const": "2.0"
+    },
+    "source": {
+      "type": "object",
+      "description": "원본 문서 정보",
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "native",
+            "compat"
+          ],
+          "description": "native = .htex, compat = 기존 .tex 호환 모드 (명세 9절)"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    },
+    "labels": {
+      "type": "object",
+      "description": "라벨 → 대상. 같은 문서 안의 \\ref와 외부 문서의 htex://…#라벨 해석에 모두 쓰인다.",
+      "propertyNames": {
+        "$ref": "#/$defs/LabelName"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/LabelTarget"
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "description": "\\parameter로 선언된 슬라이더 (명세 3.2절)",
+      "items": {
+        "$ref": "#/$defs/Parameter"
+      }
+    },
+    "bibliography": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/BibEntry"
+      }
+    },
+    "body": {
+      "$ref": "#/$defs/Blocks"
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "Id": {
+      "type": "string",
+      "pattern": "^n[0-9]+$",
+      "description": "문서 안에서 유일한 노드 id. 파서가 문서 순서대로 n1, n2, …로 매긴다."
+    },
+    "LabelName": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9가-힣:._-]+$"
+    },
+    "Number": {
+      "type": "string",
+      "description": "표시용 번호. 괄호 없이 저장하고 괄호는 렌더러와 스타일이 붙인다. 예: \"3\", \"2.1\", \"A.1\""
+    },
+    "Span": {
+      "type": "object",
+      "description": "원본에서의 위치 (1부터 시작)",
+      "required": [
+        "line",
+        "col"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "col": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endCol": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "Url": {
+      "type": "string",
+      "description": "htex:// 또는 https:// 절대 주소, 혹은 상대 주소",
+      "not": {
+        "pattern": "^([jJ][aA][vV][aA][sS][cC][rR][iI][pP][tT]|[dD][aA][tT][aA]|[fF][iI][lL][eE]|[hH][tT][tT][pP]):"
+      }
+    },
+    "Meta": {
+      "type": "object",
+      "required": [
+        "documentclass"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "documentclass": {
+          "type": "string"
+        },
+        "classOptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title": {
+          "$ref": "#/$defs/Inlines"
+        },
+        "authors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Inlines"
+          }
+        },
+        "date": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "abstract": {
+          "$ref": "#/$defs/Blocks"
+        },
+        "styles": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Url"
+          },
+          "description": "\\usestyle"
+        },
+        "macroImports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Url"
+          },
+          "description": "\\usemacros"
+        },
+        "mathExtensions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "hangulmath"
+            ]
+          },
+          "description": "\\usemath"
+        },
+        "tikzLibraries": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "arrows.meta",
+              "calc",
+              "positioning"
+            ]
+          }
+        }
+      }
+    },
+    "LabelTarget": {
+      "type": "object",
+      "required": [
+        "node",
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "enum": [
+            "section",
+            "equation",
+            "theorem",
+            "figure",
+            "table",
+            "item",
+            "footnote",
+            "step"
+          ]
+        },
+        "number": {
+          "$ref": "#/$defs/Number"
+        },
+        "display": {
+          "type": "string",
+          "description": "링크 미리보기용 짧은 이름. 예: \"정리 3\", \"식 (2.1)\""
+        }
+      }
+    },
+    "Parameter": {
+      "type": "object",
+      "required": [
+        "name",
+        "min",
+        "max",
+        "default"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "역슬래시 없는 이름. \\parameter{\\omega} → \"omega\""
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "default": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "BibEntry": {
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "number": {
+          "$ref": "#/$defs/Number"
+        },
+        "identifier": {
+          "$ref": "#/$defs/ExternalId"
+        },
+        "text": {
+          "$ref": "#/$defs/Inlines"
+        }
+      }
+    },
+    "ExternalId": {
+      "type": "object",
+      "required": [
+        "scheme",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "enum": [
+            "arXiv",
+            "doi",
+            "isbn",
+            "htex",
+            "https"
+          ]
+        },
+        "value": {
+          "type": "string"
+        },
+        "url": {
+          "$ref": "#/$defs/Url",
+          "description": "해석된 주소 (파서가 채우거나 비워 두면 뷰어가 해석)"
+        }
+      }
+    },
+    "Diagnostic": {
+      "type": "object",
+      "required": [
+        "severity",
+        "code",
+        "message"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "enum": [
+            "error",
+            "warning"
+          ]
+        },
+        "code": {
+          "enum": [
+            "undefined-command",
+            "unbalanced-brace",
+            "unclosed-environment",
+            "math-syntax",
+            "broken-ref",
+            "duplicate-label",
+            "macro-recursion",
+            "expansion-limit",
+            "excluded-command",
+            "unknown-package",
+            "unknown-tikz-library",
+            "tikz-limit",
+            "plot-sample-limit",
+            "data-limit",
+            "insecure-resource",
+            "missing-resource",
+            "unknown-parameter",
+            "expression-syntax",
+            "render-timeout"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "node": {
+          "$ref": "#/$defs/Id"
+        }
+      }
+    },
+    "Blocks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Block"
+      }
+    },
+    "Inlines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Inline"
+      }
+    },
+    "Block": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Section"
+        },
+        {
+          "$ref": "#/$defs/Paragraph"
+        },
+        {
+          "$ref": "#/$defs/List"
+        },
+        {
+          "$ref": "#/$defs/Quote"
+        },
+        {
+          "$ref": "#/$defs/Verbatim"
+        },
+        {
+          "$ref": "#/$defs/DisplayMath"
+        },
+        {
+          "$ref": "#/$defs/Theorem"
+        },
+        {
+          "$ref": "#/$defs/Proof"
+        },
+        {
+          "$ref": "#/$defs/Collapse"
+        },
+        {
+          "$ref": "#/$defs/Steps"
+        },
+        {
+          "$ref": "#/$defs/Float"
+        },
+        {
+          "$ref": "#/$defs/Image"
+        },
+        {
+          "$ref": "#/$defs/Tabular"
+        },
+        {
+          "$ref": "#/$defs/Picture"
+        },
+        {
+          "$ref": "#/$defs/Transclusion"
+        },
+        {
+          "$ref": "#/$defs/Bibliography"
+        },
+        {
+          "$ref": "#/$defs/ErrorBlock"
+        }
+      ]
+    },
+    "Section": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "level",
+        "title",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "section"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "1=section, 2=subsection, 3=subsubsection, 4=paragraph"
+        },
+        "number": {
+          "$ref": "#/$defs/Number",
+          "description": "\\section* 이면 없음"
+        },
+        "appendix": {
+          "type": "boolean"
+        },
+        "title": {
+          "$ref": "#/$defs/Inlines"
+        },
+        "label": {
+          "$ref": "#/$defs/LabelName"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Paragraph": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "content"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "paragraph"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "content": {
+          "$ref": "#/$defs/Inlines"
+        }
+      }
+    },
+    "List": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "style",
+        "items"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "list"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "style": {
+          "enum": [
+            "itemize",
+            "enumerate",
+            "description"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "children"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "number": {
+                "$ref": "#/$defs/Number"
+              },
+              "term": {
+                "$ref": "#/$defs/Inlines",
+                "description": "description 목록의 \\item[용어]"
+              },
+              "label": {
+                "$ref": "#/$defs/LabelName"
+              },
+              "children": {
+                "$ref": "#/$defs/Blocks"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Quote": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "quote"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Verbatim": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "verbatim"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "MathSource": {
+      "type": "object",
+      "description": "매크로 확장이 끝난 수식. tex는 허용 명령어만 남은 정규화된 TeX이며, 렌더러는 이를 MathML 등으로 바꾼다.",
+      "required": [
+        "tex"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tex": {
+          "type": "string"
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "latin",
+              "greek",
+              "hangul"
+            ]
+          },
+          "description": "수식 안에 쓰인 문자 체계. hangul이 있으면 한글 음절을 그리스 문자처럼 ord 기호, 직립 고딕으로 조판 (명세 8절)"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "\\showparam 등으로 참조한 매개변수. 값이 바뀌면 이 수식만 다시 그린다."
+        }
+      }
+    },
+    "DisplayMath": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "env",
+        "rows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "displaymath"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "env": {
+          "enum": [
+            "displaymath",
+            "equation",
+            "equation*",
+            "align",
+            "align*",
+            "gather",
+            "gather*",
+            "multline",
+            "multline*"
+          ]
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "description": "한 줄 수식은 행 하나. align 계열은 \\\\ 단위로 나눈 행, 각 행의 tex에 & 정렬점이 남는다.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "math"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "math": {
+                "$ref": "#/$defs/MathSource"
+              },
+              "number": {
+                "$ref": "#/$defs/Number",
+                "description": "번호 없는 행(\\nonumber, 별표 환경)은 없음"
+              },
+              "label": {
+                "$ref": "#/$defs/LabelName"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Theorem": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "env",
+        "name",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "theorem"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "env": {
+          "type": "string",
+          "description": "theorem, lemma, … 또는 \\newtheorem으로 정의한 이름"
+        },
+        "name": {
+          "type": "string",
+          "description": "표시 이름. 예: \"정리\", \"Lemma\", \"추측\""
+        },
+        "number": {
+          "$ref": "#/$defs/Number"
+        },
+        "note": {
+          "$ref": "#/$defs/Inlines",
+          "description": "\\begin{theorem}[피타고라스]의 괄호 안"
+        },
+        "label": {
+          "$ref": "#/$defs/LabelName"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Proof": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "collapsed",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "proof"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "collapsed": {
+          "type": "boolean"
+        },
+        "title": {
+          "$ref": "#/$defs/Inlines"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Collapse": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "title",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "collapse"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "title": {
+          "$ref": "#/$defs/Inlines"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Steps": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "steps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "steps"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "children"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "label": {
+                "$ref": "#/$defs/LabelName"
+              },
+              "children": {
+                "$ref": "#/$defs/Blocks"
+              }
+            }
+          }
+        }
+      }
+    },
+    "Float": {
+      "type": "object",
+      "description": "figure, table 환경. 리플로우 문서이므로 떠다니지 않고 제자리에 놓인다.",
+      "required": [
+        "kind",
+        "id",
+        "floatType",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "float"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "floatType": {
+          "enum": [
+            "figure",
+            "table"
+          ]
+        },
+        "number": {
+          "$ref": "#/$defs/Number"
+        },
+        "label": {
+          "$ref": "#/$defs/LabelName"
+        },
+        "caption": {
+          "$ref": "#/$defs/Inlines"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "Image": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "src"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "image"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "src": {
+          "$ref": "#/$defs/Url"
+        },
+        "width": {
+          "type": "string",
+          "description": "상대 폭. 예: \"0.6\\\\textwidth\" → \"60%\""
+        },
+        "alt": {
+          "type": "string"
+        }
+      }
+    },
+    "Tabular": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "columns",
+        "rows"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "tabular"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "align"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "align": {
+                "enum": [
+                  "l",
+                  "c",
+                  "r"
+                ]
+              },
+              "ruleLeft": {
+                "type": "boolean"
+              },
+              "ruleRight": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "cells"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "ruleAbove": {
+                "type": "boolean"
+              },
+              "ruleBelow": {
+                "type": "boolean"
+              },
+              "cells": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "content"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "colspan": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "align": {
+                      "enum": [
+                        "l",
+                        "c",
+                        "r"
+                      ]
+                    },
+                    "content": {
+                      "$ref": "#/$defs/Inlines"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Picture": {
+      "type": "object",
+      "description": "tikzpicture. 1.0에서는 확장이 끝난 TikZ/pgfplots 소스를 그대로 넘기고, 그리기는 렌더러 공통 모듈이 한다 (그림 내부 구조는 별도 스키마로 정할 예정).",
+      "required": [
+        "kind",
+        "id",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "picture"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "source": {
+          "type": "string"
+        },
+        "usesPgfplots": {
+          "type": "boolean"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "그림이 참조하는 매개변수. 값이 바뀌면 다시 그린다."
+        }
+      }
+    },
+    "Transclusion": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "href"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "transclusion"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "href": {
+          "$ref": "#/$defs/Url",
+          "description": "문서#라벨. 뷰어가 가져와 그 자리에 원본 번호와 함께 표시"
+        }
+      }
+    },
+    "Bibliography": {
+      "type": "object",
+      "description": "참고문헌 목록이 놓일 자리. 내용은 최상위 bibliography 배열에 있다.",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "bibliography"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "title": {
+          "$ref": "#/$defs/Inlines"
+        }
+      }
+    },
+    "ErrorBlock": {
+      "type": "object",
+      "description": "블록 수준에서 해석하지 못한 부분. 원문을 그대로 보여준다.",
+      "required": [
+        "kind",
+        "id",
+        "code",
+        "raw"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "error"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "span": {
+          "$ref": "#/$defs/Span"
+        },
+        "code": {
+          "$ref": "#/$defs/Diagnostic/properties/code"
+        },
+        "raw": {
+          "type": "string"
+        }
+      }
+    },
+    "Inline": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/Text"
+        },
+        {
+          "$ref": "#/$defs/Styled"
+        },
+        {
+          "$ref": "#/$defs/InlineMath"
+        },
+        {
+          "$ref": "#/$defs/Link"
+        },
+        {
+          "$ref": "#/$defs/Footnote"
+        },
+        {
+          "$ref": "#/$defs/LineBreak"
+        },
+        {
+          "$ref": "#/$defs/ShowParam"
+        },
+        {
+          "$ref": "#/$defs/InlineVerbatim"
+        },
+        {
+          "$ref": "#/$defs/InlineError"
+        }
+      ]
+    },
+    "Text": {
+      "type": "object",
+      "required": [
+        "kind",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "text"
+        },
+        "text": {
+          "type": "string",
+          "description": "~는 U+00A0, --는 U+2013 등으로 이미 바꾼 상태"
+        }
+      }
+    },
+    "Styled": {
+      "type": "object",
+      "required": [
+        "kind",
+        "style",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "styled"
+        },
+        "style": {
+          "enum": [
+            "emph",
+            "bold",
+            "italic",
+            "mono",
+            "smallcaps"
+          ]
+        },
+        "children": {
+          "$ref": "#/$defs/Inlines"
+        }
+      }
+    },
+    "InlineMath": {
+      "type": "object",
+      "required": [
+        "kind",
+        "math"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "math"
+        },
+        "math": {
+          "$ref": "#/$defs/MathSource"
+        }
+      }
+    },
+    "Link": {
+      "type": "object",
+      "required": [
+        "kind",
+        "linkType",
+        "target"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "link"
+        },
+        "linkType": {
+          "enum": [
+            "ref",
+            "eqref",
+            "href",
+            "url",
+            "cite"
+          ]
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "doc": {
+              "$ref": "#/$defs/Url",
+              "description": "다른 문서. 없으면 같은 문서"
+            },
+            "label": {
+              "$ref": "#/$defs/LabelName"
+            },
+            "url": {
+              "$ref": "#/$defs/Url"
+            },
+            "keys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "\\cite{a,b}의 키 또는 외부 식별자"
+            }
+          }
+        },
+        "resolved": {
+          "type": "object",
+          "description": "파서가 해석한 결과. 같은 문서 \\ref는 number가 채워지고, 다른 문서는 뷰어가 가져와 채운다.",
+          "additionalProperties": false,
+          "properties": {
+            "number": {
+              "$ref": "#/$defs/Number"
+            },
+            "numbers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Number"
+              }
+            },
+            "node": {
+              "$ref": "#/$defs/Id"
+            },
+            "broken": {
+              "type": "boolean"
+            }
+          }
+        },
+        "children": {
+          "$ref": "#/$defs/Inlines",
+          "description": "\\href의 표시 텍스트. ref·cite는 비워 두고 렌더러가 번호로 채운다."
+        }
+      }
+    },
+    "Footnote": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "number",
+        "children"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "footnote"
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "number": {
+          "$ref": "#/$defs/Number"
+        },
+        "children": {
+          "$ref": "#/$defs/Blocks"
+        }
+      }
+    },
+    "LineBreak": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "linebreak"
+        }
+      }
+    },
+    "ShowParam": {
+      "type": "object",
+      "required": [
+        "kind",
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "showparam"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "InlineVerbatim": {
+      "type": "object",
+      "required": [
+        "kind",
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "code"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "InlineError": {
+      "type": "object",
+      "required": [
+        "kind",
+        "code",
+        "raw"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "error"
+        },
+        "code": {
+          "$ref": "#/$defs/Diagnostic/properties/code"
+        },
+        "raw": {
+          "type": "string"
+        },
+        "children": {
+          "$ref": "#/$defs/Inlines",
+          "description": "정의되지 않은 명령의 인수를 일반 텍스트로 출력한 것"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+\documentclass{hypertex}
+\title{전사}
+
+\begin{document}
+다른 문서의 해밀토니안을 이 자리에 그대로 가져온다:
+\transclude{11-internal-refs.htex#eq:H}
+
+정리도 가져올 수 있다:
+\transclude{08-theorems.htex#thm:lagrange}
+\end{document}
