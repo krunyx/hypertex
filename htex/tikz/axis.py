@@ -421,6 +421,7 @@ def render_axis(eng, env_name: str, opts_text: str, body: str, outer: Style) -> 
     canvas.extend(a1[0], a1[1])
     # 그래프
     canvas.push(f' clip-path="url(#{clip_id})"')
+    saved_bbox = list(canvas.bbox) if canvas.bbox else None   # 잘리는 그래프는 경계를 넓히지 않는다
     for p in plots:
         _draw_plot(eng, p, mapper)
     # 추가 TikZ 문장 (축 좌표)
@@ -431,6 +432,9 @@ def render_axis(eng, env_name: str, opts_text: str, body: str, outer: Style) -> 
             eng.run_block("\n".join(extras), outer)
         finally:
             eng.axis_map = saved
+    canvas.bbox = saved_bbox
+    canvas.extend(a0[0], a0[1])
+    canvas.extend(a1[0], a1[1])
     canvas.pop()
     # 눈금 표시
     fs = 10 * PT * 37.8 * 0.9

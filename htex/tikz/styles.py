@@ -102,13 +102,13 @@ TIP_KINDS = {
     ">>": "to2", "<<": "to2", "Straight Barb": "to", "Classical TikZ Rightarrow": "to",
     "Computer Modern Rightarrow": "to", "Rays": "bar", "Square": "square",
 }
-_TIP_TOKEN = re.compile(r"^(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|>>|<<|[<>|*o]|stealth|latex|to|Stealth|Latex|Triangle|Circle|Bar|Kite|Square)?$")
+_TIP_TOKEN = re.compile(r"^(?:\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}|>>|<<|[<>|*o]|stealth|latex|to|Stealth|Latex|Triangle|Circle|Bar|Kite|Square)?(?:\[[^\]]*\])?$")
 
 
 def parse_arrow_key(key: str) -> Optional[tuple[Optional[str], Optional[str]]]:
     """'->', '<->', '-{Stealth}', '{Stealth[length=3mm]}-latex', '|-|' → (시작 끝 이름, 끝 이름)."""
     k = key.strip()
-    if "-" not in k or "=" in k:
+    if "-" not in k or "=" in re.sub(r"\{[^{}]*\}|\[[^\[\]]*\]", "", k):
         return None
     # 최상위 '-' 하나로 나눈다 (중괄호 안 제외)
     depth = 0
@@ -289,7 +289,8 @@ class StyleApplier:
         }
 
     # ------------------------------------------------------------ 정의
-    def define(self, text: str, problems: list) -> None:
+    def define(self, text: str, problems: Optional[list] = None) -> None:
+        problems = self.e.problems if problems is None else problems
         for key, val in keyvals(text):
             self.define_one(key, val, problems)
 

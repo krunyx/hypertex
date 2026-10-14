@@ -478,8 +478,6 @@ class Canvas:
                  f"overflow:visible;font-family:{BODY_FONT}")
         parts = [f'<svg xmlns="{SVG_NS}" class="htex-tikz" viewBox="{num(x0)} {num(y0)} {num(w)} {num(h)}" '
                  f'role="img" font-size="{num(FONT_PX)}" style="{att(style + extra_style)}">']
-        # 그림이 있으면 '원문으로 표시' 안내(style.py 의 ::before)를 숨긴다. notes/H-questions.md 참고.
-        parts.append("<style>figure.htex-picture:has(&gt;svg)::before{content:none;display:none}</style>")
         if self.defs:
             parts.append("<defs>" + "".join(self.defs) + "</defs>")
         self._emit(self.root, parts)
