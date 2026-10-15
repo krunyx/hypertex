@@ -160,3 +160,7 @@ python tools/check.py --all out/
 | 26 | 8 | 한글 줄바꿈과 한글 수식 |
 | 27 | 9 | 기존 LaTeX 호환 모드 |
 | 28 | 6 | 스타일 파일 |
+
+## 라이선스
+
+[Apache License 2.0](LICENSE). 저작권 고지는 [`NOTICE`](NOTICE)에 있다.
