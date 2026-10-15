@@ -15,7 +15,7 @@ HoTT 책 2장, Stacks Project 2장). 원고는 저장소에 넣지 않고 `.cach
 
 모든 문서가 예외 없이 2초 안에 처리된다 (가장 큰 것 2MB HTML).
 
-## 1. 사용자 확인이 필요한 결정
+## 1. 결정 (2026-10-15 사용자 확정: 네 항목 모두 아래대로)
 
 ### 1.1 compat 모드에서 매크로 순환 검사를 하지 않는다
 - 명세 4절은 순환하는 정의를 거부한다 (사례 16). 그런데 실제 원고는 `\@ifnextchar`로 보호된 재귀
@@ -23,26 +23,24 @@ HoTT 책 2장, Stacks Project 2장). 원고는 저장소에 넣지 않고 `.cach
   HoTT 책의 `\prd`, `\sm`(240여 곳)이 이 때문에 모두 정의되지 않았다.
 - 정한 것: **compat(.tex)에서만** 순환 검사를 생략한다. 무한 확장은 기존 확장 상한(10만 회, 1만 토큰)이
   막고 expansion-limit 진단이 난다. native(.htex)는 그대로 거부한다.
-- 명세 9절 표에 한 줄 더할지 결정 필요.
+- 확정: 명세 4절·9절에 반영했다.
 
 ### 1.2 화면과 무관한 패키지 경고
 - 명세 9절: 기본 5개 외의 `\usepackage`는 "무시하고 경고". 사례 27이 `inputenc`, `geometry`에 경고를 기대한다.
-- 정한 것: 이번에 실제로 지원하게 된 패키지(amscd, tikz-cd, xy, cleveref, mathrsfs, comment, xspace …)만
-  경고하지 않는다 (`build_meta.COMPAT_QUIET_PACKAGES`). 글꼴·여백 패키지(inputenc, fontenc, geometry, microtype …)는
-  명세대로 계속 경고한다.
-- 제안: 실제 원고마다 이런 경고가 5–10개씩 나와 진짜 문제를 가린다. 명세 9절을 "표시와 무관한 조판 패키지는
-  조용히 무시"로 바꾸면 목록 하나(이미 정리해 둠)로 해결된다. 그러면 사례 27 기대값도 함께 고쳐야 한다.
+- 처음 안: 지원 기능의 패키지만 조용히 받고 글꼴·여백 패키지는 명세대로 경고.
+- 확정: 조판 패키지도 조용히 무시한다. `COMPAT_QUIET_PACKAGES`를 넓히고 명세 9절, 사례 27의 manifest 기대값과
+  정답 트리(`unknown-package` 2건 삭제)를 함께 고쳤다. 모르는 패키지는 여전히 경고한다.
 
 ### 1.3 `\cref` 의 표시 이름은 영어
 - cleveref 기본값을 따라 `\cref` → "theorem 2.1", "eq. (1)", "section 3", `\Cref`·`\autoref` → "Theorem 2.1",
   "Equation (1)", "Section 3". 정리류는 `\newtheorem`의 이름을 쓴다.
 - 라벨 표의 `display`("식 (1)", "1절")는 한국어라 다르다. 원고가 영어인 경우가 대부분이라 영어로 했다.
-  문서 언어(`\usepackage[korean]{babel}`, kotex)를 보고 고를지 결정 필요.
+  확정: 영어로 간다 (명세 9절).
 
 ### 1.4 `\chapter` 가 있는 책
 - 스키마의 절은 4단계(section~paragraph)뿐이다. `\chapter`가 하나라도 있으면 chapter→section,
   section→subsection, subsection→subsubsection, subsubsection→paragraph 로 한 단계씩 내린다.
-  `\part`는 번호 없는 최상위 절로. 식·그림 번호는 지금처럼 문서 전체 일련번호.
+  `\part`는 번호 없는 최상위 절로. 식·그림 번호는 지금처럼 문서 전체 일련번호. 확정 (명세 9절).
 
 ## 2. 바꾼 기존 동작 (테스트도 고침)
 

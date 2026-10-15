@@ -15,11 +15,28 @@ KNOWN_PACKAGES = {
     "amsmath", "amssymb", "amsthm", "amsfonts", "hyperref", "graphicx", "graphics",
     "tikz", "pgfplots", "mathtools", "kotex", "url", "xcolor", "color", "bm",
 }
-# 호환 모드(4단계): 이 구현이 기능을 실제로 지원하게 된 패키지. "지원하지 않는 패키지" 경고를 내지 않는다.
-# 화면과 무관한 조판 패키지(inputenc, geometry …)는 명세 9절대로 계속 경고한다 (notes/K-questions.md).
+# 호환 모드(명세 9절, 2026-10-15 결정): 이 구현이 지원하는 기능의 패키지와 화면 표시와 무관한
+# 글꼴·여백·조판 패키지는 경고 없이 무시한다. 표시가 달라질 수 있는데 지원하지 않는 패키지만 경고한다.
 COMPAT_QUIET_PACKAGES = {
-    "amscd", "tikz-cd", "xy", "xypic", "cleveref", "mathrsfs", "eucal", "dsfont", "bbm",
-    "latexsym", "textcomp", "cancel", "comment", "verbatim", "xspace", "amsfonts", "upgreek",
+    # 지원하는 기능
+    "amscd", "tikz-cd", "xy", "xypic", "cleveref", "mathrsfs", "eucal", "euscript", "dsfont",
+    "bbm", "amsbsy", "latexsym", "textcomp", "cancel", "ulem", "soul", "comment", "verbatim",
+    "xspace", "upgreek", "amsfonts", "amsxtra", "accents", "bbold", "mathbbol", "stmaryrd",
+    "epsfig", "subcaption", "subfig", "caption", "float", "wrapfig", "multicol", "booktabs",
+    "array", "enumerate", "enumitem", "paralist", "mdwlist", "framed", "mdframed", "csquotes",
+    "bookmark", "nameref", "varioref", "xr", "xr-hyper", "chngcntr", "etoolbox", "ifthen",
+    "calc", "xparse", "keyval", "kvoptions", "makeidx", "imakeidx", "showkeys", "appendix",
+    "abstract", "authblk", "thmtools", "aliascnt", "doi", "url",
+    # 글꼴·여백·쪽·조판 (화면 표시와 무관)
+    "inputenc", "fontenc", "lmodern", "times", "mathptmx", "palatino", "mathpazo", "helvet",
+    "courier", "charter", "newtxtext", "newtxmath", "libertine", "libertinus", "fourier",
+    "kpfonts", "txfonts", "pxfonts", "tgtermes", "tgpagella", "ebgaramond", "microtype",
+    "geometry", "fullpage", "a4wide", "a4", "setspace", "parskip", "indentfirst", "ragged2e",
+    "lscape", "pdflscape", "afterpage", "placeins", "needspace", "hyphenat", "fixltx2e",
+    "fix-cm", "cmap", "ae", "aecompl", "type1cm", "anyfontsize", "relsize", "fancyhdr",
+    "lastpage", "emptypage", "nopageno", "titlesec", "titletoc", "tocloft", "silence",
+    "pdfsync", "lineno", "changepage", "babel", "polyglossia", "fontspec", "xltxtra",
+    "xunicode", "luatextra", "iftex", "ifpdf", "ifxetex", "pdfpages",
 }
 MATH_EXTENSIONS = {"hangulmath"}
 DEFINITION_COMMANDS = {"newcommand", "renewcommand", "providecommand", "DeclareMathOperator", "def"}

@@ -231,3 +231,10 @@ def test_tex_conditionals_empty_arg_idiom():
            r"\def\a{x}\def\b{x}\ifx\a\b S\else D\fi\ifdefined\a Y\fi\ifdefined\zz Y\else Z\fi")
     out, sink = run(src)
     assert flat(out).replace(" ", "") == "EN(ab)TFSYZ" and not sink.items
+
+
+def test_typesetting_packages_are_quiet_but_unknown_ones_warn():
+    tree = parse(r"\usepackage[utf8]{inputenc}\usepackage{geometry,microtype,tikz-cd,cleveref,foo}"
+                 r"\begin{document}x\end{document}")
+    assert [d["message"] for d in tree["diagnostics"]] and diag_codes(tree) == Counter({"unknown-package": 1})
+    assert "foo" in tree["diagnostics"][0]["message"]

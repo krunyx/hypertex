@@ -10,309 +10,836 @@
   },
   "cases": [
     {
-      "id": "01-minimal", "file": "docs/01-minimal.htex", "spec": ["2"],
+      "id": "01-minimal",
+      "file": "docs/01-minimal.htex",
+      "spec": [
+        "2"
+      ],
       "purpose": "\\begin{document} 생략, 최소 구조",
       "expect": {
-        "meta": { "documentclass": "hypertex" },
-        "count": { "section": 1, "paragraph": 1 },
+        "meta": {
+          "documentclass": "hypertex"
+        },
+        "count": {
+          "section": 1,
+          "paragraph": 1
+        },
         "labels": {},
-        "diagnostics": { "exact": {} }
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "02-metadata", "file": "docs/02-metadata.htex", "spec": ["2"],
+      "id": "02-metadata",
+      "file": "docs/02-metadata.htex",
+      "spec": [
+        "2"
+      ],
       "purpose": "메타데이터가 meta에 구조화되는지",
       "expect": {
-        "meta": { "documentclass": "hypertex", "classOptions": ["note"], "date": "2026-10-14", "keywords": ["메타데이터", "시험", "metadata"] },
-        "metaLengths": { "authors": 2, "abstract": 1 },
-        "diagnostics": { "exact": {} }
+        "meta": {
+          "documentclass": "hypertex",
+          "classOptions": [
+            "note"
+          ],
+          "date": "2026-10-14",
+          "keywords": [
+            "메타데이터",
+            "시험",
+            "metadata"
+          ]
+        },
+        "metaLengths": {
+          "authors": 2,
+          "abstract": 1
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "03-sections-numbering", "file": "docs/03-sections-numbering.htex", "spec": ["3"],
+      "id": "03-sections-numbering",
+      "file": "docs/03-sections-numbering.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "절 번호, 별표 절, 부록 번호",
       "expect": {
-        "count": { "section": 9 },
-        "labels": {
-          "sec:one": { "kind": "section", "number": "1" },
-          "sec:one-a": { "kind": "section", "number": "1.1" },
-          "sec:one-a-i": { "kind": "section", "number": "1.1.1" },
-          "sec:two": { "kind": "section", "number": "2" },
-          "sec:appA": { "kind": "section", "number": "A" },
-          "sec:appA-1": { "kind": "section", "number": "A.1" }
+        "count": {
+          "section": 9
         },
-        "diagnostics": { "exact": {} }
+        "labels": {
+          "sec:one": {
+            "kind": "section",
+            "number": "1"
+          },
+          "sec:one-a": {
+            "kind": "section",
+            "number": "1.1"
+          },
+          "sec:one-a-i": {
+            "kind": "section",
+            "number": "1.1.1"
+          },
+          "sec:two": {
+            "kind": "section",
+            "number": "2"
+          },
+          "sec:appA": {
+            "kind": "section",
+            "number": "A"
+          },
+          "sec:appA-1": {
+            "kind": "section",
+            "number": "A.1"
+          }
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "04-text-formatting", "file": "docs/04-text-formatting.htex", "spec": ["3"],
+      "id": "04-text-formatting",
+      "file": "docs/04-text-formatting.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "인라인 서식, 각주, 인용, verbatim, 특수 문자",
       "expect": {
-        "count": { "footnote": 2, "quote": 1, "verbatim": 1, "linebreak": 1 },
-        "diagnostics": { "exact": {} }
+        "count": {
+          "footnote": 2,
+          "quote": 1,
+          "verbatim": 1,
+          "linebreak": 1
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "05-lists", "file": "docs/05-lists.htex", "spec": ["3"],
+      "id": "05-lists",
+      "file": "docs/05-lists.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "세 종류 목록, 중첩, 항목 라벨",
       "expect": {
-        "count": { "list": 4 },
-        "labels": { "item:first": { "kind": "item", "number": "1" } },
-        "links": [ { "linkType": "ref", "label": "item:first", "number": "1" } ],
-        "diagnostics": { "exact": {} }
+        "count": {
+          "list": 4
+        },
+        "labels": {
+          "item:first": {
+            "kind": "item",
+            "number": "1"
+          }
+        },
+        "links": [
+          {
+            "linkType": "ref",
+            "label": "item:first",
+            "number": "1"
+          }
+        ],
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "06-math-basic", "file": "docs/06-math-basic.htex", "spec": ["3"],
+      "id": "06-math-basic",
+      "file": "docs/06-math-basic.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "인라인·디스플레이 수식, 번호, cases, 행렬",
       "expect": {
-        "count": { "displaymath": 4 },
+        "count": {
+          "displaymath": 4
+        },
         "labels": {
-          "eq:schrodinger": { "kind": "equation", "number": "1" },
-          "eq:cases": { "kind": "equation", "number": "2" }
+          "eq:schrodinger": {
+            "kind": "equation",
+            "number": "1"
+          },
+          "eq:cases": {
+            "kind": "equation",
+            "number": "2"
+          }
         },
         "links": [
-          { "linkType": "eqref", "label": "eq:schrodinger", "number": "1" },
-          { "linkType": "ref", "label": "eq:cases", "number": "2" }
+          {
+            "linkType": "eqref",
+            "label": "eq:schrodinger",
+            "number": "1"
+          },
+          {
+            "linkType": "ref",
+            "label": "eq:cases",
+            "number": "2"
+          }
         ],
-        "diagnostics": { "exact": {} }
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "07-math-multiline", "file": "docs/07-math-multiline.htex", "spec": ["3"],
+      "id": "07-math-multiline",
+      "file": "docs/07-math-multiline.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "align, gather, multline, \\nonumber",
       "expect": {
-        "count": { "displaymath": 4 },
-        "labels": {
-          "eq:sq": { "kind": "equation", "number": "1" },
-          "eq:diff": { "kind": "equation", "number": "2" },
-          "eq:g2": { "kind": "equation", "number": "4" },
-          "eq:long": { "kind": "equation", "number": "5" }
+        "count": {
+          "displaymath": 4
         },
-        "diagnostics": { "exact": {} }
+        "labels": {
+          "eq:sq": {
+            "kind": "equation",
+            "number": "1"
+          },
+          "eq:diff": {
+            "kind": "equation",
+            "number": "2"
+          },
+          "eq:g2": {
+            "kind": "equation",
+            "number": "4"
+          },
+          "eq:long": {
+            "kind": "equation",
+            "number": "5"
+          }
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "08-theorems", "file": "docs/08-theorems.htex", "spec": ["3"],
+      "id": "08-theorems",
+      "file": "docs/08-theorems.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "정리류 공유 카운터, \\newtheorem, 증명",
       "expect": {
-        "count": { "theorem": 5, "proof": 1 },
-        "labels": {
-          "def:group": { "kind": "theorem", "number": "1" },
-          "thm:lagrange": { "kind": "theorem", "number": "2" },
-          "lem:coset": { "kind": "theorem", "number": "3" },
-          "conj:x": { "kind": "theorem", "number": "4" }
+        "count": {
+          "theorem": 5,
+          "proof": 1
         },
-        "diagnostics": { "exact": {} }
+        "labels": {
+          "def:group": {
+            "kind": "theorem",
+            "number": "1"
+          },
+          "thm:lagrange": {
+            "kind": "theorem",
+            "number": "2"
+          },
+          "lem:coset": {
+            "kind": "theorem",
+            "number": "3"
+          },
+          "conj:x": {
+            "kind": "theorem",
+            "number": "4"
+          }
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "09-figures", "file": "docs/09-figures.htex", "spec": ["3", "7"],
+      "id": "09-figures",
+      "file": "docs/09-figures.htex",
+      "spec": [
+        "3",
+        "7"
+      ],
       "purpose": "그림, 캡션, 상대·절대 주소, http 거부",
       "expect": {
-        "count": { "float": 2, "image": 2 },
-        "labels": {
-          "fig:orbit": { "kind": "figure", "number": "1" },
-          "fig:phase": { "kind": "figure", "number": "2" }
+        "count": {
+          "float": 2,
+          "image": 2
         },
-        "diagnostics": { "exact": { "insecure-resource": 1 } }
+        "labels": {
+          "fig:orbit": {
+            "kind": "figure",
+            "number": "1"
+          },
+          "fig:phase": {
+            "kind": "figure",
+            "number": "2"
+          }
+        },
+        "diagnostics": {
+          "exact": {
+            "insecure-resource": 1
+          }
+        }
       }
     },
     {
-      "id": "10-tables", "file": "docs/10-tables.htex", "spec": ["3"],
+      "id": "10-tables",
+      "file": "docs/10-tables.htex",
+      "spec": [
+        "3"
+      ],
       "purpose": "table, tabular, 세로선, \\hline, \\multicolumn",
       "expect": {
-        "count": { "float": 1, "tabular": 1 },
-        "labels": { "tab:mass": { "kind": "table", "number": "1" } },
-        "diagnostics": { "exact": {} }
+        "count": {
+          "float": 1,
+          "tabular": 1
+        },
+        "labels": {
+          "tab:mass": {
+            "kind": "table",
+            "number": "1"
+          }
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "11-internal-refs", "file": "docs/11-internal-refs.htex", "spec": ["5", "7"],
+      "id": "11-internal-refs",
+      "file": "docs/11-internal-refs.htex",
+      "spec": [
+        "5",
+        "7"
+      ],
       "purpose": "같은 문서 참조와 깨진 참조",
       "expect": {
-        "count": { "section": 2, "displaymath": 2 },
+        "count": {
+          "section": 2,
+          "displaymath": 2
+        },
         "labels": {
-          "sec:energy": { "kind": "section", "number": "1" },
-          "eq:H": { "kind": "equation", "number": "1" },
-          "sec:eigen": { "kind": "section", "number": "2" },
-          "eq:En": { "kind": "equation", "number": "2" }
+          "sec:energy": {
+            "kind": "section",
+            "number": "1"
+          },
+          "eq:H": {
+            "kind": "equation",
+            "number": "1"
+          },
+          "sec:eigen": {
+            "kind": "section",
+            "number": "2"
+          },
+          "eq:En": {
+            "kind": "equation",
+            "number": "2"
+          }
         },
         "links": [
-          { "linkType": "eqref", "label": "eq:H", "number": "1" },
-          { "linkType": "ref", "label": "sec:energy", "number": "1" },
-          { "linkType": "ref", "label": "eq:missing", "broken": true }
+          {
+            "linkType": "eqref",
+            "label": "eq:H",
+            "number": "1"
+          },
+          {
+            "linkType": "ref",
+            "label": "sec:energy",
+            "number": "1"
+          },
+          {
+            "linkType": "ref",
+            "label": "eq:missing",
+            "broken": true
+          }
         ],
-        "diagnostics": { "exact": { "broken-ref": 1 } }
+        "diagnostics": {
+          "exact": {
+            "broken-ref": 1
+          }
+        }
       }
     },
     {
-      "id": "12-cross-doc-refs", "file": "docs/12-cross-doc-refs.htex", "spec": ["2", "5", "7"],
+      "id": "12-cross-doc-refs",
+      "file": "docs/12-cross-doc-refs.htex",
+      "spec": [
+        "2",
+        "5",
+        "7"
+      ],
       "purpose": "문서 간 참조, htex:// 절대 주소, 위험한 스킴 거부",
       "expect": {
         "links": [
-          { "linkType": "ref", "doc": "11-internal-refs.htex", "label": "eq:H" },
-          { "linkType": "eqref", "doc": "htex://example.org/notes/oscillator.htex", "label": "eq:aadag" },
-          { "linkType": "ref", "doc": "11-internal-refs.htex", "label": "sec:eigen" },
-          { "linkType": "href", "url": "https://arxiv.org" },
-          { "linkType": "url", "url": "htex://example.org/notes/" }
+          {
+            "linkType": "ref",
+            "doc": "11-internal-refs.htex",
+            "label": "eq:H"
+          },
+          {
+            "linkType": "eqref",
+            "doc": "htex://example.org/notes/oscillator.htex",
+            "label": "eq:aadag"
+          },
+          {
+            "linkType": "ref",
+            "doc": "11-internal-refs.htex",
+            "label": "sec:eigen"
+          },
+          {
+            "linkType": "href",
+            "url": "https://arxiv.org"
+          },
+          {
+            "linkType": "url",
+            "url": "htex://example.org/notes/"
+          }
         ],
-        "diagnostics": { "exact": { "insecure-resource": 1 } }
+        "diagnostics": {
+          "exact": {
+            "insecure-resource": 1
+          }
+        }
       }
     },
     {
-      "id": "13-citations", "file": "docs/13-citations.htex", "spec": ["5"],
+      "id": "13-citations",
+      "file": "docs/13-citations.htex",
+      "spec": [
+        "5"
+      ],
       "purpose": "외부 식별자 인용, BibTeX 키, thebibliography",
       "expect": {
-        "count": { "bibliography": 1 },
-        "bibKeys": ["epr1935", "bell1964"],
-        "links": [
-          { "linkType": "cite", "keys": ["arXiv:2401.01234"] },
-          { "linkType": "cite", "keys": ["doi:10.1103/PhysRev.47.777"] },
-          { "linkType": "cite", "keys": ["isbn:9780198520115"] },
-          { "linkType": "cite", "keys": ["htex://example.org/notes/oscillator.htex"] },
-          { "linkType": "cite", "keys": ["epr1935", "bell1964"] },
-          { "linkType": "cite", "keys": ["nobody2000"], "broken": true }
+        "count": {
+          "bibliography": 1
+        },
+        "bibKeys": [
+          "epr1935",
+          "bell1964"
         ],
-        "diagnostics": { "exact": { "broken-ref": 1 } }
+        "links": [
+          {
+            "linkType": "cite",
+            "keys": [
+              "arXiv:2401.01234"
+            ]
+          },
+          {
+            "linkType": "cite",
+            "keys": [
+              "doi:10.1103/PhysRev.47.777"
+            ]
+          },
+          {
+            "linkType": "cite",
+            "keys": [
+              "isbn:9780198520115"
+            ]
+          },
+          {
+            "linkType": "cite",
+            "keys": [
+              "htex://example.org/notes/oscillator.htex"
+            ]
+          },
+          {
+            "linkType": "cite",
+            "keys": [
+              "epr1935",
+              "bell1964"
+            ]
+          },
+          {
+            "linkType": "cite",
+            "keys": [
+              "nobody2000"
+            ],
+            "broken": true
+          }
+        ],
+        "diagnostics": {
+          "exact": {
+            "broken-ref": 1
+          }
+        }
       }
     },
     {
-      "id": "14-transclusion", "file": "docs/14-transclusion.htex", "spec": ["5"],
+      "id": "14-transclusion",
+      "file": "docs/14-transclusion.htex",
+      "spec": [
+        "5"
+      ],
       "purpose": "다른 문서의 식과 정리 전사",
       "expect": {
-        "count": { "transclusion": 2 },
-        "diagnostics": { "exact": {} }
+        "count": {
+          "transclusion": 2
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "15-macros", "file": "docs/15-macros.htex", "spec": ["4"],
+      "id": "15-macros",
+      "file": "docs/15-macros.htex",
+      "spec": [
+        "4"
+      ],
       "purpose": "\\newcommand, 선택 인수, \\renewcommand, \\DeclareMathOperator",
-      "expect": { "diagnostics": { "exact": {} } }
-    },
-    {
-      "id": "16-macro-recursion", "file": "docs/16-macro-recursion.htex", "spec": ["4", "7"],
-      "purpose": "직접·간접 순환 거부, 모르는 명령을 부르는 정의는 허용",
-      "expect": { "diagnostics": { "exact": { "macro-recursion": 2, "undefined-command": 2 } } }
-    },
-    {
-      "id": "17-expansion-limit", "file": "docs/17-expansion-limit.htex", "spec": ["4", "7"],
-      "purpose": "재귀 없는 기하급수적 확장의 국소 오류 처리 (그 자리는 빨간 오류로)",
-      "expect": { "count": { "error": 2 }, "diagnostics": { "exact": { "expansion-limit": 2 } } }
-    },
-    {
-      "id": "18-usemacros", "file": "docs/18-usemacros.htex", "spec": ["4"],
-      "purpose": "다른 문서의 전문 매크로 가져오기 (본문은 무시)",
-      "requires": ["docs/notation.htex"],
       "expect": {
-        "meta": { "macroImports": ["notation.htex"] },
-        "count": { "paragraph": 1 },
-        "diagnostics": { "exact": {} }
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "19-error-tolerance", "file": "docs/19-error-tolerance.htex", "spec": ["7"],
+      "id": "16-macro-recursion",
+      "file": "docs/16-macro-recursion.htex",
+      "spec": [
+        "4",
+        "7"
+      ],
+      "purpose": "직접·간접 순환 거부, 모르는 명령을 부르는 정의는 허용",
+      "expect": {
+        "diagnostics": {
+          "exact": {
+            "macro-recursion": 2,
+            "undefined-command": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "17-expansion-limit",
+      "file": "docs/17-expansion-limit.htex",
+      "spec": [
+        "4",
+        "7"
+      ],
+      "purpose": "재귀 없는 기하급수적 확장의 국소 오류 처리 (그 자리는 빨간 오류로)",
+      "expect": {
+        "count": {
+          "error": 2
+        },
+        "diagnostics": {
+          "exact": {
+            "expansion-limit": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "18-usemacros",
+      "file": "docs/18-usemacros.htex",
+      "spec": [
+        "4"
+      ],
+      "purpose": "다른 문서의 전문 매크로 가져오기 (본문은 무시)",
+      "requires": [
+        "docs/notation.htex"
+      ],
+      "expect": {
+        "meta": {
+          "macroImports": [
+            "notation.htex"
+          ]
+        },
+        "count": {
+          "paragraph": 1
+        },
+        "diagnostics": {
+          "exact": {}
+        }
+      }
+    },
+    {
+      "id": "19-error-tolerance",
+      "file": "docs/19-error-tolerance.htex",
+      "spec": [
+        "7"
+      ],
       "purpose": "네 가지 오류에도 문서 끝까지 렌더링",
       "expect": {
-        "count": { "section": 5 },
-        "diagnostics": { "exact": { "undefined-command": 1, "unbalanced-brace": 1, "math-syntax": 1, "unclosed-environment": 1 } }
+        "count": {
+          "section": 5
+        },
+        "diagnostics": {
+          "exact": {
+            "undefined-command": 1,
+            "unbalanced-brace": 1,
+            "math-syntax": 1,
+            "unclosed-environment": 1
+          }
+        }
       }
     },
     {
-      "id": "20-excluded-commands", "file": "docs/20-excluded-commands.htex", "spec": ["3", "7"],
+      "id": "20-excluded-commands",
+      "file": "docs/20-excluded-commands.htex",
+      "spec": [
+        "3",
+        "7"
+      ],
       "purpose": "\\def, \\catcode, \\input, \\write, \\openin, 페이지 명령 차단",
-      "expect": { "diagnostics": { "atLeast": { "excluded-command": 8 } } }
+      "expect": {
+        "diagnostics": {
+          "atLeast": {
+            "excluded-command": 8
+          }
+        }
+      }
     },
     {
-      "id": "21-tikz-basic", "file": "docs/21-tikz-basic.htex", "spec": ["3.1"],
+      "id": "21-tikz-basic",
+      "file": "docs/21-tikz-basic.htex",
+      "spec": [
+        "3.1"
+      ],
       "purpose": "좌표, 극좌표, 노드, 라이브러리, \\foreach, plot",
       "expect": {
-        "meta": { "tikzLibraries": ["arrows.meta", "calc", "positioning"] },
-        "count": { "picture": 2, "float": 1 },
-        "labels": { "fig:polar": { "kind": "figure", "number": "1" } },
-        "diagnostics": { "exact": {} }
+        "meta": {
+          "tikzLibraries": [
+            "arrows.meta",
+            "calc",
+            "positioning"
+          ]
+        },
+        "count": {
+          "picture": 2,
+          "float": 1
+        },
+        "labels": {
+          "fig:polar": {
+            "kind": "figure",
+            "number": "1"
+          }
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "22-tikz-limits", "file": "docs/22-tikz-limits.htex", "spec": ["3.1", "7"],
+      "id": "22-tikz-limits",
+      "file": "docs/22-tikz-limits.htex",
+      "spec": [
+        "3.1",
+        "7"
+      ],
       "purpose": "라이브러리 제한, 반복·샘플 상한, 제외 명령",
       "expect": {
-        "count": { "picture": 3 },
-        "diagnostics": { "exact": { "unknown-tikz-library": 1, "tikz-limit": 1, "plot-sample-limit": 1, "excluded-command": 1 } }
+        "count": {
+          "picture": 3
+        },
+        "diagnostics": {
+          "exact": {
+            "unknown-tikz-library": 1,
+            "tikz-limit": 1,
+            "plot-sample-limit": 1,
+            "excluded-command": 1
+          }
+        }
       }
     },
     {
-      "id": "23-pgfplots", "file": "docs/23-pgfplots.htex", "spec": ["3.1"],
+      "id": "23-pgfplots",
+      "file": "docs/23-pgfplots.htex",
+      "spec": [
+        "3.1"
+      ],
       "purpose": "axis, 함수식, 좌표 목록, 인라인 표, 로그 축, 범례, 3D 거부",
       "expect": {
-        "count": { "picture": 3, "float": 1 },
-        "pictures": { "usesPgfplots": 3 },
-        "labels": { "fig:damped": { "kind": "figure", "number": "1" } },
-        "diagnostics": { "exact": { "excluded-command": 1 } }
+        "count": {
+          "picture": 3,
+          "float": 1
+        },
+        "pictures": {
+          "usesPgfplots": 3
+        },
+        "labels": {
+          "fig:damped": {
+            "kind": "figure",
+            "number": "1"
+          }
+        },
+        "diagnostics": {
+          "exact": {
+            "excluded-command": 1
+          }
+        }
       }
     },
     {
-      "id": "24-interaction", "file": "docs/24-interaction.htex", "spec": ["3.2"],
+      "id": "24-interaction",
+      "file": "docs/24-interaction.htex",
+      "spec": [
+        "3.2"
+      ],
       "purpose": "접힌 증명, collapse, steps와 단계 라벨",
       "expect": {
-        "count": { "theorem": 1, "proof": 1, "collapse": 1, "steps": 1 },
+        "count": {
+          "theorem": 1,
+          "proof": 1,
+          "collapse": 1,
+          "steps": 1
+        },
         "collapsedProofs": 1,
         "labels": {
-          "thm:main": { "kind": "theorem", "number": "1" },
-          "step:last": { "kind": "step", "number": "3" }
+          "thm:main": {
+            "kind": "theorem",
+            "number": "1"
+          },
+          "step:last": {
+            "kind": "step",
+            "number": "3"
+          }
         },
-        "diagnostics": { "exact": {} }
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "25-parameters", "file": "docs/25-parameters.htex", "spec": ["3.2"],
+      "id": "25-parameters",
+      "file": "docs/25-parameters.htex",
+      "spec": [
+        "3.2"
+      ],
       "purpose": "슬라이더 선언, 그림·수식 연동, 계산식 오류",
       "expect": {
         "parameters": [
-          { "name": "omega", "min": 0.5, "max": 3, "default": 1, "step": 0.1 },
-          { "name": "gamma", "min": 0, "max": 1, "default": 0.2 }
+          {
+            "name": "omega",
+            "min": 0.5,
+            "max": 3,
+            "default": 1,
+            "step": 0.1
+          },
+          {
+            "name": "gamma",
+            "min": 0,
+            "max": 1,
+            "default": 0.2
+          }
         ],
-        "count": { "picture": 4, "showparam": 2 },
-        "diagnostics": { "exact": { "unknown-parameter": 1, "expression-syntax": 2 } }
+        "count": {
+          "picture": 4,
+          "showparam": 2
+        },
+        "diagnostics": {
+          "exact": {
+            "unknown-parameter": 1,
+            "expression-syntax": 2
+          }
+        }
       }
     },
     {
-      "id": "26-hangul", "file": "docs/26-hangul.htex", "spec": ["8"],
+      "id": "26-hangul",
+      "file": "docs/26-hangul.htex",
+      "spec": [
+        "8"
+      ],
       "purpose": "어절 단위 줄바꿈, 한글 수식 기호",
       "expect": {
-        "meta": { "mathExtensions": ["hangulmath"] },
-        "labels": { "eq:hangul": { "kind": "equation", "number": "1" } },
-        "mathScripts": { "eq:hangul": ["hangul"] },
-        "diagnostics": { "exact": {} }
+        "meta": {
+          "mathExtensions": [
+            "hangulmath"
+          ]
+        },
+        "labels": {
+          "eq:hangul": {
+            "kind": "equation",
+            "number": "1"
+          }
+        },
+        "mathScripts": {
+          "eq:hangul": [
+            "hangul"
+          ]
+        },
+        "diagnostics": {
+          "exact": {}
+        }
       }
     },
     {
-      "id": "27-compat-article", "file": "docs/27-compat-article.tex", "spec": ["9"],
+      "id": "27-compat-article",
+      "file": "docs/27-compat-article.tex",
+      "spec": [
+        "9"
+      ],
       "purpose": "일반 LaTeX 문서의 호환 모드 처리",
-      "requires": ["docs/appendix.tex"],
+      "requires": [
+        "docs/appendix.tex"
+      ],
       "expect": {
         "mode": "compat",
-        "meta": { "documentclass": "hypertex" },
-        "labels": {
-          "sec:intro": { "kind": "section", "number": "1" },
-          "eq:newton": { "kind": "equation", "number": "1" },
-          "thm:one": { "kind": "theorem", "number": "1" },
-          "sec:appendix": { "kind": "section", "number": "2" }
+        "meta": {
+          "documentclass": "hypertex"
         },
-        "diagnostics": { "exact": { "unknown-package": 2, "missing-resource": 1 } }
+        "labels": {
+          "sec:intro": {
+            "kind": "section",
+            "number": "1"
+          },
+          "eq:newton": {
+            "kind": "equation",
+            "number": "1"
+          },
+          "thm:one": {
+            "kind": "theorem",
+            "number": "1"
+          },
+          "sec:appendix": {
+            "kind": "section",
+            "number": "2"
+          }
+        },
+        "diagnostics": {
+          "exact": {
+            "missing-resource": 1
+          }
+        }
       }
     },
     {
-      "id": "28-styles", "file": "docs/28-styles.htex", "spec": ["6", "7"],
+      "id": "28-styles",
+      "file": "docs/28-styles.htex",
+      "spec": [
+        "6",
+        "7"
+      ],
       "purpose": "스타일 파일의 번호 형식 반영, http 스타일 거부",
-      "requires": ["docs/physics-notes.hsty"],
+      "requires": [
+        "docs/physics-notes.hsty"
+      ],
       "expect": {
-        "meta": { "styles": ["physics-notes.hsty"] },
-        "labels": {
-          "eq:s1": { "kind": "equation", "number": "1.1" },
-          "eq:s2": { "kind": "equation", "number": "2.1" }
+        "meta": {
+          "styles": [
+            "physics-notes.hsty"
+          ]
         },
-        "diagnostics": { "exact": { "insecure-resource": 1 } }
+        "labels": {
+          "eq:s1": {
+            "kind": "equation",
+            "number": "1.1"
+          },
+          "eq:s2": {
+            "kind": "equation",
+            "number": "2.1"
+          }
+        },
+        "diagnostics": {
+          "exact": {
+            "insecure-resource": 1
+          }
+        }
       }
     }
   ]
