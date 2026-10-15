@@ -25,6 +25,7 @@ def tokenize(src: str, sink: Sink | None = None) -> list[Token]:
     out: list[Token] = []
     i, n = 0, len(src)
     line, col = 1, 1
+    at_letter = False  # \makeatletter 구간
 
     def adv(k: int):
         nonlocal i, line, col
@@ -61,12 +62,18 @@ def tokenize(src: str, sink: Sink | None = None) -> list[Token]:
                 out.append(Token(T.CHAR, "\\", start))
                 continue
             d = src[i + 1]
-            if d.isascii() and d.isalpha():
+            if (d.isascii() and d.isalpha()) or (d == "@" and at_letter):
                 j = i + 1
-                while j < n and src[j].isascii() and src[j].isalpha():
+                while j < n and ((src[j].isascii() and src[j].isalpha())
+                                 or (src[j] == "@" and at_letter)):
                     j += 1
                 name = src[i + 1:j]
                 adv(j - i)
+                # \makeatletter … \makeatother: 그 사이에서는 @ 도 제어어 글자 (LaTeX 호환)
+                if name == "makeatletter":
+                    at_letter = True
+                elif name == "makeatother":
+                    at_letter = False
                 # \verb
                 if name == "verb" and i < n:
                     delim = src[i]

@@ -44,16 +44,20 @@ class BuildContext:
 
 
 from .build_blocks import BlockMixin  # noqa: E402
+from .build_compat import CompatMixin, remap_chapters  # noqa: E402
 from .build_inline import InlineMixin  # noqa: E402
 from .build_meta import MetaMixin  # noqa: E402
 from .build_state import StateMixin  # noqa: E402
 
 
-class _Builder(StateMixin, MetaMixin, InlineMixin, BlockMixin):
+class _Builder(StateMixin, MetaMixin, InlineMixin, CompatMixin, BlockMixin):
     """build_state / build_meta / build_inline / build_blocks 의 기능을 합친 해석기."""
 
     def __init__(self, tokens: list[Token], ctx: BuildContext):
+        if ctx.mode == "compat":
+            tokens = remap_chapters(tokens)
         self._init_state(tokens, ctx)
+        self.pending_crefs: list = []
         self._init_meta()
         self.bibliography: list[dict] = []
         self.out: list[dict] = []
@@ -63,10 +67,12 @@ class _Builder(StateMixin, MetaMixin, InlineMixin, BlockMixin):
 
     def run(self) -> dict[str, Any]:
         body = self.out
+        self.out_root = body
         self.run_top()
         self.finish_params(body)
         self.finish_ids(body)
         self.resolve()
+        self.resolve_crefs()
         meta = self.meta
         if "abstract" in meta and not meta["abstract"]:
             del meta["abstract"]

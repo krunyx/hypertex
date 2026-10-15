@@ -100,6 +100,17 @@ class InlineMixin:
     # ------------------------------------------------------------ 글자
     def text_char(self) -> None:
         t = self.cur
+        if t.text in ("`", "'") and self.ctx.mode == "compat":
+            # LaTeX 따옴표 합자: `` → “, '' → ”, ` → ‘ (홑 ' 는 그대로 둔다)
+            nxt = self.at(self.pos + 1)
+            if nxt.type is T.CHAR and nxt.text == t.text:
+                self.adv(2)
+                self.add_text("“" if t.text == "`" else "”")
+                return
+            if t.text == "`":
+                self.adv()
+                self.add_text("‘")
+                return
         if t.text == "-":
             k = 0
             while self.at(self.pos + k).type is T.CHAR and self.at(self.pos + k).text == "-" and k < 3:

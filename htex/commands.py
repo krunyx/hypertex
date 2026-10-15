@@ -81,8 +81,24 @@ lbrace rbrace lbrack rbrack
 GREEK = frozenset(_GREEK)
 MATH = set(_GREEK) | set(_MATH_SYMBOLS)
 
+# 수식 → MathML 변환기가 그릴 줄 아는 명령은 모두 수식 명령으로 본다.
+# (목록을 두 곳에서 따로 관리하면 변환기가 그리는 기호도 빌더는 "정의되지 않음"으로 진단한다.)
+# htex.html.mathml 은 표준 라이브러리만 쓰고 htex 핵심을 가져오지 않으므로 순환이 없다.
+from .html.mathml import HANDLED_COMMANDS as _MATHML_COMMANDS  # noqa: E402
+from .html.mathml import TEXTLIKE_COMMANDS as _TEXTLIKE  # noqa: E402
+
+# 수식 전용 기호·명령 (본문에 나오면 빌더가 인라인 수식으로 감싼다)
+MATH |= set(_MATHML_COMMANDS) - set(_TEXTLIKE)
+# 수식 안에서 알아듣는 본문류 명령 (\rm, \mbox, \index …): 수식 안 진단에서만 쓴다
+MATH_TEXTLIKE = frozenset(_TEXTLIKE)
+
 BUILTIN = PREAMBLE | TEXT | MATH
 
 
 def is_builtin(name: str) -> bool:
     return name in BUILTIN
+
+
+def is_known_in_math(name: str) -> bool:
+    """수식 안에서 정의된 명령인가 (내장 + 변환기가 아는 본문류 명령)."""
+    return name in BUILTIN or name in MATH_TEXTLIKE

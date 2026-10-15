@@ -61,22 +61,29 @@ python -m htex parse examples/oscillator.htex
 ```
 
 기존 `.tex` 파일은 확장자 그대로 열면 호환 모드로 읽는다 (명세 9절).
+호환 모드는 실제 원고에서 흔한 것들을 받는다: 인수·구분자 있는 `\def`, `\let`, `\newenvironment`,
+`\@ifnextchar`와 TeX 조건문, `\cref`, 옛 글꼴 전환(`{\bf …}`), `\chapter`, 가환 그림(`\xymatrix`, `tikzcd`, amscd `CD`),
+그리고 표시와 무관한 조판·색인 명령은 조용히 버린다. 자세한 목록과 결정은 `notes/K-questions.md`.
 
 ## 테스트
 
 ```bash
 python -m pip install pytest jsonschema
-python -m pytest -q tests/unit          # 단위 테스트 606건
+python -m pytest -q tests/unit          # 단위 테스트 756건
 python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
 python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
+python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks Project, amsmath 시험 문서 …)
 ```
+
+`tools/realworld.py`는 공개 원고를 GitHub에서 받아 `.cache/realworld/`에 두고(저장소에는 넣지 않는다)
+진단 수와 수식 변환 실패율을 재며, `--check`는 기준을 넘으면 실패한다.
 
 ## 구성
 
 | 폴더 | 내용 |
 | --- | --- |
 | `htex/` | lexer, macros(매크로 확장), build_*(문서 트리), expr(계산식), picture(그림 검사) |
-| `htex/html/` | 문서 트리 → HTML + MathML |
+| `htex/html/` | 문서 트리 → HTML + MathML, 가환 그림(`cd.py`) |
 | `htex/tikz/` | TikZ·pgfplots 부분집합 → SVG |
 | `htex/web/` | `serve`, `build`, 상호작용 스크립트 interact.js |
 | `htex/viewer/` | PySide6 전용 뷰어 (`htex://` 주소, 히스토리, 미리보기, 슬라이더) |

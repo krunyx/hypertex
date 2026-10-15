@@ -15,6 +15,12 @@ KNOWN_PACKAGES = {
     "amsmath", "amssymb", "amsthm", "amsfonts", "hyperref", "graphicx", "graphics",
     "tikz", "pgfplots", "mathtools", "kotex", "url", "xcolor", "color", "bm",
 }
+# 호환 모드(4단계): 이 구현이 기능을 실제로 지원하게 된 패키지. "지원하지 않는 패키지" 경고를 내지 않는다.
+# 화면과 무관한 조판 패키지(inputenc, geometry …)는 명세 9절대로 계속 경고한다 (notes/K-questions.md).
+COMPAT_QUIET_PACKAGES = {
+    "amscd", "tikz-cd", "xy", "xypic", "cleveref", "mathrsfs", "eucal", "dsfont", "bbm",
+    "latexsym", "textcomp", "cancel", "comment", "verbatim", "xspace", "amsfonts", "upgreek",
+}
 MATH_EXTENSIONS = {"hangulmath"}
 DEFINITION_COMMANDS = {"newcommand", "renewcommand", "providecommand", "DeclareMathOperator", "def"}
 META_COMMANDS = {
@@ -174,7 +180,8 @@ class MetaMixin:
         elif name == "usepackage":
             self.read_opt()
             for pkg in (x.strip() for x in self.read_text_arg().split(",")):
-                if pkg and pkg not in KNOWN_PACKAGES:
+                if pkg and pkg not in KNOWN_PACKAGES and not (
+                        self.ctx.mode == "compat" and pkg in COMPAT_QUIET_PACKAGES):
                     self.sink.add("unknown-package", f"지원하지 않는 패키지를 무시했다: {pkg}", tok.span)
         elif name == "newtheorem":
             star = self.take_star()

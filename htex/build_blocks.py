@@ -282,6 +282,8 @@ class BlockMixin:
             self.read_opt()
             if name == "bibitem":
                 self.read_group()
+        elif self.ctx.mode == "compat" and self.compat_command(tok):
+            pass
         elif self.inline_command(tok):
             pass
         elif name in C.MATH and name not in C.TEXT:
@@ -312,15 +314,27 @@ class BlockMixin:
             self.adv()
             start = self.pos
             i = start
+            depth = 0
+            first: Optional[int] = None
             while True:
                 t = self.at(i)
+                if t.type in (T.EOF, T.PAR) and first is not None:
+                    i = first          # 중괄호가 안 닫혔다: 첫 $ 에서 닫는다
+                    t = self.at(i)
+                    depth = 0
+                elif t.type is T.MATH and first is None:
+                    first = i
                 if t.type in (T.EOF, T.PAR):
                     self.pos = i
                     body = self.toks[start:i]
                     self.sink.add("math-syntax", "$$ 수식이 닫히지 않았다", tok.span)
                     self.error_block("math-syntax", "$$" + detok(body), tok)
                     return
-                if t.type is T.MATH:
+                if t.type is T.BGROUP:
+                    depth += 1
+                elif t.type is T.EGROUP:
+                    depth = max(depth - 1, 0)
+                if t.type is T.MATH and depth == 0:
                     body = self.toks[start:i]
                     self.pos = i + 1
                     if self.cur.type is T.MATH:
@@ -328,11 +342,36 @@ class BlockMixin:
                     self.display_math("displaymath", body, tok, "$$" + detok(body) + "$$")
                     return
                 i += 1
-        body, closed = self.collect_until(lambda t: t.type is T.MATH)
+        body, closed = self.collect_math_until_dollar()
         body, labels, _, _ = self._inline_labels(body)
         for lb in labels:
             self.register_label(lb, self.target, tok)
         self.inline_math(body, tok, "$", "$", closed)
+
+    def collect_math_until_dollar(self) -> tuple[list[Token], bool]:
+        """닫는 $ 까지. 중괄호 안의 $ 는 \\text{…$x$…}, \\raisebox{…}{$x$} 처럼 상자 인수 속의
+        중첩 수식이므로 닫는 것으로 보지 않는다 (TeX와 같다)."""
+        start = i = self.pos
+        depth = 0
+        first: Optional[int] = None   # 깊이와 상관없는 첫 $ (중괄호가 안 닫힌 수식의 되돌림)
+        while True:
+            t = self.at(i)
+            if t.type is T.EOF or t.type is T.PAR:
+                if first is not None:
+                    self.pos = first + 1
+                    return self.toks[start:first], True
+                self.pos = i
+                return self.toks[start:i], False
+            if t.type is T.MATH and first is None:
+                first = i
+            if t.type is T.BGROUP:
+                depth += 1
+            elif t.type is T.EGROUP:
+                depth = max(depth - 1, 0)
+            elif t.type is T.MATH and depth == 0:
+                self.pos = i + 1
+                return self.toks[start:i], True
+            i += 1
 
     def _inline_labels(self, body):
         if any(t.type is T.CS and t.text == "label" for t in body):
@@ -525,6 +564,16 @@ class BlockMixin:
             self.env_body(env, tok, self.meta.setdefault("abstract", []))
         elif env == "tikzpicture":
             self.picture(env, tok)
+        elif self.ctx.mode == "compat" and env in ("tikzcd", "CD"):
+            # 본문에 단독으로 놓인 가환 그림: 번호 없는 전시 수식으로
+            body, closed = self.collect_env(env)
+            if not closed:
+                self.unclosed(env, tok)
+            raw = f"\\begin{{{env}}}" + detok(body) + f"\\end{{{env}}}"
+            self.display_math("displaymath", self._env_tokens(env, body, tok), tok, raw)
+        elif self.ctx.mode == "compat" and env == "math":
+            body, closed = self.collect_env(env)
+            self.inline_math(body, tok, "\\begin{math}", "\\end{math}", closed)
         elif env == "verbatim":   # lexer가 VERBATIM으로 바꾸지 못한 경우 (확장 결과 등)
             body, closed = self.collect_env(env)
             node = {"kind": "verbatim", "id": self.new_id(), "span": span_json(tok), "text": detok(body)}
@@ -532,11 +581,16 @@ class BlockMixin:
             self.end_block(node)
         else:
             from . import commands as C
-            if env not in LAYOUT_ENVS and env not in PICTURE_ENVS and env not in C.ENVIRONMENTS:
+            from .build_compat import COMPAT_ENV_ARGS, COMPAT_LAYOUT_ENVS
+            compat_layout = self.ctx.mode == "compat" and env in COMPAT_LAYOUT_ENVS
+            if (env not in LAYOUT_ENVS and env not in PICTURE_ENVS and env not in C.ENVIRONMENTS
+                    and not compat_layout):
                 self.sink.add("undefined-command", f"정의되지 않은 환경: {env}", tok.span)
-            if env == "minipage":
+            if env == "minipage" and not compat_layout:
                 self.read_opt()
                 self.read_group()
+            elif compat_layout:
+                self.skip_signature(COMPAT_ENV_ARGS.get(env, ""))
             # 알 수 없는 환경은 투명하게: 내용만 그 자리에
             with self.keep_target():
                 if self.body_until(env) == "unclosed":

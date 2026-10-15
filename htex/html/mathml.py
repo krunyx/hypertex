@@ -25,6 +25,8 @@ import re
 import unicodedata
 from typing import Any, Iterable
 
+from . import cd as _cd
+
 __all__ = ["MathError", "El", "convert", "tex_to_mathml"]
 
 
@@ -101,6 +103,10 @@ GREEK = {
     "Gamma": "Γ", "Delta": "Δ", "Theta": "Θ", "Lambda": "Λ", "Xi": "Ξ", "Pi": "Π",
     "Sigma": "Σ", "Upsilon": "Υ", "Phi": "Φ", "Psi": "Ψ", "Omega": "Ω",
     "digamma": "ϝ",
+    # 기울인 대문자 그리스 (amsmath \varGamma 등)
+    "varGamma": "𝛤", "varDelta": "𝛥", "varTheta": "𝛩", "varLambda": "𝛬", "varXi": "𝛯",
+    "varPi": "𝛱", "varSigma": "𝛴", "varUpsilon": "𝛶", "varPhi": "𝛷", "varPsi": "𝛹",
+    "varOmega": "𝛺",
 }
 
 # 보통 기호(ord)로 쓰는 것 → mi
@@ -111,6 +117,12 @@ ORD_SYMBOLS = {
     "Box": "□", "square": "□", "triangle": "△", "flat": "♭", "sharp": "♯", "natural": "♮",
     "clubsuit": "♣", "diamondsuit": "♢", "heartsuit": "♡", "spadesuit": "♠",
     "complement": "∁", "eth": "ð", "mho": "℧", "Finv": "Ⅎ", "Game": "⅁",
+    "gimel": "ℷ", "daleth": "ℸ", "backprime": "‵", "Diamond": "◊", "lozenge": "◊",
+    "blacklozenge": "⧫", "bigstar": "★", "blacksquare": "■", "blacktriangle": "▴",
+    "blacktriangledown": "▾", "triangledown": "▽", "vartriangle": "△", "circledS": "Ⓢ",
+    "measuredangle": "∡", "sphericalangle": "∢", "diagup": "╱", "diagdown": "╲",
+    "pounds": "£", "yen": "¥", "copyright": "©", "dag": "†", "ddag": "‡",
+    "varpropto": "∝", "Bbbk": "𝕜", "Dbar": "Đ",
 }
 
 # 연산자·관계·화살표 → mo
@@ -123,7 +135,12 @@ OPERATORS = {
     "uplus": "⊎", "amalg": "⨿", "dagger": "†", "ddagger": "‡", "wr": "≀", "diamond": "⋄",
     "bigtriangleup": "△", "bigtriangledown": "▽", "triangleleft": "◃", "triangleright": "▹",
     "lhd": "⊲", "rhd": "⊳", "unlhd": "⊴", "unrhd": "⊵", "boxplus": "⊞", "boxtimes": "⊠",
-    "cdotp": "⋅", "centerdot": "⋅",
+    "cdotp": "⋅", "centerdot": "⋅", "ldotp": ".", "intercal": "⊺", "dotplus": "∔",
+    "ltimes": "⋉", "rtimes": "⋊", "leftthreetimes": "⋋", "rightthreetimes": "⋌",
+    "circledast": "⊛", "circledcirc": "⊚", "circleddash": "⊝", "boxminus": "⊟",
+    "boxdot": "⊡", "barwedge": "⊼", "veebar": "⊻", "doublebarwedge": "⩞",
+    "curlywedge": "⋏", "curlyvee": "⋎", "Cap": "⋒", "Cup": "⋓", "divideontimes": "⋇",
+    "bigcirc": "◯", "bigsqcap": "⨅", "Join": "⋈", "smallfrown": "⌢", "smallsmile": "⌣",
     # 관계
     "le": "≤", "leq": "≤", "ge": "≥", "geq": "≥", "ne": "≠", "neq": "≠", "leqslant": "⩽",
     "geqslant": "⩾", "approx": "≈", "equiv": "≡", "sim": "∼", "simeq": "≃", "cong": "≅",
@@ -137,6 +154,24 @@ OPERATORS = {
     "lesssim": "≲", "gtrsim": "≳", "approxeq": "≊", "thicksim": "∼", "nsim": "≁",
     "ncong": "≇", "nleq": "≰", "ngeq": "≱", "nless": "≮", "ngtr": "≯",
     "nsubseteq": "⊈", "nsupseteq": "⊉",
+    "vDash": "⊨", "Vdash": "⊩", "Vvdash": "⊪", "VDash": "⊫", "nvdash": "⊬", "nvDash": "⊭",
+    "nVdash": "⊮", "nVDash": "⊯", "leqq": "≦", "geqq": "≧", "lneq": "⪇", "gneq": "⪈",
+    "lneqq": "≨", "gneqq": "≩", "lll": "⋘", "ggg": "⋙", "lessgtr": "≶", "gtrless": "≷",
+    "lesseqgtr": "⋚", "gtreqless": "⋛", "preccurlyeq": "≼", "succcurlyeq": "≽",
+    "precsim": "≾", "succsim": "≿", "nprec": "⊀", "nsucc": "⊁", "eqsim": "≂", "backsim": "∽",
+    "backsimeq": "⋍", "doteqdot": "≑", "risingdotseq": "≓", "fallingdotseq": "≒",
+    "eqcirc": "≖", "circeq": "≗", "bumpeq": "≏", "Bumpeq": "≎", "between": "≬",
+    "pitchfork": "⋔", "multimap": "⊸", "subsetneqq": "⫋", "supsetneqq": "⫌",
+    "varsubsetneq": "⊊", "varsupsetneq": "⊋", "subseteqq": "⫅", "supseteqq": "⫆",
+    "Subset": "⋐", "Supset": "⋑", "sqsubsetneq": "⊏", "ntriangleleft": "⋪",
+    "ntriangleright": "⋫", "trianglelefteq": "⊴", "trianglerighteq": "⊵",
+    "vartriangleleft": "⊲", "vartriangleright": "⊳", "lesssimeq": "≲", "lessapprox": "⪅",
+    "gtrapprox": "⪆", "eqslantless": "⪕", "eqslantgtr": "⪖", "shortmid": "∣",
+    "shortparallel": "∥", "nshortmid": "∤", "nshortparallel": "∦", "napprox": "≉",
+    "nequiv": "≢", "nsimeq": "≄", "nleqslant": "⪇", "ngeqslant": "⪈",
+    "vcentcolon": ":", "centercolon": ":", "ratio": "∶", "coloneq": "≔", "eqcolon": "≕",
+    "Coloneqq": "⩴", "dblcolon": "∷", "Colon": "∷", "colonapprox": ":≈", "colonsim": ":∼",
+    "notni": "∌", "varsupsetneqq": "⫌", "ltimes": "⋉",
     # 논리
     "forall": "∀", "exists": "∃", "nexists": "∄", "neg": "¬", "lnot": "¬",
     "therefore": "∴", "because": "∵",
@@ -152,6 +187,18 @@ OPERATORS = {
     "rightleftharpoons": "⇌", "leadsto": "⇝", "rightsquigarrow": "⇝",
     "twoheadrightarrow": "↠", "rightrightarrows": "⇉", "leftrightarrows": "⇆",
     "leftleftarrows": "⇇", "rightleftarrows": "⇄",
+    "mapsfrom": "↤", "longmapsfrom": "⟻", "Mapsto": "⤇", "Mapsfrom": "⤆",
+    "leftharpoonup": "↼", "leftharpoondown": "↽", "rightharpoondown": "⇁",
+    "upharpoonleft": "↿", "upharpoonright": "↾", "restriction": "↾",
+    "downharpoonleft": "⇃", "downharpoonright": "⇂", "leftrightharpoons": "⇋",
+    "dashrightarrow": "⇢", "dashleftarrow": "⇠", "Rrightarrow": "⇛", "Lleftarrow": "⇚",
+    "leftarrowtail": "↢", "rightarrowtail": "↣", "twoheadleftarrow": "↞",
+    "looparrowleft": "↫", "looparrowright": "↬", "curvearrowleft": "↶",
+    "curvearrowright": "↷", "circlearrowleft": "↺", "circlearrowright": "↻",
+    "nrightarrow": "↛", "nleftarrow": "↚", "nRightarrow": "⇏", "nLeftarrow": "⇍",
+    "nleftrightarrow": "↮", "nLeftrightarrow": "⇎", "leftrightsquigarrow": "↭",
+    "upuparrows": "⇈", "downdownarrows": "⇊", "Lsh": "↰", "Rsh": "↱",
+    "longleftrightarrows": "⇆", "rightarrowtriangle": "⇾",
     # 점
     "ldots": "…", "dots": "…", "dotsc": "…", "dotso": "…", "dotsb": "⋯", "dotsm": "⋯",
     "dotsi": "⋯", "cdots": "⋯", "vdots": "⋮", "ddots": "⋱", "mathellipsis": "…",
@@ -169,6 +216,8 @@ FENCES = {
     "lgroup": "⟮", "rgroup": "⟯", "lmoustache": "⎰", "rmoustache": "⎱",
     "backslash": "\\", "uparrow": "↑", "downarrow": "↓", "updownarrow": "↕",
     "Uparrow": "⇑", "Downarrow": "⇓",
+    "llbracket": "⟦", "rrbracket": "⟧", "lBrack": "⟦", "rBrack": "⟧", "lAngle": "⟪",
+    "rAngle": "⟫", "lparen": "(", "rparen": ")", "llparenthesis": "⦇", "rrparenthesis": "⦈",
 }
 CHAR_FENCES = set("()[]|/<>.")
 _CHAR_FENCE_MAP = {"<": "⟨", ">": "⟩", ".": ""}
@@ -181,6 +230,8 @@ BIG_OPS = {
     "bigsqcup": ("⨆", "auto"), "bigvee": ("⋁", "auto"), "bigwedge": ("⋀", "auto"),
     "int": ("∫", "nolimits"), "iint": ("∬", "nolimits"), "iiint": ("∭", "nolimits"),
     "oint": ("∮", "nolimits"), "oiint": ("∯", "nolimits"), "intop": ("∫", "auto"),
+    "iiiint": ("⨌", "nolimits"), "idotsint": ("∫⋯∫", "nolimits"), "smallint": ("∫", "nolimits"),
+    "ointop": ("∮", "auto"), "bigsqcap": ("⨅", "auto"),
 }
 
 # 함수 이름 (첨자는 옆에)
@@ -214,7 +265,13 @@ ACCENTS = {
     "overline": ("‾", True, True), "underline": ("_", True, False),
     "overrightarrow": ("→", True, True), "overleftarrow": ("←", True, True),
     "overleftrightarrow": ("↔", True, True), "underrightarrow": ("→", True, False),
-    "underleftarrow": ("←", True, False),
+    "underleftarrow": ("←", True, False), "underleftrightarrow": ("↔", True, False),
+    "ddddot": ("⃜", False, True), "utilde": ("~", True, False), "overline*": ("‾", True, True),
+    # amsmath의 대문자 악센트는 소문자와 같게 그린다
+    "Hat": ("^", False, True), "Check": ("ˇ", False, True), "Tilde": ("~", False, True),
+    "Acute": ("´", False, True), "Grave": ("`", False, True), "Dot": ("˙", False, True),
+    "Ddot": ("¨", False, True), "Breve": ("˘", False, True), "Bar": ("¯", False, True),
+    "Vec": ("→", False, True),
     "overbrace": ("⏞", True, True), "underbrace": ("⏟", True, False),
 }
 
@@ -223,7 +280,30 @@ FONT_COMMANDS = {
     "mathbf": "bf", "mathrm": "rm", "mathit": "it", "mathsf": "sf", "mathtt": "tt",
     "mathcal": "cal", "mathscr": "cal", "mathbb": "bb", "mathfrak": "frak",
     "boldsymbol": "bfit", "bm": "bfit", "mathnormal": None, "mathup": "rm", "mathbfit": "bfit",
+    "pmb": "bfit", "mathbbm": "bb", "mathds": "bb", "mathbbb": "bb", "EuScript": "cal",
+    "mathpzc": "cal", "mathsfit": "sf", "symbf": "bf", "symit": "it", "symrm": "rm",
+    "symsf": "sf", "symtt": "tt", "symcal": "cal", "symbb": "bb", "symfrak": "frak",
 }
+
+# 옛 글꼴 전환 (\rm x: 그룹 끝까지)
+OLD_FONT_SWITCHES = {"rm": "rm", "bf": "bf", "it": "it", "sf": "sf", "tt": "tt", "cal": "cal",
+                     "mit": None, "boldmath": "bfit", "unboldmath": None, "mathversion": None,
+                     "rmfamily": "rm", "bfseries": "bf", "itshape": "it", "sffamily": "sf",
+                     "ttfamily": "tt", "upshape": "rm", "mdseries": None, "normalfont": None}
+
+# TeX 원자 종류 명령: 이름 → (왼쪽 간격, 오른쪽 간격)
+ATOM_CLASSES = {"mathord": ("0", "0"), "mathbin": ("0.2222em", "0.2222em"),
+                "mathrel": ("0.2778em", "0.2778em"), "mathopen": ("0", "0"),
+                "mathclose": ("0", "0"), "mathpunct": ("0", "0.1667em"),
+                "mathinner": ("0", "0")}
+
+# 그 자리에서 아무것도 그리지 않는 명령 (인수 없음)
+NOOP_COMMANDS = {"nonumber", "notag", "hline", "allowbreak", "nobreak", "relax", "protect",
+                 "displaybreak", "linebreak", "nolinebreak", "pagebreak", "nopagebreak",
+                 "noindent", "nulldelimiterspace", "scriptspace", "strut", "xspace",
+                 "leavevmode", "ignorespaces", "unskip", "hfill", "hfil", "vfill",
+                 "global", "makeatletter", "makeatother", "displaylimits", "nonscript",
+                 "mathsurround", "/", "@"}
 
 TEXT_COMMANDS = {"text", "textrm", "textnormal", "mbox", "textup", "textbf", "textit", "textsf",
                  "texttt", "emph", "hbox"}
@@ -419,6 +499,26 @@ class _Parser:
         self.i = save
         return None
 
+    _LEN_RE = re.compile(r"\s*(?:\{\s*)?([+-]?(?:\d+\.?\d*|\.\d+)\s*(?:em|ex|pt|cm|mm|in|mu|bp|pc|sp))"
+                         r"(?:\s*\})?(?:\s*(?:plus|minus)\s*[+-]?(?:\d+\.?\d*|\.\d+)\s*"
+                         r"(?:em|ex|pt|cm|mm|in|mu|bp|pc|sp|fil+))*")
+
+    def _read_length(self) -> str:
+        """\\kern 같은 명령 뒤의 TeX 길이 (중괄호가 있어도 없어도). 없으면 ""."""
+        m = self._LEN_RE.match(self.s, self.i)
+        if not m:
+            if self.peek() == ("char", "{"):
+                return self.read_raw_group()
+            return ""
+        self.i = m.end()
+        return m.group(1)
+
+    def unknown(self, name: str) -> El:
+        """모르는 명령: 그 자리만 표시하고 계속 (명세 결정: 멈추지 않고 건너뛴다).
+        인수를 몇 개 받는지 모르므로 뒤의 {…}는 보통 그룹으로 그려진다."""
+        return El("merror", [El("mtext", ["\\" + name])], class_="htex-unknown",
+                  title="모르는 명령")
+
     def sub(self, src: str) -> El:
         """다른 원문 조각을 같은 설정으로 변환."""
         p = _Parser(src, self.params, self.depth + 1)
@@ -437,6 +537,7 @@ class _Parser:
         self.depth += 1
         if self.depth > _MAX_DEPTH:
             raise MathError("너무 깊은 중첩")
+        saved_font = self.font  # \rm 같은 전환은 이 그룹(칸) 끝까지
         try:
             items: list[El] = []
             while True:
@@ -470,10 +571,36 @@ class _Parser:
                     }[val]
                     items.append(El("mstyle", rest, **attrs))
                     return items, term
+                if kind == "cmd" and val in OLD_FONT_SWITCHES:
+                    self.next()
+                    if val == "mathversion":
+                        self.read_raw_group()
+                    self.font = OLD_FONT_SWITCHES[val]
+                    continue
+                if kind == "cmd" and val in ("over", "atop", "choose", "brace", "brack",
+                                              "above"):
+                    # TeX 중위 분수: 앞(같은 그룹)이 분자, 뒤가 분모
+                    self.next()
+                    thick = _css_length(self._read_length()) if val == "above" else None
+                    rest, term = self.parse_seq()
+                    num = mrow(items) if items else El("mrow")
+                    den = mrow(rest) if rest else El("mrow")
+                    attrs = {} if val in ("over", "above") else {"linethickness": "0"}
+                    if thick:
+                        attrs["linethickness"] = thick
+                    frac = El("mfrac", [num, den], **attrs)
+                    fence = {"choose": "()", "brace": "{}", "brack": "[]"}.get(val)
+                    if fence:
+                        frac = El("mrow", [mo(fence[0], stretchy="true", fence="true",
+                                              form="prefix"), frac,
+                                           mo(fence[1], stretchy="true", fence="true",
+                                              form="postfix")])
+                    return [frac], term
                 atom = self.parse_atom()
                 if atom is not None:
                     items.append(atom)
         finally:
+            self.font = saved_font
             self.depth -= 1
 
     def parse_group_body(self) -> El:
@@ -765,11 +892,232 @@ class _Parser:
             return El("mover", [arrow, above])
         if name in ("label", "tag"):
             raise MathError(f"수식 안의 \\{name}")
-        if name in ("nonumber", "notag", "hline", "allowbreak", "nobreak", "relax"):
+        if name in NOOP_COMMANDS:
             return None
         if name == "\\":
             raise MathError("예상하지 못한 \\\\")
-        raise MathError(f"모르는 명령 \\{name}")
+        return self.extra_command(name)
+
+    def extra_command(self, name: str) -> El | None:  # noqa: C901 - 분기 표
+        """실제 문서(호환 모드)에서 자주 나오는 TeX·amsmath 명령. 모르면 그 자리만 표시."""
+        if name in ATOM_CLASSES:
+            body = self.read_arg()
+            left, right = ATOM_CLASSES[name]
+            if body.tag == "mo":
+                body.attrs["lspace"], body.attrs["rspace"] = left, right
+                if name in ("mathopen", "mathclose"):
+                    body.attrs["stretchy"] = "false"
+                return body
+            if left == "0" and right == "0":
+                return El("mrow", [body]) if body.tag != "mrow" else body
+            return El("mrow", [mspace(left), body, mspace(right)])
+        if name == "mathop":
+            body = self.read_arg()
+            word = body.text().strip() if body.tag in ("mi", "mrow", "mtext") else ""
+            if word and all(c.isalpha() for c in word):
+                el = mo(word, movablelimits="true", form="prefix", lspace="0.1667em",
+                        rspace="0.1667em")
+            elif body.tag == "mo":
+                el = body
+                el.attrs.update(movablelimits="true", form="prefix")
+            else:
+                el = El("mrow", [body, mspace("0.1667em")])
+                el.limits = "nolimits"
+                return el
+            el.largeop = True
+            el.limits = "auto"
+            return el
+        if name in ("ensuremath", "vcenter", "vtop", "vbox", "mathstrut", "lower", "raise",
+                    "moveleft", "moveright"):
+            if name == "mathstrut":
+                return El("mpadded", [El("mphantom", [mo("(")])], width="0")
+            if name in ("lower", "raise", "moveleft", "moveright"):
+                self._read_length()
+            return self.read_arg()
+        if name in ("raisebox", "makebox", "framebox", "fbox", "parbox", "scalebox",
+                    "resizebox", "rotatebox", "colorbox", "textcolor", "color", "underbar"):
+            # 크기·위치·색 지정은 버리고 내용만 (raisebox 등의 내용은 본문 모드)
+            if name in ("raisebox", "parbox", "scalebox", "rotatebox"):
+                self.read_optional_raw()
+                self.read_raw_group()
+            elif name in ("resizebox",):
+                self.read_raw_group()
+                self.read_raw_group()
+            elif name in ("colorbox", "textcolor", "color"):
+                self.read_optional_raw()
+                self.read_raw_group()
+                if name == "color":
+                    return None
+            while self.read_optional_raw() is not None:
+                pass
+            if name == "underbar":
+                return El("munder", [self.read_arg(), mo("_", stretchy="true")],
+                          accentunder="true")
+            if name == "textcolor":
+                return self.read_arg()
+            if name == "fbox" or name == "framebox":
+                return El("menclose", [self.text_command("mbox")], notation="box")
+            return self.text_command("mbox")
+        if name == "mathchoice":
+            # 글자 크기마다 다른 모양: 본문 크기(둘째)를 쓴다
+            self.read_raw_group()
+            chosen = self.read_raw_group()
+            self.read_raw_group()
+            self.read_raw_group()
+            return self.sub(chosen)
+        if name == "genfrac":
+            left = self.read_raw_group().strip()
+            right = self.read_raw_group().strip()
+            thick = self.read_raw_group().strip()
+            style = self.read_raw_group().strip()
+            num = self.read_arg()
+            den = self.read_arg()
+            attrs = {"linethickness": _css_length(thick)} if thick else {}
+            el: El = El("mfrac", [num, den], **attrs)
+            fl = FENCES.get(left.lstrip("\\"), left if left in CHAR_FENCES else "")
+            fr = FENCES.get(right.lstrip("\\"), right if right in CHAR_FENCES else "")
+            if fl or fr:
+                el = El("mrow", [mo(_CHAR_FENCE_MAP.get(fl, fl), stretchy="true", fence="true",
+                                    form="prefix"), el,
+                                 mo(_CHAR_FENCE_MAP.get(fr, fr), stretchy="true", fence="true",
+                                    form="postfix")])
+            if style in ("0", "1", "2", "3"):
+                st = [dict(displaystyle="true", scriptlevel="0"),
+                      dict(displaystyle="false", scriptlevel="0"),
+                      dict(displaystyle="false", scriptlevel="1"),
+                      dict(displaystyle="false", scriptlevel="2")][int(style)]
+                el = El("mstyle", [el], **st)
+            return el
+        if name in ("kern", "mkern", "hskip", "mskip", "hspace*", "mspace"):
+            return mspace(_css_length(self._read_length()))
+        if name in ("hdotsfor", "dotsfor"):
+            self.read_optional_raw()
+            self.read_raw_group()
+            return mo("⋯")
+        if name in ("xleftrightarrow", "xmapsto", "xRightarrow", "xLeftarrow",
+                    "xLeftrightarrow", "xhookrightarrow", "xhookleftarrow",
+                    "xtwoheadrightarrow", "xlongequal", "xrightleftharpoons"):
+            below = self.read_optional_raw()
+            above = self.read_arg()
+            ch = {"xleftrightarrow": "↔", "xmapsto": "↦", "xRightarrow": "⇒",
+                  "xLeftarrow": "⇐", "xLeftrightarrow": "⇔", "xhookrightarrow": "↪",
+                  "xhookleftarrow": "↩", "xtwoheadrightarrow": "↠", "xlongequal": "=",
+                  "xrightleftharpoons": "⇌"}[name]
+            arrow = mo(ch, stretchy="true", minsize="2em")
+            if below is not None and below.strip():
+                return El("munderover", [arrow, self.sub(below), above])
+            return El("mover", [arrow, above])
+        if name in ("sideset",):
+            pre = self.read_raw_group()
+            post = self.read_raw_group()
+            base = self.read_arg()
+            return El("mrow", [self.sub("{}" + pre), base, self.sub("{}" + post)])
+        if name in ("cancel", "bcancel", "xcancel", "sout"):
+            notation = {"cancel": "updiagonalstrike", "bcancel": "downdiagonalstrike",
+                        "xcancel": "updiagonalstrike downdiagonalstrike",
+                        "sout": "horizontalstrike"}[name]
+            return El("menclose", [self.read_arg()], notation=notation)
+        if name in ("overbracket", "underbracket"):
+            self.read_optional_raw()
+            self.read_optional_raw()
+            base = self.read_arg()
+            return El("mover" if name == "overbracket" else "munder",
+                      [base, mo("⎴" if name == "overbracket" else "⎵", stretchy="true")])
+        if name in ("index", "IfFileExists", "penalty", "label"):
+            if name == "penalty":
+                self._read_length() or self._skip_number()
+                return None
+            self.read_raw_group()
+            return None
+        if name in ("leftroot", "uproot"):
+            self.read_raw_group()
+            return None
+        if name == "pod":
+            arg = self.read_arg()
+            return El("mrow", [mspace("1em"), mo("(", stretchy="false"), arg,
+                               mo(")", stretchy="false")])
+        if name in ("dddot",):
+            return self.accent("dddot")
+        if name in ("bigwedge", "bigvee"):
+            return mo(OPERATORS.get(name, name))
+        if name in ("textsuperscript", "textsubscript"):
+            body = self.text_command("mbox")
+            return El("msup" if name == "textsuperscript" else "msub", [El("mrow"), body])
+        if name == "xymatrix":
+            # @C=2em, @R+1pc, @!0 같은 간격 수식어는 버린다
+            self._skip_ws()
+            if self.i < self.n and self.s[self.i] == "@":
+                j = self.s.find("{", self.i)
+                self.i = self.n if j < 0 else j
+            return self.diagram(self.read_raw_group(), tikz=False)
+        return self.unknown(name)
+
+    # ------------------------------------------------------------ 가환 그림 (cd.py)
+    def safe_sub(self, raw: str) -> El:
+        try:
+            return self.sub(raw)
+        except MathError:
+            return El("merror", [El("mtext", [raw.strip()])], class_="htex-unknown")
+
+    def diagram(self, raw: str, tikz: bool) -> El:
+        objects: list[list[str]] = []
+        arrows: list[tuple[int, int, Any]] = []
+        rows = _cd.split_top(raw, "\\\\")
+        while rows and not rows[-1].strip():
+            rows.pop()
+        for i, row in enumerate(rows):
+            objs = []
+            for j, cell in enumerate(_cd.split_top(row, "&")):
+                obj, arws = _cd.split_cell(cell, tikz)
+                objs.append(obj)
+                arrows.extend((i, j, a) for a in arws)
+            objects.append(objs)
+        if not objects:
+            return El("mrow")
+        return _cd.build_grid(objects, arrows, self.safe_sub, El, mo)
+
+    def amscd(self, raw: str) -> El:
+        objects: list[list[str]] = []
+        arrows: list[tuple[int, int, Any]] = []
+        for row in _cd.parse_cd(raw):
+            if row and row[0][0] == "v":
+                i = max(len(objects) - 1, 0)
+                for k, (_, a) in enumerate(row):
+                    if a is not None:
+                        arrows.append((i, k, a) if a.di > 0 else (i + 1, k, a))
+                continue
+            objs = []
+            for kind, val in row:
+                if kind == "obj":
+                    objs.append(val)
+                elif val is not None:
+                    j = len(objs) - 1
+                    arrows.append((len(objects), j, val) if val.dj >= 0
+                                  else (len(objects), j + 1, val))
+            objects.append(objs)
+        if not objects:
+            return El("mrow")
+        # 마지막 세로 행 뒤에 대상 행이 없으면 빈 행을 더한다
+        need = max((i for i, _, a in arrows if a.di != 0), default=0) + 1
+        while len(objects) < need + (1 if any(a.di > 0 for _, _, a in arrows) else 0):
+            objects.append([])
+        return _cd.build_grid(objects, arrows, self.safe_sub, El, mo)
+
+    def raw_env_body(self, env: str) -> str:
+        end = "\\end{" + env + "}"
+        k = self.s.find(end, self.i)
+        if k < 0:
+            raise MathError(f"닫히지 않은 환경 {env}")
+        raw = self.s[self.i:k]
+        self.i = k + len(end)
+        return raw
+
+    def _skip_number(self) -> str:
+        m = re.compile(r"\s*[+-]?\d+").match(self.s, self.i)
+        if m:
+            self.i = m.end()
+            return m.group(0)
+        return ""
 
     def function_name(self, word: str) -> El:
         attrs = {}
@@ -901,6 +1249,11 @@ class _Parser:
         if env in ("gathered",):
             rows = self.table_rows(env)
             return build_table(rows, ["c"], display=True)
+        if env == "tikzcd":
+            self.read_optional_raw()
+            return self.diagram(self.raw_env_body(env), tikz=True)
+        if env == "CD":
+            return self.amscd(self.raw_env_body(env))
         if env in ("array", "subarray"):
             spec = self.read_raw_group()
             cols = [c for c in spec if c in "lcr"]
@@ -980,6 +1333,45 @@ def build_table(rows: list[list[El]], cols: list[str], *, colgap: str | None = N
     return table
 
 
+# 변환기가 알아서 그리는 명령 전부 (htex.commands 가 빌더 진단에 쓴다)
+HANDLED_COMMANDS = frozenset(
+    set(GREEK) | set(ORD_SYMBOLS) | set(OPERATORS) | set(FENCES) | set(BIG_OPS)
+    | set(FUNCTIONS) | set(LIMIT_FUNCTIONS) | {k for k in SPACES if k.isalpha()} | set(ACCENTS)
+    | set(FONT_COMMANDS) | set(TEXT_COMMANDS) | set(OLD_FONT_SWITCHES) | set(ATOM_CLASSES)
+    | {k for k in NOOP_COMMANDS if k.isalpha()}
+    | {"frac", "dfrac", "tfrac", "cfrac", "binom", "dbinom", "tbinom", "sqrt", "operatorname",
+       "left", "right", "middle", "big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr",
+       "biggl", "biggr", "Biggl", "Biggr", "bigm", "Bigm", "biggm", "Biggm", "begin", "end",
+       "not", "pmod", "bmod", "mod", "overset", "underset", "stackrel", "showparam", "boxed",
+       "phantom", "hphantom", "vphantom", "smash", "hspace", "substack", "xrightarrow",
+       "xleftarrow", "displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle", "limits",
+       "nolimits", "over", "atop", "choose", "brace", "brack", "above", "mathop", "ensuremath",
+       "vcenter", "vtop", "vbox", "mathstrut", "lower", "raise", "moveleft", "moveright",
+       "raisebox", "makebox", "framebox", "fbox", "parbox", "scalebox", "resizebox",
+       "rotatebox", "colorbox", "textcolor", "color", "underbar", "mathchoice", "genfrac",
+       "kern", "mkern", "hskip", "mskip", "mspace", "hdotsfor", "dotsfor", "xleftrightarrow",
+       "xmapsto", "xRightarrow", "xLeftarrow", "xLeftrightarrow", "xhookrightarrow",
+       "xhookleftarrow", "xtwoheadrightarrow", "xlongequal", "xrightleftharpoons", "sideset",
+       "cancel", "bcancel", "xcancel", "sout", "overbracket", "underbracket", "index",
+       "IfFileExists", "penalty", "textsuperscript", "textsubscript", "thinspace", "xymatrix",
+       "ar", "arrow", "leftroot", "uproot", "pod", "rtwocell", "rrtwocell", "ltwocell",
+       "dtwocell", "utwocell", "ruppertwocell", "rlowertwocell", "rruppertwocell",
+       "rrlowertwocell", "drtwocell", "urtwocell",
+       "medspace", "thickspace", "negthinspace", "negmedspace", "negthickspace", "enspace"}
+)
+
+
+# 위 가운데 본문에서도 뜻이 있는 명령 (빌더가 본문에서 만나도 인라인 수식으로 바꾸지 않는다)
+TEXTLIKE_COMMANDS = frozenset(
+    set(OLD_FONT_SWITCHES) | {k for k in NOOP_COMMANDS if k.isalpha()} | set(TEXT_COMMANDS)
+    | {"raisebox", "makebox", "framebox", "fbox", "parbox", "scalebox", "resizebox",
+       "rotatebox", "colorbox", "textcolor", "color", "underbar", "index", "IfFileExists",
+       "penalty", "textsuperscript", "textsubscript", "kern", "hskip", "lower", "raise",
+       "vbox", "vtop", "ensuremath", "sout", "thinspace", "enspace", "copyright", "dag",
+       "ddag", "pounds", "yen", "S", "P", "label"}
+)
+
+
 # ====================================================================== 텍스트 도우미
 _TEXT_ESCAPES = {"{": "{", "}": "}", "%": "%", "$": "$", "&": "&", "#": "#", "_": "_",
                  " ": " ", ",": " ", ";": " ", ":": " ", "!": "",
@@ -988,7 +1380,15 @@ _TEXT_WORDS = {"textbf", "textit", "textrm", "textsf", "texttt", "emph", "textno
                "textup", "mbox"}
 _TEXT_SYMBOLS = {"quad": " ", "qquad": "  ", "ldots": "…", "dots": "…",
                  "textbackslash": "\\", "LaTeX": "LaTeX", "TeX": "TeX", "S": "§",
-                 "textendash": "–", "textemdash": "—", "textasciitilde": "~"}
+                 "textendash": "–", "textemdash": "—", "textasciitilde": "~",
+                 "textgreater": ">", "textless": "<", "textbar": "|", "textbullet": "•",
+                 "textdagger": "†", "textdaggerdbl": "‡", "textsection": "§",
+                 "textparagraph": "¶", "textdegree": "°", "copyright": "©", "dag": "†",
+                 "ddag": "‡", "P": "¶", "ss": "ß", "ae": "æ", "AE": "Æ", "oe": "œ",
+                 "OE": "Œ", "o": "ø", "O": "Ø", "aa": "å", "AA": "Å", "l": "ł", "L": "Ł",
+                 "i": "ı", "j": "ȷ", "space": " ", "enspace": " ", "thinspace": " ",
+                 "textvisiblespace": "␣", "textquotedblleft": "“", "textquotedblright": "”",
+                 "textquoteleft": "‘", "textquoteright": "’", "today": ""}
 
 
 def _split_text_math(raw: str) -> list[tuple[bool, str]]:
@@ -1044,7 +1444,10 @@ def _plain_text(raw: str) -> str:
                 if word in GREEK:
                     out.append(GREEK[word])
                     continue
-                raise MathError(f"\\text 안의 모르는 명령 \\{word}")
+                if word in OLD_FONT_SWITCHES or word in NOOP_COMMANDS:
+                    continue
+                # 모르는 명령: 이름만 버리고 계속 (뒤의 {…} 내용은 글자로 남는다)
+                continue
             if d in _TEXT_ESCAPES:
                 out.append(_TEXT_ESCAPES[d])
                 i += 2
