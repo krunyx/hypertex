@@ -20,6 +20,10 @@
       재귀 깊이 8 제한. 파일이 없으면 missing-resource.
     * \\def\\name{body} (인수 없는 것): \\newcommand로 취급.
     * \\newpage, \\clearpage, \\pagestyle 등 페이지 명령: 진단 없이 버린다.
+    * (4단계, 실문서 호환) COMPAT_SKIP 표의 명령(\\index, \\setcounter, \\medskip …)을 인수 서명대로
+      버린다. \\def\\name#1#2{…} (구분자 없는 인수), \\gdef·\\edef·\\xdef(=\\def로 근사), \\let,
+      \\providecommand, \\DeclareRobustCommand, \\newenvironment·\\renewenvironment,
+      comment 환경, \\@ifnextchar·\\@ifstar·\\@gobble 류, \\bgroup·\\egroup 을 지원한다.
 - 수식 안팎을 구분할 필요는 없다. 확장은 문맥과 무관하다.
 - 매개변수(\\parameter로 선언된 이름)와 같은 이름의 매크로는 만들지 않는다. 그리스 문자 등
   내장 명령은 확장하지 않고 그대로 둔다.
@@ -62,6 +66,58 @@ EXCLUDED = {
 COMPAT_IGNORED = {"newpage", "clearpage", "pagestyle", "thispagestyle", "bibliographystyle",
                   "vspace", "hspace", "noindent", "centering", "small", "large", "Large"}
 
+# compat 모드에서 진단 없이 버리는 명령 (4단계 추가): 이름 → 인수 서명
+#   '*' 별표(있으면), '[' 선택 인수(있으면), '{' 필수 인수
+# 실제 .tex 원고(arXiv 논문, 책)에서 화면 표시와 무관한 조판·색인·카운터·패키지 설정 명령들.
+COMPAT_SKIP: dict[str, str] = {
+    # 색인·용어·목차
+    "index": "{", "indexsee": "{{", "glossary": "{", "printindex": "", "makeindex": "",
+    "makeglossaries": "", "tableofcontents": "", "listoffigures": "", "listoftables": "",
+    "addcontentsline": "{{{", "addtocontents": "{{", "phantomsection": "",
+    # 카운터·길이
+    "setcounter": "{{", "addtocounter": "{{", "stepcounter": "{", "refstepcounter": "{",
+    "newcounter": "{[", "counterwithin": "*{{", "counterwithout": "*{{", "numberwithin": "[{{",
+    "setlength": "{{", "addtolength": "{{", "settowidth": "{{", "settoheight": "{{",
+    "newlength": "{", "newsavebox": "{",
+    # 정리 모양·참조 설정
+    "theoremstyle": "{", "newtheoremstyle": "{{{{{{{{{", "swapnumbers": "",
+    "crefname": "{{{", "Crefname": "{{{", "crefformat": "{{", "Crefformat": "{{",
+    "creflabelformat": "{{", "externaldocument": "[{", "hypersetup": "{", "urlstyle": "{",
+    "setcitestyle": "{", "nocite": "{", "bibliographystyle": "{",
+    # 쪽·간격·글자 크기
+    "pagenumbering": "{", "enlargethispage": "*{", "cleardoublepage": "",
+    "pagebreak": "[", "nopagebreak": "[", "linebreak": "[", "nolinebreak": "[",
+    "smallskip": "", "medskip": "", "bigskip": "", "smallbreak": "", "medbreak": "",
+    "bigbreak": "", "goodbreak": "", "filbreak": "", "vfill": "", "hfill": "", "hfil": "",
+    "indent": "", "raggedright": "", "raggedleft": "", "sloppy": "", "fussy": "",
+    "frenchspacing": "", "nonfrenchspacing": "", "raggedbottom": "", "flushbottom": "",
+    "onehalfspacing": "", "doublespacing": "", "singlespacing": "", "setstretch": "{",
+    "linespread": "{", "fontsize": "{{", "selectfont": "", "normalsize": "", "footnotesize": "",
+    "scriptsize": "", "tiny": "", "LARGE": "", "huge": "", "Huge": "",
+    "allowdisplaybreaks": "[", "displaybreak": "[",
+    # 패키지·문서 설정
+    "graphicspath": "{", "DeclareGraphicsExtensions": "{", "includeonly": "{",
+    "captionsetup": "[{", "geometry": "{", "definecolor": "{{{", "colorlet": "{{",
+    "xyoption": "{", "UseAllTwocells": "", "CompileMatrices": "", "SelectTips": "{{",
+    "hyphenation": "{", "VerbatimFootnotes": "", "frontmatter": "", "mainmatter": "",
+    "backmatter": "", "makeatletter": "", "makeatother": "", "IfFileExists": "{{{",
+    "DeclareMathSymbol": "{{{{", "DeclareSymbolFont": "{{{{{", "SetSymbolFont": "{{{{",
+    "DeclareMathAlphabet": "{{{{{", "DeclareFontFamily": "{{{", "DeclareFontShape": "{{{{{{",
+    "DeclareOption": "{{", "ProcessOptions": "*", "RequirePackage": "[{[", "NeedsTeXFormat": "{[",
+    "ProvidesPackage": "{[", "PassOptionsToPackage": "{{", "AtBeginDocument": "{",
+    "AtEndDocument": "{", "newif": "{", "maketitle": "",
+    # 아무것도 그리지 않는 명령
+    "protect": "", "xspace": "", "qedhere": "", "null": "", "leavevmode": "",
+    "ignorespaces": "", "unskip": "", "nobreak": "", "allowbreak": "", "strut": "",
+    "normalfont": "", "marginpar": "[{", "markboth": "{{", "markright": "{",
+    "crefrangeformat": "{{", "Crefrangeformat": "{{", "crefmultiformat": "{{{{",
+    "Crefmultiformat": "{{{{", "crefrangemultiformat": "{{{{", "Crefrangemultiformat": "{{{{",
+    "crefalias": "{{", "setlist": "[{", "setitemize": "[{", "setenumerate": "[{",
+    "setdescription": "[{", "newaliascnt": "{{", "aliascntresetthe": "{",
+    "hfuzz": "", "vfuzz": "", "tolerance": "", "emergencystretch": "", "rule": "[{{",
+    "thanks": "{", "relax": "",
+}
+
 
 @dataclass
 class Limits:
@@ -77,6 +133,8 @@ class Macro:
     default: Optional[list[Token]]  # 첫 인수 기본값. None이면 선택 인수 없음
     body: list[Token]
     span: Span
+    # compat \def 의 구분자 있는 인수: ("param", n) 또는 ("tok", Token) 의 나열. None이면 보통 인수
+    pattern: Optional[list] = None
 
 
 @dataclass
@@ -95,10 +153,39 @@ class MacroTable:
 _DEFINERS = {"newcommand", "renewcommand"}
 _INPUT_END = "\x00input-end"  # compat \input 펼친 구간의 끝 표지 (EOF 토큰의 text)
 _IGNORED_WITH_ARG = {"pagestyle", "thispagestyle", "bibliographystyle", "vspace", "hspace"}
+# compat 모드에서 확장기가 직접 처리하는 명령 (정의 본문에 있어도 거부하지 않는다)
+_COMPAT_HANDLED = {"input", "include", "def", "gdef", "edef", "xdef", "let", "providecommand",
+                   "DeclareRobustCommand", "newenvironment", "renewenvironment", "@ifnextchar",
+                   "@ifstar", "@gobble", "@gobbletwo", "@firstofone", "@firstoftwo",
+                   "@secondoftwo", "bgroup", "egroup", "iffalse", "iftrue", "fi", "chardef",
+                   "if", "ifx", "ifdefined", "ifcsname", "else", "detokenize", "relax"}
 
 
 def _is_control_word(name: str) -> bool:
     return bool(name) and name.isascii() and name.isalpha()
+
+
+def _one_group(toks: list[Token]) -> bool:
+    """toks 전체가 짝 맞는 {…} 하나인가."""
+    depth = 0
+    for i, t in enumerate(toks):
+        if t.type is T.BGROUP:
+            depth += 1
+        elif t.type is T.EGROUP:
+            depth -= 1
+            if depth == 0 and i != len(toks) - 1:
+                return False
+    return depth == 0
+
+
+def _substitute(m: "Macro", args: list[list[Token]], span: Span) -> list[Token]:
+    out: list[Token] = []
+    for b in m.body:
+        if b.type is T.PARAM and b.text.isdigit() and 1 <= int(b.text) <= m.nargs:
+            out.extend(args[int(b.text) - 1])
+        else:
+            out.append(Token(b.type, b.text, span))
+    return out
 
 
 def _refs(tokens: list[Token]) -> list[str]:
@@ -154,6 +241,9 @@ class Expander:
         self.limits = limits or Limits()
         self.parameters: set[str] = set()
         self.total_expansions = 0
+        self._conds: list[bool] = []   # compat TeX 조건문의 열린 가지
+        # compat \newenvironment: 이름 → (시작 매크로, 끝 토큰, comment 환경인가)
+        self.envs: dict[str, tuple[Macro, list[Token], bool]] = {}
         self._imported: set[str] = set()
         self._import_depth = 0
         self._input_depth = 0               # compat \input 중첩 깊이
@@ -201,6 +291,8 @@ class Expander:
 
     def _handle_cs(self, t: Token) -> None:
         name = t.text
+        if self.mode == "compat" and self._compat_cs(t):
+            return
         if name in _DEFINERS:
             self._define_command(t)
         elif name == "DeclareMathOperator":
@@ -215,7 +307,7 @@ class Expander:
             self._compat_input(t)
         elif self.mode == "compat" and name == "def":
             self._compat_def(t)
-        elif self.mode == "compat" and name in COMPAT_IGNORED:
+        elif self.mode == "compat" and (name in COMPAT_IGNORED or name in COMPAT_SKIP):
             self._skip_ignored(name)
         elif name in EXCLUDED:
             self._excluded(t)
@@ -283,6 +375,8 @@ class Expander:
         self._check_size()
 
     def _read_macro_args(self, m: Macro) -> list[list[Token]]:
+        if m.pattern is not None:
+            return self._match_pattern(m.pattern, m.nargs)
         args: list[list[Token]] = []
         k = m.nargs
         if m.default is not None and k >= 1:
@@ -291,6 +385,65 @@ class Expander:
             k -= 1
         for _ in range(k):
             args.append(self._read_arg())
+        return args
+
+    def _match_pattern(self, pattern: list, nargs: int) -> list[list[Token]]:
+        """TeX의 구분자 인수 맞추기 (\\def\\a#1.#2\\end{…}).
+        - 인수 앞의 구분자는 입력과 그대로 맞춰 소비한다 (맞지 않으면 거기서 멈춘다).
+        - 뒤에 구분자가 오는 인수: 중괄호 깊이 0에서 그 구분자가 나올 때까지. 전체가 {…} 하나면 벗긴다.
+        - 뒤에 구분자가 없는 인수: 보통 인수 하나."""
+        args: list[list[Token]] = [[] for _ in range(nargs)]
+
+        def same(a: Token, b: Token) -> bool:
+            if a.type is T.SPACE and b.type is T.SPACE:
+                return True
+            return a.type is b.type and a.text == b.text
+
+        k = 0
+        while k < len(pattern):
+            kind, val = pattern[k]
+            if kind == "tok":
+                nxt = self.inp.peek()
+                if val.type is not T.SPACE and nxt.type is T.SPACE:
+                    self._skip_spaces()
+                    nxt = self.inp.peek()
+                if not same(val, nxt):
+                    return args  # 정의와 맞지 않는 사용: 읽은 데까지만
+                self.inp.next()
+                k += 1
+                continue
+            # 인수
+            delim = []
+            j = k + 1
+            while j < len(pattern) and pattern[j][0] == "tok":
+                delim.append(pattern[j][1])
+                j += 1
+            if not delim:
+                args[val - 1] = self._read_arg()
+                k += 1
+                continue
+            got: list[Token] = []
+            depth = 0
+            while True:
+                u = self.inp.peek()
+                if u.type is T.EOF or len(got) > self.limits.tokens_per_expansion:
+                    break
+                if depth == 0 and all(same(d, self.inp.peek(i)) for i, d in enumerate(delim)):
+                    break
+                self.inp.next()
+                got.append(u)
+                if u.type is T.BGROUP:
+                    depth += 1
+                elif u.type is T.EGROUP:
+                    depth -= 1
+            # 앞뒤 공백을 걷고, 전체가 {…} 하나면 중괄호를 벗긴다
+            while got and got[0].type is T.SPACE:
+                got.pop(0)
+            if (len(got) >= 2 and got[0].type is T.BGROUP and got[-1].type is T.EGROUP
+                    and _one_group(got)):
+                got = got[1:-1]
+            args[val - 1] = got
+            k += 1  # 구분자는 다음 차례에 "tok"로 소비한다
         return args
 
     # ------------------------------------------------------------ 인수 읽기
@@ -448,6 +601,18 @@ class Expander:
         if not renew and self.table.is_defined(name):
             return False  # LaTeX처럼 기존 정의 유지 (Q3)
         refs = _refs(m.body) + (_refs(m.default) if m.default else [])
+        if self.mode == "compat":
+            # 4단계: 실제 원고의 매크로는 \@ifnextchar 로 보호된 재귀(\prd → \prd@parens → …)나
+            # 비교 대상으로서의 자기 이름(\@ifnextchar\prd)을 흔히 쓴다. 무한 확장은 확장 상한이
+            # 막으므로 compat 에서는 순환 검사를 하지 않는다 (notes/K-questions.md).
+            for r in refs:
+                if (r in EXCLUDED and r not in _COMPAT_HANDLED and r not in COMPAT_SKIP
+                        and r not in COMPAT_IGNORED):
+                    self.sink.add("excluded-command",
+                                  f"\\{name}의 정의가 제외된 명령 \\{r}을 쓴다", at.span)
+                    return False
+            self.table.define(m)
+            return True
         for r in refs:
             if r == name:
                 self.sink.add("macro-recursion", f"\\{name}의 정의가 자기 자신을 부른다", at.span)
@@ -455,7 +620,8 @@ class Expander:
         for r in refs:
             if self._can_reference(r) or self.table.is_defined(r):
                 continue
-            if self.mode == "compat" and (r in COMPAT_IGNORED or r in ("input", "include", "def")):
+            if self.mode == "compat" and (r in COMPAT_IGNORED or r in COMPAT_SKIP
+                                          or r in _COMPAT_HANDLED):
                 continue
             if r in EXCLUDED:
                 self.sink.add("excluded-command",
@@ -701,6 +867,16 @@ class Expander:
         if name in _IGNORED_WITH_ARG:
             self._skip_star()
             self._read_arg()
+            return
+        for ch in COMPAT_SKIP.get(name, ""):
+            if ch == "*":
+                self._skip_star()
+            elif ch == "[":
+                self._read_optional()
+            else:
+                self._skip_spaces()
+                if self.inp.peek().type in (T.BGROUP, T.CS, T.CHAR):
+                    self._read_arg()
 
     # ------------------------------------------------------------ 호환 모드
     def _compat_input(self, t: Token) -> None:
@@ -724,17 +900,326 @@ class Expander:
         self.inp.splice(sub)
 
     def _compat_def(self, t: Token) -> None:
+        """\\def\\name{…}, \\def\\name#1#2{…}, \\def\\name[#1]#2.{…} (구분자 있는 인수) → 매크로.
+        매개변수 번호가 차례대로가 아니면 제외한다."""
         self._skip_spaces()
         nt = self.inp.peek()
         if nt.type is not T.CS:
             self._excluded(t)
             return
-        k = 1
+        k, n = 1, 0
+        pattern: list = []
+        delimited = False
+        while True:
+            u = self.inp.peek(k)
+            if u.type in (T.BGROUP, T.EOF, T.PAR) or k > 64:
+                break
+            if u.type is T.PARAM:
+                if u.text != str(n + 1) or n >= 9:
+                    self._excluded(t)  # 번호가 차례대로가 아닌 매개변수 글
+                    return
+                n += 1
+                pattern.append(("param", n))
+            elif u.type is T.SPACE and (not pattern or pattern[-1][0] == "param"):
+                pass  # 이름·매개변수 바로 뒤 공백은 TeX도 무시한다
+            else:
+                pattern.append(("tok", u))
+                delimited = True
+            k += 1
+        if self.inp.peek(k).type is not T.BGROUP:
+            self._excluded(t)
+            return
+        for _ in range(k):
+            self.inp.next()
+        body = self._read_arg()
+        m = Macro(nt.text, n, None, body, t.span, pattern if delimited else None)
+        self._try_define(m, True, t)
+
+    # ---- 4단계: 실문서 호환
+    def _compat_cs(self, t: Token) -> bool:
+        """compat 모드에서만 하는 처리. 처리했으면 True."""
+        name = t.text
+        if name in ("gdef", "edef", "xdef"):
+            self._compat_def(t)
+        elif name == "let":
+            self._compat_let(t)
+        elif name in ("providecommand", "DeclareRobustCommand"):
+            self._define_command(Token(T.CS, "renewcommand" if name == "DeclareRobustCommand"
+                                       else "newcommand", t.span))
+        elif name in ("newenvironment", "renewenvironment"):
+            self._compat_newenv(t)
+        elif name == "begin":
+            return self._compat_begin(t)
+        elif name == "end":
+            return self._compat_end(t)
+        elif name == "@ifnextchar":
+            self._ifnextchar(t)
+        elif name == "@ifstar":
+            yes, no = self._read_arg(), self._read_arg()
+            if self.inp.peek().type is T.CHAR and self.inp.peek().text == "*":
+                self.inp.next()
+                self._push_expansion(t, yes)
+            else:
+                self._push_expansion(t, no)
+        elif name in ("@gobble", "@gobbletwo"):
+            self._read_arg()
+            if name == "@gobbletwo":
+                self._read_arg()
+        elif name in ("@firstofone", "@firstoftwo", "@secondoftwo"):
+            a = self._read_arg()
+            if name == "@firstofone":
+                self._push_expansion(t, a)
+            else:
+                b = self._read_arg()
+                self._push_expansion(t, a if name == "@firstoftwo" else b)
+        elif name == "iffalse":
+            self._cond_branch(False)
+        elif name == "iftrue":
+            self._cond_branch(True)
+        elif name == "if":
+            a, b = self._cond_operand(), self._cond_operand()
+            same = (a is not None and b is not None and
+                    (a.type is T.CS and b.type is T.CS or a.type is b.type and a.text == b.text))
+            self._cond_branch(same)
+        elif name == "ifx":
+            a, b = self.inp.next(), self.inp.next()
+            self._cond_branch(self._same_meaning(a, b))
+        elif name in ("ifdefined", "ifcsname"):
+            if name == "ifcsname":
+                self._cond_branch(False)
+                return True
+            a = self.inp.next()
+            self._cond_branch(a.type is T.CS and (a.text in self.table.macros
+                                                   or commands.is_builtin(a.text)))
+        elif name == "else":
+            if self._conds:
+                self._conds.pop()
+                self._skip_conditional(stop_at_else=False)
+            # 짝 없는 \else 는 버린다
+        elif name == "fi":
+            if self._conds:
+                self._conds.pop()
+        elif name == "detokenize":
+            arg = self._read_arg()
+            chars: list[Token] = []
+            for u in arg:
+                txt = ("\\" + u.text + (" " if u.text[:1].isalpha() else "")) \
+                    if u.type is T.CS else u.text
+                chars.extend(Token(T.CHAR if c != " " else T.SPACE, c, t.span) for c in txt)
+            self._push_expansion(t, chars)
+        elif name == "chardef":
+            # \chardef\bslash=`\\  또는 \chardef\x=65 → 글자 하나로 확장하는 매크로
+            self._skip_spaces()
+            nt = self.inp.peek()
+            if nt.type is not T.CS:
+                return True
+            self.inp.next()
+            self._skip_char("=")
+            self._skip_spaces()
+            u = self.inp.next()
+            ch = None
+            if u.type is T.CHAR and u.text == "`":
+                v = self.inp.next()
+                ch = v.text if v.type in (T.CS, T.CHAR) else None
+            else:
+                digits = u.text if u.type is T.CHAR else ""
+                while self.inp.peek().type is T.CHAR and self.inp.peek().text.isdigit():
+                    digits += self.inp.next().text
+                if digits.isdigit():
+                    ch = chr(int(digits))
+            if ch:
+                self._try_define(Macro(nt.text, 0, None, [Token(T.CHAR, ch, t.span)], t.span),
+                                 True, t)
+        elif name in ("bgroup", "egroup"):
+            self._emit(Token(T.BGROUP if name == "bgroup" else T.EGROUP,
+                             "{" if name == "bgroup" else "}", t.span))
+        else:
+            return False
+        return True
+
+    def _push_expansion(self, t: Token, tokens: list[Token]) -> None:
+        """확장 결과처럼 대기열에 넣는다 (확장 횟수 상한을 같이 센다)."""
+        if self.total_expansions >= self.limits.total_expansions:
+            self.sink.add("expansion-limit",
+                          f"문서 전체 확장 횟수 {self.limits.total_expansions}회를 넘었다"
+                          f" (\\{t.text})", t.span)
+            return
+        self.total_expansions += 1
+        if self._region is None:
+            self._region = t
+            self._buffer = []
+        self.inp.push(list(tokens))
+        self._check_size()
+
+    def _compat_let(self, t: Token) -> None:
+        """\\let\\a=\\b, \\let\\a\\b: \\b가 매크로면 그 정의를 복사, 아니면 \\a → \\b 로."""
+        self._skip_spaces()
+        nt = self.inp.peek()
+        if nt.type is not T.CS:
+            self._excluded(t)
+            return
+        self.inp.next()
+        self._skip_spaces()
+        self._skip_char("=")
+        if self.inp.peek().type is T.SPACE:
+            self.inp.next()
+        src = self.inp.peek()
+        if src.type in (T.EOF, T.PAR):
+            return
+        self.inp.next()
+        if src.type is T.CS and src.text == nt.text:
+            return
+        if src.type is T.CS and src.text in self.table.macros:
+            m = self.table.macros[src.text]
+            self._try_define(Macro(nt.text, m.nargs, m.default, list(m.body), t.span,
+                                   m.pattern), True, t)
+        elif src.type in (T.CS, T.CHAR):
+            self._try_define(Macro(nt.text, 0, None, [src], t.span), True, t)
+
+    def _env_name_ahead(self) -> tuple[Optional[str], int]:
+        """대기열 앞의 {이름} 을 소비하지 않고 읽는다. (이름, 그 뒤 위치)"""
+        k = 0
         while self.inp.peek(k).type is T.SPACE:
             k += 1
         if self.inp.peek(k).type is not T.BGROUP:
-            self._excluded(t)  # 인수 있는 \def 는 변환하지 않는다
+            return None, 0
+        k += 1
+        chars = []
+        while True:
+            u = self.inp.peek(k)
+            if u.type is T.EGROUP:
+                return "".join(chars).strip(), k + 1
+            if u.type not in (T.CHAR, T.SPACE) or len(chars) > 64:
+                return None, 0
+            chars.append(u.text)
+            k += 1
+
+    def _compat_newenv(self, t: Token) -> None:
+        renew = t.text == "renewenvironment"
+        self._skip_star()
+        name, k = self._env_name_ahead()
+        if name is None:
+            self._read_arg()
+        else:
+            for _ in range(k):
+                self.inp.next()
+        nargs, default = 0, None
+        opt = self._read_optional()
+        if opt is not None:
+            s = self._arg_text(opt)
+            nargs = int(s) if s.isdigit() and int(s) <= 9 else 0
+            default = self._read_optional()
+        begin = self._read_arg()
+        end = self._read_arg()
+        if not name or name in commands.ENVIRONMENTS or name == "document":
             return
-        self.inp.next()
-        body = self._read_arg()
-        self._try_define(Macro(nt.text, 0, None, body, t.span), True, t)
+        if name in self.envs and not renew:
+            return
+        comment = [u.text for u in begin if u.type is T.CS] == ["comment"]
+        self.envs[name] = (Macro(name, nargs, default, begin, t.span), end, comment)
+
+    def _compat_begin(self, t: Token) -> bool:
+        name, k = self._env_name_ahead()
+        if name is None:
+            return False
+        if name == "comment" or (name in self.envs and self.envs[name][2]):
+            for _ in range(k):
+                self.inp.next()
+            self._skip_environment(name)
+            return True
+        if name not in self.envs:
+            return False
+        for _ in range(k):
+            self.inp.next()
+        m = self.envs[name][0]
+        self._expand_macro(t, m)
+        return True
+
+    def _compat_end(self, t: Token) -> bool:
+        name, k = self._env_name_ahead()
+        if name is None or name not in self.envs:
+            return False
+        for _ in range(k):
+            self.inp.next()
+        self._push_expansion(t, self.envs[name][1])
+        return True
+
+    def _skip_environment(self, name: str) -> None:
+        """\\begin{name} 다음부터 짝이 맞는 \\end{name} 까지 버린다 (comment 환경)."""
+        depth = 1
+        while not self.inp.at_eof():
+            u = self.inp.next()
+            if u.type is T.CS and u.text in ("begin", "end"):
+                nm, k = self._env_name_ahead()
+                if nm == name:
+                    for _ in range(k):
+                        self.inp.next()
+                    depth += 1 if u.text == "begin" else -1
+                    if depth == 0:
+                        return
+
+    # ---- TeX 조건문 (compat): \if \ifx \ifdefined \iftrue \iffalse \else \fi
+    #  self._conds 는 "지금 살아 있는 가지"의 쌓임. 참 가지 끝의 \else 를 만나면 \fi 까지 버린다.
+    def _cond_branch(self, true: bool) -> None:
+        if true:
+            self._conds.append(True)
+        elif self._skip_conditional(stop_at_else=True):
+            self._conds.append(True)   # \else 가지가 살아 있다
+
+    def _skip_conditional(self, stop_at_else: bool) -> bool:
+        """짝 맞는 \\fi 까지 버린다. stop_at_else 이고 같은 깊이의 \\else 를 만나면 거기서 멈추고 True."""
+        depth = 1
+        while not self.inp.at_eof():
+            u = self.inp.next()
+            if u.type is not T.CS:
+                continue
+            if u.text.startswith("if") and u.text != "iff" and u.text.isalpha():
+                depth += 1
+            elif u.text == "fi":
+                depth -= 1
+                if depth == 0:
+                    return False
+            elif u.text == "else" and depth == 1 and stop_at_else:
+                return True
+        return False
+
+    def _cond_operand(self) -> Optional[Token]:
+        """\\if 의 비교 대상: 매크로와 \\detokenize 를 펼친 뒤의 첫 토큰."""
+        for _ in range(64):
+            u = self.inp.next()
+            if u.type is T.EOF:
+                return None
+            if u.type is T.CS and u.text in self.table.macros:
+                m = self.table.macros[u.text]
+                self.inp.push(_substitute(m, self._read_macro_args(m), u.span))
+                continue
+            if u.type is T.CS and u.text == "detokenize":
+                self._compat_cs(u)
+                continue
+            if u.type is T.SPACE:
+                return Token(T.CHAR, " ", u.span)
+            return u
+        return None
+
+    def _same_meaning(self, a: Token, b: Token) -> bool:
+        if a.type is b.type and a.text == b.text:
+            return True
+        if a.type is T.CS and b.type is T.CS:
+            ma, mb = self.table.macros.get(a.text), self.table.macros.get(b.text)
+            if ma and mb:
+                return (ma.nargs == mb.nargs and [(x.type, x.text) for x in ma.body]
+                        == [(x.type, x.text) for x in mb.body])
+        return False
+
+    def _ifnextchar(self, t: Token) -> None:
+        """\\@ifnextchar X{있을 때}{없을 때}: 공백 뒤 다음 토큰이 X인지 본다."""
+        self._skip_spaces()
+        ch = self.inp.next()
+        yes, no = self._read_arg(), self._read_arg()
+        self._skip_spaces()
+        nxt = self.inp.peek()
+        if ch.type is T.CS and ch.text == "bgroup":
+            match = nxt.type is T.BGROUP
+        else:
+            match = nxt.type is ch.type and nxt.text == ch.text
+        self._push_expansion(t, yes if match else no)

@@ -170,9 +170,13 @@ def test_compat_input_missing_and_depth(tmp_path):
 
 
 def test_compat_def_with_args_is_excluded():
+    # 4단계(실문서 호환): 구분자 없는 인수의 \def 는 \newcommand 로 바꾼다.
     out, sink = run(r"\def\f#1{#1}\f{a}", mode="compat")
+    assert codes(sink) == Counter()
+    assert cs_names(out) == []
+    # 매개변수 번호가 차례대로가 아니면 여전히 제외
+    out, sink = run(r"\def\g#2{#2}\g a", mode="compat")
     assert codes(sink) == Counter({"excluded-command": 1})
-    assert cs_names(out) == ["f"]
 
 
 def test_native_input_is_excluded():

@@ -10,3 +10,6 @@ dist/
 *.AppImage
 packaging/linux/AppDir/
 packaging/.tools/
+
+# tools/realworld.py 가 받은 원고
+.cache/

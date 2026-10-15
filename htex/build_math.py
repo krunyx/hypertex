@@ -408,7 +408,7 @@ def undefined_in_math(tokens: list[Token]) -> list[Token]:
         if t.type is T.CS and t.text == "showparam":
             _, i = read_arg_at(tokens, i + 1)
             continue
-        if t.type is T.CS and is_word(t.text) and not C.is_builtin(t.text):
+        if t.type is T.CS and is_word(t.text) and not C.is_known_in_math(t.text):
             out.append(t)
         i += 1
     return out

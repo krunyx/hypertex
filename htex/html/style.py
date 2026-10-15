@@ -87,6 +87,8 @@ mtd.htex-pair-a{padding-right:0}mtd.htex-pair-b{padding-left:0}
 .htex-math-error{color:var(--err);background:var(--err-bg);padding:0 .25em;border-radius:.2em;
   white-space:pre-wrap}
 .htex-param-error{color:var(--err)}
+merror.htex-unknown{color:var(--err);background:var(--err-bg);border:0;font-size:.8em;
+  font-family:var(--mono-font,monospace)}
 
 /* 정리·증명 */
 .htex-theorem{margin:1.25rem 0;padding:.1rem 0 .1rem 1rem;border-left:3px solid var(--accent)}

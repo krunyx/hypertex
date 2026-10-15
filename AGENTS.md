@@ -68,3 +68,14 @@ I와 J 사이의 약속:
 - J는 `htex.viewer.app.run` 이 대상 목록(list[str])을 받도록 하고, 이미 떠 있는 뷰어가 있으면 그쪽에 넘기고 끝나게 하며(단일 인스턴스), macOS의 파일 열기 이벤트(QFileOpenEvent: 파일과 htex:// URL)를 처리한다.
 - I는 OS 등록(macOS Info.plist의 CFBundleURLTypes·CFBundleDocumentTypes, 윈도 레지스트리, 리눅스 .desktop·MIME)이 위 진입점으로 대상을 넘기게 만든다.
 - `htex/web/interact.js`는 실행 파일에 패키지 데이터로 들어가야 한다 (I).
+
+
+## 4단계 담당 구역 (실제 원고 호환)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| K 실제 원고 호환 | `htex/macros.py`·`htex/lexer.py`(compat 부분), 새 파일 `htex/build_compat.py`, `htex/build_blocks.py`·`htex/build_inline.py`·`htex/builder.py`·`htex/build_meta.py`(compat 연결 부분), `htex/commands.py`(수식 목록 일원화), `htex/html/mathml.py`, 새 파일 `htex/html/cd.py`, `htex/html/style.py`(새 표시), `tools/realworld.py`, `tests/unit/test_K_*.py`, `notes/K-questions.md` | `python tools/realworld.py --check` 통과, 기존 단위 테스트·`run_all.py`·`compare.py` 유지 |
+
+- compat(.tex) 전용 처리는 `ctx.mode == "compat"` / `self.mode == "compat"` 안에 둔다. native(.htex) 동작을 바꾸는
+  것(수식의 모르는 명령 표시, 중괄호 안의 `$`)은 `notes/K-questions.md` 2절에 적었다.
+- 기존 테스트를 바꾼 곳도 같은 절에 적었다. 명세·스키마·manifest는 고치지 않았다 (1절의 확인 필요 항목 참고).

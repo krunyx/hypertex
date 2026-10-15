@@ -364,12 +364,12 @@ def test_render_reference_trees(path):
             if a.get(key) is not None:
                 assert safe_url(a[key]) == a[key], (tag, key, a[key])
     # 실제 트리의 수식은 모두 MathML 로 변환되어야 한다 (수식 구문 오류는 이미 error 노드).
-    # 예외: 16번은 수식 안의 정의되지 않은 명령을 math 노드로 남기고 렌더러가 원문으로 보여 준다 (통합 단계 결정).
+    # 16번은 수식 안의 정의되지 않은 명령을 math 노드로 남긴다. 4단계부터 렌더러는 수식 전체를
+    # 원문으로 바꾸지 않고 그 명령 자리만 빨갛게 표시한다 (htex-unknown).
     body = out.split("<style>")[0] + out.split("</style>")[1]
+    assert "htex-math-error" not in body
     if path.name.startswith("16-"):
-        assert body.count("htex-math-error") == 2
-    else:
-        assert "htex-math-error" not in body
+        assert body.count('class="htex-unknown"') == 2
 
 
 # ---------------------------------------------------------------- 세부 동작

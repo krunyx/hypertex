@@ -15,6 +15,29 @@ KNOWN_PACKAGES = {
     "amsmath", "amssymb", "amsthm", "amsfonts", "hyperref", "graphicx", "graphics",
     "tikz", "pgfplots", "mathtools", "kotex", "url", "xcolor", "color", "bm",
 }
+# 호환 모드(명세 9절, 2026-10-15 결정): 이 구현이 지원하는 기능의 패키지와 화면 표시와 무관한
+# 글꼴·여백·조판 패키지는 경고 없이 무시한다. 표시가 달라질 수 있는데 지원하지 않는 패키지만 경고한다.
+COMPAT_QUIET_PACKAGES = {
+    # 지원하는 기능
+    "amscd", "tikz-cd", "xy", "xypic", "cleveref", "mathrsfs", "eucal", "euscript", "dsfont",
+    "bbm", "amsbsy", "latexsym", "textcomp", "cancel", "ulem", "soul", "comment", "verbatim",
+    "xspace", "upgreek", "amsfonts", "amsxtra", "accents", "bbold", "mathbbol", "stmaryrd",
+    "epsfig", "subcaption", "subfig", "caption", "float", "wrapfig", "multicol", "booktabs",
+    "array", "enumerate", "enumitem", "paralist", "mdwlist", "framed", "mdframed", "csquotes",
+    "bookmark", "nameref", "varioref", "xr", "xr-hyper", "chngcntr", "etoolbox", "ifthen",
+    "calc", "xparse", "keyval", "kvoptions", "makeidx", "imakeidx", "showkeys", "appendix",
+    "abstract", "authblk", "thmtools", "aliascnt", "doi", "url",
+    # 글꼴·여백·쪽·조판 (화면 표시와 무관)
+    "inputenc", "fontenc", "lmodern", "times", "mathptmx", "palatino", "mathpazo", "helvet",
+    "courier", "charter", "newtxtext", "newtxmath", "libertine", "libertinus", "fourier",
+    "kpfonts", "txfonts", "pxfonts", "tgtermes", "tgpagella", "ebgaramond", "microtype",
+    "geometry", "fullpage", "a4wide", "a4", "setspace", "parskip", "indentfirst", "ragged2e",
+    "lscape", "pdflscape", "afterpage", "placeins", "needspace", "hyphenat", "fixltx2e",
+    "fix-cm", "cmap", "ae", "aecompl", "type1cm", "anyfontsize", "relsize", "fancyhdr",
+    "lastpage", "emptypage", "nopageno", "titlesec", "titletoc", "tocloft", "silence",
+    "pdfsync", "lineno", "changepage", "babel", "polyglossia", "fontspec", "xltxtra",
+    "xunicode", "luatextra", "iftex", "ifpdf", "ifxetex", "pdfpages",
+}
 MATH_EXTENSIONS = {"hangulmath"}
 DEFINITION_COMMANDS = {"newcommand", "renewcommand", "providecommand", "DeclareMathOperator", "def"}
 META_COMMANDS = {
@@ -174,7 +197,8 @@ class MetaMixin:
         elif name == "usepackage":
             self.read_opt()
             for pkg in (x.strip() for x in self.read_text_arg().split(",")):
-                if pkg and pkg not in KNOWN_PACKAGES:
+                if pkg and pkg not in KNOWN_PACKAGES and not (
+                        self.ctx.mode == "compat" and pkg in COMPAT_QUIET_PACKAGES):
                     self.sink.add("unknown-package", f"지원하지 않는 패키지를 무시했다: {pkg}", tok.span)
         elif name == "newtheorem":
             star = self.take_star()

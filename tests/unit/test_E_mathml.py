@@ -164,23 +164,46 @@ def test_all_math_commands_in_commands_py_are_handled():
     one_arg = {"hat", "bar", "vec", "dot", "ddot", "tilde", "widetilde", "widehat", "overline",
                "underline", "overbrace", "underbrace", "mathbf", "mathrm", "mathit", "mathsf",
                "mathtt", "mathcal", "mathbb", "mathfrak", "boldsymbol"}
-    delims = {"big", "Big", "bigg", "Bigg", "bigl", "bigr", "Bigl", "Bigr"}
+    needs.update({
+        "begin": r"\begin{matrix} a \end{matrix}", "end": r"\begin{matrix} a \end{matrix}",
+        "over": r"{a \over b}", "atop": r"{a \atop b}", "choose": r"{a \choose b}",
+        "brace": r"{a \brace b}", "brack": r"{a \brack b}", "above": r"{a \above 1pt b}",
+        "hdotsfor": r"\begin{matrix} a & b \\ \hdotsfor{2} \end{matrix}",
+        "dotsfor": r"\begin{matrix} a & b \\ \dotsfor{2} \end{matrix}",
+        "xymatrix": r"\xymatrix{A \ar[r] & B}", "ar": r"\xymatrix{A \ar[r]^f & B}",
+        **{n: rf"\xymatrix{{A \{n}^F_G{{\alpha}} & B & C}}" for n in (
+            "rtwocell", "rrtwocell", "ruppertwocell", "rlowertwocell", "rruppertwocell",
+            "rrlowertwocell", "drtwocell", "urtwocell")},
+        **{n: rf"\xymatrix{{A \{n}^F_G{{\alpha}} \\ B}}" for n in ("dtwocell",)},
+        **{n: rf"\xymatrix{{B \\ A \{n}^F_G{{\alpha}}}}" for n in ("utwocell",)},
+        **{n: rf"\xymatrix{{B & A \{n}^F_G{{\alpha}}}}" for n in ("ltwocell",)},
+        "arrow": r'\begin{tikzcd} A \arrow[r, "f"] & B \end{tikzcd}',
+    })
+    delims = {n for n in MATH if re.fullmatch(r"[Bb]igg?[lrm]?|Bigg?[lrm]?", n)}
     failed = []
+
+    def ok(tex: str) -> bool:
+        try:
+            out = tex_to_mathml(tex)
+            convert(tex)
+        except MathError:
+            return False
+        return "htex-unknown" not in out and "htex-math-error" not in out
+
     for name in sorted(MATH):
         if name in needs:
-            tex = needs[name]
+            cands = [needs[name]]
         elif name in one_arg:
-            tex = rf"\{name}{{A}}"
+            cands = [rf"\{name}{{A}}"]
         elif name in delims:
-            tex = rf"\{name}( a"
-        elif name in ("displaystyle", "textstyle", "scriptstyle"):
-            tex = rf"\{name} a"
+            cands = [rf"\{name}( a"]
+        elif name in ("displaystyle", "textstyle", "scriptstyle", "scriptscriptstyle"):
+            cands = [rf"\{name} a"]
         else:
-            tex = rf"a \{name} b"
-        try:
-            convert(tex)
-        except MathError as e:
-            failed.append(f"{name}: {e}")
+            # 인수 개수는 명령마다 다르므로 0~6개를 차례로 시도한다
+            cands = [rf"a \{name} b"] + [rf"\{name}" + "{A}" * k for k in range(1, 7)]
+        if not any(ok(t) for t in cands):
+            failed.append(name)
     assert not failed, failed
 
 
@@ -398,8 +421,8 @@ def test_showparam_in_math():
 
 # ---------------------------------------------------------------- 오류
 @pytest.mark.parametrize("bad", [
-    r"\frac{1}{", r"\frac{1}", r"x}", r"\undefinedmacro x", r"a^", r"\sqrt", r"\left(",
-    r"\begin{pmatrix} a", "\\", r"\text{\foo}", r"a \limits",
+    r"\frac{1}{", r"\frac{1}", r"x}", r"a^", r"\sqrt", r"\left(",
+    r"\begin{pmatrix} a", "\\", r"a \limits",
 ])
 def test_errors_fall_back_to_code(bad):
     out = tex_to_mathml(bad)
@@ -442,3 +465,72 @@ def test_output_always_balanced():
         out = mm(s)
         assert balanced(out), s
         assert not re.search(r"htex-math-error", out)
+
+
+# ---------------------------------------------------------------- 4단계: 실문서 호환
+def test_unknown_command_marks_only_its_place():
+    """모르는 명령은 그 자리만 merror로 표시하고 나머지 수식은 그린다 (멈추지 않고 건너뛴다)."""
+    out = tex_to_mathml(r"a + \undefinedmacro{b} + c")
+    assert "htex-math-error" not in out
+    assert '<merror class="htex-unknown"' in out and "<mtext>\\undefinedmacro</mtext>" in out
+    assert "<mi>b</mi>" in out and "<mi>c</mi>" in out
+
+
+def test_unknown_command_inside_text_is_dropped():
+    out = tex_to_mathml(r"\text{see \foo{x} here}")
+    assert "htex-math-error" not in out and "see x here" in out
+
+
+@pytest.mark.parametrize("tex, want", [
+    (r"\mathop{\rm Hom}(X,Y)", ">Hom</mo>"),
+    (r"a \mathbin{\centerdot} b", 'lspace="0.2222em" rspace="0.2222em">⋅</mo>'),
+    (r"a \mathrel{R} b", "<mspace width=\"0.2778em\"></mspace><mi>R</mi>"),
+    (r"{n \choose k}", '<mfrac linethickness="0"><mi>n</mi><mi>k</mi></mfrac>'),
+    (r"{a \over b}", "<mfrac><mi>a</mi><mi>b</mi></mfrac>"),
+    (r"\ensuremath{x}", "<mi>x</mi>"),
+    (r"\mathchoice{D}{T}{S}{s}", "<mi>T</mi>"),
+    (r"{\rm d}x", '<mi mathvariant="normal">d</mi><mi>x</mi>'),
+    (r"\Hat{x}", '<mover accent="true"><mi>x</mi>'),
+    (r"\genfrac{(}{)}{0pt}{}{n}{k}", 'linethickness="0pt"'),
+    (r"x \mkern3mu y", '<mspace width="0.1667em">'),
+    (r"\varGamma", "𝛤"),
+    (r"A \vDash B", "⊨"),
+])
+def test_real_world_math_commands(tex, want):
+    out = tex_to_mathml(tex)
+    assert "htex-math-error" not in out and "htex-unknown" not in out, out
+    assert want in out, out
+
+
+def test_old_font_switch_is_scoped_to_group():
+    out = tex_to_mathml(r"{\bf x} y")
+    assert "𝐱" in out and "<mi>y</mi>" in out
+
+
+# ---------------------------------------------------------------- 가환 그림
+def test_xymatrix_square():
+    out = tex_to_mathml(r"\xymatrix{ A \ar[r]^{f} \ar[d]_{g} & B \ar[d]^{h} \\ C \ar[r]_{k} & D }")
+    assert 'class="htex-cd"' in out and out.count("<mtr>") == 3
+    assert "→" in out and out.count("↓") == 2
+    # 왼쪽 세로 화살표의 _ 라벨은 왼쪽, 오른쪽 세로 화살표의 ^ 라벨은 오른쪽
+    assert re.search(r"<mi>g</mi></mstyle><mo[^>]*>↓", out)
+    assert re.search(r"↓</mo><mstyle scriptlevel=\"1\"><mi>h</mi>", out)
+
+
+def test_xymatrix_modifiers_and_styles():
+    out = tex_to_mathml(r"\xymatrix@C=3em@R=1pc{ A \ar@{^{(}->}[r] \ar@{-->}[d] & B \ar@{->>}[d] \\ C \ar@{=}[r] & D }")
+    for ch in "↪⇣↡=":
+        assert ch in out, ch
+
+
+def test_tikzcd_labels_swap_and_styles():
+    out = tex_to_mathml(r"""\begin{tikzcd}[column sep=large] A \arrow[r, "f"] \arrow[d, "g"'] & B \arrow[dl, dashed] \\ C \end{tikzcd}""")
+    assert 'class="htex-cd"' in out and "↙" in out
+    assert re.search(r"<munderover><mo[^>]*>→</mo><mspace[^>]*></mspace><mstyle[^>]*><mi>f</mi>", out)
+    assert re.search(r"<mi>g</mi></mstyle><mo[^>]*>↓", out)
+
+
+def test_amscd():
+    out = tex_to_mathml(r"\begin{CD} A @>f>> B \\ @VgVV @VVhV \\ C @>>k> D \end{CD}")
+    assert 'class="htex-cd"' in out and out.count("<mtr>") == 3 and out.count("↓") == 2
+    assert re.search(r"<munderover><mo[^>]*>→</mo><mstyle scriptlevel=\"1\"><mi>k</mi>", out)
