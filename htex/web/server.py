@@ -265,7 +265,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, data, ctype, csp=csp, extra={"Last-Modified": lm, "Cache-Control": "no-cache"})
 
     def serve_dir(self, target: Path, path: str) -> None:
-        for name in ("index.htex",):
+        for name in ("index.htex", "index.md", "README.md"):
             idx = target / name
             if idx.is_file():
                 self.serve_document(idx)

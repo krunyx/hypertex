@@ -46,7 +46,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QInputDia
                                QWidgetAction)
 
 from .. import __version__
-from .core import (DOC_EXTS, History, Response, TreeCache, ViewerCore, ViewerError, error_page,
+from .core import (DOC_EXTS, HTML_EXTS, History, Response, TreeCache, ViewerCore, ViewerError, error_page,
                    default_cache_dir, https_to_htex, is_doc_path, split_fragment)
 from .instance import (REPLY_OK, decode_message, encode_message, file_signature, instance_name,
                        local_dependencies, normalize_targets)
@@ -148,7 +148,7 @@ class SchemeHandler(QWebEngineUrlSchemeHandler):
             buf = QBuffer(job)
             buf.setData(QByteArray(resp.body))
             buf.open(QBuffer.OpenModeFlag.ReadOnly)
-            mime = resp.mime + ("; charset=utf-8" if resp.mime.startswith("text/") else "")
+            mime = resp.mime + ("; charset=utf-8" if resp.mime.startswith("text/") and resp.utf8 else "")
             job.reply(QByteArray(mime.encode()), buf)
         except RuntimeError:     # 그 사이 요청이 취소되어 job 이 사라졌다
             return
@@ -182,7 +182,8 @@ class HtexPage(QWebEnginePage):
                 if is_main_frame and self.url().toString().startswith(START_URL):
                     self.start_request.emit(*req)
                 return False
-        if scheme in ("http", "https") and is_doc_path(url.path()):
+        if (scheme in ("http", "https") and is_doc_path(url.path())
+                and nav_type != QWebEnginePage.NavigationType.NavigationTypeRedirect):
             if not is_main_frame:
                 return False
             if scheme == "http":
@@ -311,6 +312,10 @@ class Tab(QWidget):
         start_only = all(e.url.startswith(START_URL) for e in self.history.entries)
         return (not u or u == "about:blank" or u.startswith(START_URL)) and start_only
 
+    def is_local_html(self) -> bool:
+        url = split_fragment(self.current_url())[0].split("?", 1)[0]
+        return url.startswith("htexapp://doc-") and urllib.parse.unquote(url).lower().endswith(HTML_EXTS)
+
     def is_start(self) -> bool:
         return self.current_url().startswith(START_URL)
 
@@ -372,7 +377,7 @@ class Tab(QWidget):
         self.zoom_changed.emit(self, z)
 
     def apply_theme(self, theme: str) -> None:
-        if not self.current_url().startswith(("htex:", "htexapp:")):
+        if not self.current_url().startswith(("htex:", "htexapp:")) or self.is_local_html():
             return
         if theme in ("light", "dark"):
             js = f"document.documentElement.setAttribute('data-theme', '{theme}')"
@@ -421,8 +426,9 @@ class Tab(QWidget):
                 path = self.core.local_path(split_fragment(url)[0])
             except ViewerError:
                 path = None
-            if path is not None and path.suffix.lower() in DOC_EXTS and path.is_file():
-                files = [path] + local_dependencies(path)
+            suffix = path.suffix.lower() if path is not None else ""
+            if path is not None and (suffix in DOC_EXTS or suffix in HTML_EXTS) and path.is_file():
+                files = [path] + (local_dependencies(path) if suffix in (".htex", ".tex") else [])
         self._set_watch(files)
 
     def _set_watch(self, files: list[Path]) -> None:
@@ -1109,9 +1115,11 @@ class ViewerWindow(QMainWindow):
         rec = self.core.record_for(url) if url.startswith(("htex:", "htexapp://doc-")) else None
         if rec is not None:
             err, _warn = rec.counts()
-            compat = (rec.tree.get("source") or {}).get("mode") == "compat"
-            label = (f"오류 {err}" if err else "") or ("호환 모드" if compat else "")
+            mode = (rec.tree.get("source") or {}).get("mode")
+            label = (f"오류 {err}" if err else "") or {"compat": "호환 모드", "markdown": "Markdown"}.get(mode, "")
             ob.set_info("doc", label, warn=bool(err))
+        elif tab is not None and tab.is_local_html():
+            ob.set_info("doc", "로컬 HTML")
         elif url.startswith("htexapp://source/"):
             ob.set_info("source", "원문")
         elif url.startswith("https:"):
@@ -1140,6 +1148,11 @@ class ViewerWindow(QMainWindow):
             if len(rec.diagnostics) > 8:
                 pop.label(f"… 그 밖 {len(rec.diagnostics) - 8}개", muted=True)
             pop.label(f"해석 {rec.elapsed * 1000:.0f}ms", muted=True)
+        elif tab.is_local_html():
+            pop.title(tab.title() or "로컬 HTML")
+            pop.label(urllib.parse.unquote(self.core.display_address(url)), muted=True)
+            pop.label("내 컴퓨터의 HTML 파일입니다. 스크립트는 격리된 상자 안에서 돌고, "
+                      "다른 파일을 fetch 로 읽을 수 없습니다.")
         else:
             pop.title(tab.title() or url)
             pop.label(url, muted=True)
@@ -1149,6 +1162,7 @@ class ViewerWindow(QMainWindow):
                 pop.label("이 사이트와의 연결은 안전하지 않습니다.")
             elif url.startswith("htexapp://source/"):
                 pop.label("문서의 원문입니다 (읽기 전용, 스크립트 없음).")
+
         pop.show_under(self.omnibox.info, align_right=False)
         self.last_popup = pop
 
@@ -1316,9 +1330,11 @@ class ViewerWindow(QMainWindow):
         self.current_tab().navigate_url(url)
 
     def open_file(self) -> None:
-        exts = " ".join("*" + e for e in DOC_EXTS)
-        path, _ = QFileDialog.getOpenFileName(self, "HyperTeX 문서 열기", str(self.cwd),
-                                              f"HyperTeX 문서 ({exts});;모든 파일 (*)")
+        exts = " ".join("*" + e for e in DOC_EXTS + HTML_EXTS)
+        path, _ = QFileDialog.getOpenFileName(
+            self, "문서 열기", str(self.cwd),
+            f"읽을 수 있는 문서 ({exts});;HyperTeX (*.htex *.tex);;Markdown (*.md *.markdown);;"
+            f"HTML (*.html *.htm);;모든 파일 (*)")
         if path:
             tab = self.current_tab()
             if tab is not None and tab.is_blank():
@@ -1444,7 +1460,8 @@ class ViewerWindow(QMainWindow):
         rec = self.core.record_for(url) if url.startswith(("htex:", "htexapp://doc-")) else None
         if rec is not None:
             err, warn = rec.counts()
-            mode = "호환 모드 · " if (rec.tree.get("source") or {}).get("mode") == "compat" else ""
+            mode = {"compat": "호환 모드 · ", "markdown": "Markdown · "}.get(
+                (rec.tree.get("source") or {}).get("mode"), "")
             watching = " · 자동 새로고침" if tab.watched_files() else ""
             self.diag_label.setText(f"{mode}진단: 오류 {err} · 경고 {warn}{watching}")
             self.diag_label.setToolTip("\n".join(f'{d.get("severity")}: {d.get("message")}'
@@ -1456,6 +1473,9 @@ class ViewerWindow(QMainWindow):
             self.status.showMessage("" if ok else "페이지를 불러오지 못했습니다.", 4000)
         elif url.startswith("htexapp://source/"):
             self.diag_label.setText("원문 (읽기 전용)")
+            self.diag_label.setToolTip("")
+        elif tab.is_local_html():
+            self.diag_label.setText("로컬 HTML 파일 (스크립트는 격리된 상자 안에서 실행)")
             self.diag_label.setToolTip("")
         else:
             self.diag_label.setText("")

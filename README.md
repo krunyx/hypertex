@@ -55,6 +55,7 @@ cd hypertex
 
 # 문서 → HTML (브라우저로 열기)
 python -m htex html examples/oscillator.htex -o oscillator.html
+python -m htex html notes.md -o notes.html          # Markdown 도
 
 # 전용 뷰어 (PySide6 필요: python -m pip install PySide6)
 python -m htex view examples/oscillator.htex
@@ -69,7 +70,7 @@ python -m htex build tests/docs -o site
 python -m htex parse examples/oscillator.htex
 ```
 
-기존 `.tex` 파일은 확장자 그대로 열면 호환 모드로 읽는다 (명세 9절).
+기존 `.tex` 파일은 확장자 그대로 열면 호환 모드로 읽는다 (명세 9절). Markdown(`.md`)도 같은 방식으로 읽고(수식 `$…$` 포함, 명세 9.1절), 뷰어는 내 컴퓨터의 `.html` 파일도 연다.
 호환 모드는 실제 원고에서 흔한 것들을 받는다: 인수·구분자 있는 `\def`, `\let`, `\newenvironment`,
 `\@ifnextchar`와 TeX 조건문, `\cref`, 옛 글꼴 전환(`{\bf …}`), `\chapter`, 가환 그림(`\xymatrix`, `tikzcd`, amscd `CD`),
 그리고 표시와 무관한 조판·색인 명령은 조용히 버린다. 자세한 목록과 결정은 `notes/K-questions.md`.
@@ -78,7 +79,7 @@ python -m htex parse examples/oscillator.htex
 
 ```bash
 python -m pip install pytest jsonschema
-python -m pytest -q tests/unit          # 단위 테스트 774건
+python -m pytest -q tests/unit          # 단위 테스트 801건
 python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
 python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
 python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks Project, amsmath 시험 문서 …)
@@ -91,7 +92,7 @@ python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks P
 
 | 폴더 | 내용 |
 | --- | --- |
-| `htex/` | lexer, macros(매크로 확장), build_*(문서 트리), expr(계산식), picture(그림 검사) |
+| `htex/` | lexer, macros(매크로 확장), build_*(문서 트리), markdown(Markdown → 문서 트리), expr(계산식), picture(그림 검사) |
 | `htex/html/` | 문서 트리 → HTML + MathML, 가환 그림(`cd.py`) |
 | `htex/tikz/` | TikZ·pgfplots 부분집합 → SVG |
 | `htex/web/` | `serve`, `build`, 상호작용 스크립트 interact.js |

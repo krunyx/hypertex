@@ -29,9 +29,10 @@
         "mode": {
           "enum": [
             "native",
-            "compat"
+            "compat",
+            "markdown"
           ],
-          "description": "native = .htex, compat = 기존 .tex 호환 모드 (명세 9절)"
+          "description": "native = .htex, compat = 기존 .tex 호환 모드 (명세 9절), markdown = .md·.markdown 읽기 (명세 9.1절)"
         },
         "sha256": {
           "type": "string",
@@ -1160,7 +1161,8 @@
             "bold",
             "italic",
             "mono",
-            "smallcaps"
+            "smallcaps",
+            "strike"
           ]
         },
         "children": {

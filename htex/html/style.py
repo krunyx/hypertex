@@ -61,6 +61,7 @@ ul,ol,dl{padding-left:1.6rem}
 .htex-list>li>p:last-child{margin-bottom:.3rem}
 ol.htex-explicit{list-style:none;padding-left:1rem}
 .htex-itemnum{font-variant-numeric:tabular-nums;margin-right:.2em}
+.htex-explicit>li{list-style:none}.htex-explicit>li>.htex-itemnum+p{display:inline}.htex-explicit>li>.htex-itemnum+p+*{margin-top:.5em}
 ol.htex-explicit>li>p:first-child{display:inline}
 dl.htex-description dt{font-weight:700;font-family:var(--sans-font)}
 dl.htex-description dd{margin-left:1.5rem}
