@@ -57,9 +57,22 @@ TRANSCLUDE_BUDGET = 3.0     # 전사 전체에 쓰는 시간 (가져오기 포�
 MAX_TRANSCLUSIONS = 20
 REMOTE_TTL = 300.0          # 원격 원문 메모리 보관 시간 (새로고침하면 무시)
 
-DOC_EXTS = (".htex", ".tex")
+DOC_EXTS = (".htex", ".tex", ".md", ".markdown")        # .md 는 6단계(M): htex.markdown 이 트리로 바꾼다
+HTML_EXTS = (".html", ".htm", ".xhtml")                 # 로컬 HTML: 그대로 보여 준다 (아래 LOCAL_HTML_CSP)
+# 로컬 HTML 이 함께 불러오는 파일 (같은 열어 둔 폴더 안만)
+# (스크립트가 fetch 로 읽는 데이터 파일 .json·.txt 등은 내주지 않는다: 어차피 connect-src 'none')
+ASSET_TYPES = {".css": "text/css", ".js": "text/javascript", ".mjs": "text/javascript",
+               ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf", ".otf": "font/otf"}
+# 로컬 HTML 은 Chrome 이 file:// 를 다루듯이: 스크립트는 돌지만 고유 출처 없는 상자(sandbox) 안에서.
+# 다른 파일을 fetch·XHR 로 읽을 수 없고(connect-src 'none'), 그림·스타일·스크립트·글꼴은 불러올 수 있다.
+LOCAL_HTML_CSP = ("sandbox allow-scripts allow-forms; default-src htexapp: https: data: blob:; "
+                  "script-src htexapp: https: 'unsafe-inline' 'unsafe-eval'; "
+                  "style-src htexapp: https: 'unsafe-inline'; img-src htexapp: https: data: blob:; "
+                  "font-src htexapp: https: data:; media-src htexapp: https: data: blob:; "
+                  "connect-src 'none'; object-src 'none'; frame-src htexapp: https:; base-uri 'none'")
 IMAGE_TYPES = {".svg": "image/svg+xml", ".png": "image/png",
-               ".jpg": "image/jpeg", ".jpeg": "image/jpeg"}
+               ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp",
+               ".ico": "image/x-icon", ".bmp": "image/bmp", ".avif": "image/avif"}
 
 CSP = ("default-src 'none'; script-src htexapp:; connect-src htexapp:; "
        "img-src htexapp: htex: https: blob:; style-src 'unsafe-inline'; font-src htexapp:; "
@@ -477,6 +490,7 @@ class Response:
     redirect: Optional[str] = None
     fail: bool = False
     record: Optional["DocRecord"] = None
+    utf8: bool = True               # False: 글자 인코딩을 문서가 정한다 (로컬 HTML 의 <meta charset>)
 
     @property
     def text(self) -> str:
@@ -890,11 +904,27 @@ class ViewerCore:
                                  "Content-Security-Policy": "default-src 'none'"})
             except OSError:
                 return _fail(404, "그림 파일이 없습니다.")
+        if ext in HTML_EXTS or ext in ASSET_TYPES:
+            return self._respond_local_file(path, ext)
         try:
             rec = self.load(split_fragment(url)[0], reload=reload)
         except ViewerError as e:
             return self._error(e, url)
         return self._page_response(rec, url)
+
+    def _respond_local_file(self, path: Path, ext: str) -> Response:
+        """로컬 HTML 과 그것이 부르는 CSS·JS·글꼴 (M). 열어 둔 폴더 안만 (local_path 가 이미 확인)."""
+        try:
+            if path.stat().st_size > MAX_BYTES:
+                return _fail(413, _too_large(MAX_BYTES))
+            data = path.read_bytes()
+        except OSError:
+            return _fail(404, "파일이 없습니다.")
+        if ext in HTML_EXTS:
+            return Response(200, "text/html", data,
+                            {"Content-Security-Policy": LOCAL_HTML_CSP, "X-Content-Type-Options": "nosniff",
+                             "Referrer-Policy": "no-referrer"}, utf8=False)
+        return Response(200, ASSET_TYPES[ext], data, {"X-Content-Type-Options": "nosniff"})
 
     def _error(self, err: ViewerError, url: str = "") -> Response:
         r = error_page(err, url)

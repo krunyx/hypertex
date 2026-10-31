@@ -574,6 +574,8 @@ class _Renderer:
                 return f'<span class="htex-tt">{inner}</span>'
             if st == "smallcaps":
                 return f'<span class="htex-sc">{inner}</span>'
+            if st == "strike":
+                return f"<s>{inner}</s>"
             return f"<span>{inner}</span>"
         if k == "math":
             return self.math(x.get("math") or {})

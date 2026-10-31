@@ -19,7 +19,7 @@ from typing import Any, Callable, Optional
 from urllib.parse import quote, unquote
 
 INTERACT_JS_PATH = Path(__file__).with_name("interact.js")
-DOC_EXTENSIONS = (".htex", ".tex")
+DOC_EXTENSIONS = (".htex", ".tex", ".md", ".markdown")   # .md 는 6단계(M)
 
 # 웹 서버 응답 헤더 (명세 7절: 문서에는 스크립트가 없다. 스크립트는 호스트가 넣는 같은 출처 파일뿐)
 CSP_HTML = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "

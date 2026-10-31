@@ -1,7 +1,7 @@
 """htex build: 정적 사이트 만들기 (명세 원칙 5). (담당: G)
 
 DIR 아래 모든 파일을 OUT 으로:
-- .htex/.tex → 같은 상대 경로의 .html (render(web_fallback=True, doc_url=…)).
+- .htex/.tex/.md → 같은 상대 경로의 .html (render(web_fallback=True, doc_url=…)).
   다른 문서 링크 `x.htex#lab`·`x.tex#lab` → `x.html#lab` (상대 주소만; htex:// 와 https:// 는 그대로).
   같은 이름의 .htex 와 .tex 가 함께 있으면 .htex 가 x.html, .tex 는 x.tex.html (경고).
 - 그 밖의 파일 → 그대로 복사 (숨김 파일, 루트 밖을 가리키는 심볼릭 링크, OUT 자신은 건너뜀).
@@ -62,7 +62,7 @@ def make_doc_url(rel_dir: str, html_names: dict[str, str]):
         mapped = html_names.get(target)
         if mapped is None:
             # 사이트 안에 없는 문서: 확장자만 바꾼다 (그래도 .htex 로 두면 브라우저가 내려받기만 한다)
-            mapped_path = re.sub(r"\.(htex|tex)$", ".html", sp.path, flags=re.I)
+            mapped_path = re.sub(r"\.(htex|tex|md|markdown)$", ".html", sp.path, flags=re.I)
         else:
             mapped_path = quote(os.path.relpath(mapped, rel_dir or ".").replace(os.sep, "/"))
         out = mapped_path

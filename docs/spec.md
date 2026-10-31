@@ -137,6 +137,25 @@ pgfplots 부분집합: axis, semilogxaxis, semilogyaxis, loglogaxis; 축 옵션(
 | \bibliography{refs} + .bbl | 인용 목록으로 변환 |
 | 페이지 명령 | 무시 |
 
+### 9.1 Markdown (.md, .markdown) 읽기
+
+Markdown 은 `.tex` 처럼 읽어 주는 형식이다 (문서 트리 `source.mode = "markdown"`). 서로 링크를 거는 주 형식은 `.htex` 로 둔다.
+
+| Markdown 요소 | 처리 |
+| --- | --- |
+| 머리말 `--- title/author/date/tags ---` | meta (제목·저자·날짜·핵심어) |
+| 문서 맨 앞의 유일한 `#` 제목 | meta.title, 나머지 제목은 한 단계씩 올림 |
+| `#`~`######` 제목 | 번호 없는 절 (5·6단계는 4단계로), GitHub 식 앵커를 라벨로 |
+| `$…$`, `\(…\)`, `$$…$$`, `\[…\]`, ```` ```math ````, `\begin{equation|align|gather|multline}` | 수식 (번호는 equation·align 계열만) |
+| 목록·할 일 목록·인용·코드·표·각주·그림 | 대응하는 블록 (GitHub 식 표·각주 포함) |
+| `[글](#앵커)` | 문서 안 참조 |
+| `[글](다른.md)`, `[글](x.htex#라벨)` | 상대 주소 링크 (뷰어·웹 빌드가 따라간다) |
+| `http://` 링크·그림 | `https://` 로 올림 |
+| HTML 태그 | `<br>`, `<a href>`, `<img>`, `<details>` 만 해석, 나머지는 지우고 글자만 (HTML 을 그대로 넣지 않는다) |
+
+뷰어는 내 컴퓨터의 `.html` 파일도 연다. 스크립트는 고유 출처 없는 격리 상자(CSP sandbox) 안에서 돌고,
+다른 파일을 fetch·XHR 로 읽을 수 없다 (`connect-src 'none'`). 같은 열어 둔 폴더의 그림·CSS·JS·글꼴은 불러온다.
+
 ## 10. 결정 기록
 
-htex:// 채택 / TikZ 부분집합 / pgfplots 2D / 선언적 상호작용 / 계산식 함수 한정 / 라벨 영구성 미보장 / 매크로 상한 100,000·10,000 / 어절 줄바꿈 / 한글 수식은 그리스 문자처럼 / 명칭 HyperTeX 2.0 / 호환 모드: 순환 검사 생략, 조판 패키지 경고 없음, \cref 영어 이름, \chapter 단계 내림 (2026-10-15).
+htex:// 채택 / TikZ 부분집합 / pgfplots 2D / 선언적 상호작용 / 계산식 함수 한정 / 라벨 영구성 미보장 / 매크로 상한 100,000·10,000 / 어절 줄바꿈 / 한글 수식은 그리스 문자처럼 / 명칭 HyperTeX 2.0 / 호환 모드: 순환 검사 생략, 조판 패키지 경고 없음, \cref 영어 이름, \chapter 단계 내림 (2026-10-15) / Markdown 읽기와 로컬 HTML 열기, hwpx·docx 는 직접 읽지 않고 hwp2x 에 맡김 (2026-10-31).

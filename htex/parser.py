@@ -17,8 +17,13 @@ from .macros import Expander, MacroTable
 
 def parse_text(text: str, url: str = "", base_dir: Optional[Path] = None,
                mode: Optional[str] = None) -> dict[str, Any]:
+    """원문 → 문서 트리. mode 가 없으면 주소의 확장자로: .tex = compat, .md·.markdown = markdown, 그 밖 native."""
     if mode is None:
-        mode = "compat" if url.endswith(".tex") else "native"
+        from .markdown import is_markdown
+        mode = "compat" if url.endswith(".tex") else "markdown" if is_markdown(url) else "native"
+    if mode == "markdown":
+        from .markdown import parse_markdown
+        return parse_markdown(text, url=url, base_dir=base_dir)
     sink = Sink()
     loader = Loader(base_dir or Path.cwd())
 
