@@ -10,12 +10,18 @@ J 가 더한 것
   로컬 파일 자동 새로고침(QFileSystemWatcher, 300ms 묶음, 스크롤·슬라이더 값 유지), 원문 보기, 메뉴.
 - run(targets) : 단일 인스턴스(QLocalServer, 이름은 instance.instance_name()), macOS QFileOpenEvent.
 
+L 이 더한 것 (Chrome 모양, 부품은 chrome.py)
+- 위에서부터 탭 줄 · 도구줄(← → ⟳ ⌂ 주소창 ⋮) · 북마크바 · 페이지. 메뉴는 ⋮ 에 (macOS 는 화면 위 메뉴 막대도).
+- 새 탭·홈 = 시작 페이지(htexapp://start/), 북마크(bookmarks.py, ☆·Ctrl+D·Ctrl+Shift+B),
+  상태 표시줄 대신 페이지 왼쪽 아래 말풍선, 찾기는 오른쪽 위 상자, 진단은 주소창 왼쪽 페이지 정보 단추.
+
 단축키 (Qt 의 Ctrl 은 macOS 에서 Cmd)
   Ctrl+T 새 탭 · Ctrl+W 탭 닫기 · Ctrl+Tab / Ctrl+Shift+Tab (Ctrl+PgDown/PgUp) 탭 전환 · Ctrl+1…8 그 탭, Ctrl+9 마지막 탭
   가운데 클릭·Ctrl+클릭 = 새 탭(뒤), Ctrl+Shift+클릭 = 새 탭(앞)
   Ctrl+F 찾기 · Enter/F3 다음 · Shift+Enter/Shift+F3 이전 · Esc 닫기
   Ctrl+= / Ctrl++ 확대 · Ctrl+- 축소 · Ctrl+0 원래 크기 · Ctrl+U 원문 보기
   Ctrl+O 열기 · Ctrl+L 주소 · Ctrl+R/F5 새로고침 · Alt+←/→ (macOS Cmd+[ ]) 뒤로·앞으로 · Ctrl+Q 끝내기
+  Alt+Home 홈 · Ctrl+D 북마크 · Ctrl+Shift+B 북마크바 보이기/숨기기 · 탭 가운데 클릭 = 탭 닫기
 """
 from __future__ import annotations
 
@@ -35,15 +41,20 @@ from PySide6.QtWebEngineCore import (QWebEnginePage, QWebEngineProfile, QWebEngi
                                      QWebEngineUrlRequestJob, QWebEngineUrlScheme,
                                      QWebEngineUrlSchemeHandler)
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel, QLineEdit,
-                               QMainWindow, QSizePolicy, QTabWidget, QToolBar, QToolButton,
-                               QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel,
+                               QLineEdit, QMainWindow, QMenu, QToolButton, QVBoxLayout, QWidget,
+                               QWidgetAction)
 
 from .. import __version__
 from .core import (DOC_EXTS, History, Response, TreeCache, ViewerCore, ViewerError, error_page,
                    default_cache_dir, https_to_htex, is_doc_path, split_fragment)
 from .instance import (REPLY_OK, decode_message, encode_message, file_signature, instance_name,
                        local_dependencies, normalize_targets)
+from . import chrome
+from .bookmarks import BookmarkStore
+from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
+                     TabStrip, ZoomRow, svg_icon)
+from .startpage import START_URL, parse_request as start_request
 
 SCHEMES = (b"htex", b"htexapp")
 APP_NAME = "HyperTeX"
@@ -154,6 +165,7 @@ class HtexPage(QWebEnginePage):
     가운데 클릭·Ctrl+클릭(새 탭)은 createWindow → 탭(J)."""
 
     redirected = Signal(QUrl)
+    start_request = Signal(str, str)        # 시작 페이지에서 누른 것: (go|open|action, 값)
 
     def __init__(self, profile, parent=None, tab: Optional["Tab"] = None):
         super().__init__(profile, parent)
@@ -163,6 +175,13 @@ class HtexPage(QWebEnginePage):
     def acceptNavigationRequest(self, url: QUrl, nav_type, is_main_frame: bool) -> bool:  # noqa: N802
         scheme = url.scheme().lower()
         current = self.url().scheme().lower()
+        if scheme == "htexapp" and url.host().lower() == "start":
+            req = start_request(url.toString(QUrl.ComponentFormattingOption.FullyEncoded))
+            if req is not None:
+                # 시작 페이지 자신이 보낸 것만 (다른 문서가 이 주소로 링크를 걸어도 무시)
+                if is_main_frame and self.url().toString().startswith(START_URL):
+                    self.start_request.emit(*req)
+                return False
         if scheme in ("http", "https") and is_doc_path(url.path()):
             if not is_main_frame:
                 return False
@@ -190,7 +209,8 @@ class HtexPage(QWebEnginePage):
         WT = QWebEnginePage.WebWindowType
         if kind not in (WT.WebBrowserTab, WT.WebBrowserBackgroundTab, WT.WebBrowserWindow):
             return None
-        tab = win.new_tab(background=(kind == WT.WebBrowserBackgroundTab), focus_address=False)
+        tab = win.new_tab(background=(kind == WT.WebBrowserBackgroundTab), focus_address=False,
+                          start_page=False)
         return tab.page
 
     def javaScriptConsoleMessage(self, level, message, line, source):  # noqa: N802
@@ -211,6 +231,8 @@ class Tab(QWidget):
     url_changed = Signal(object, str)
     load_finished = Signal(object, bool)
     zoom_changed = Signal(object, float)
+    loading_changed = Signal(object, bool)
+    icon_changed = Signal(object)
 
     def __init__(self, win: "ViewerWindow"):
         super().__init__(win.tabs)
@@ -249,10 +271,13 @@ class Tab(QWidget):
         self._restore: Optional[dict] = None
         self.auto_reloads = 0
 
+        self.loading = False
         self.view.urlChanged.connect(self._on_url_changed)
         self.view.titleChanged.connect(lambda t: (self.history.set_title(t),
                                                   self.title_changed.emit(self, t)))
+        self.view.loadStarted.connect(lambda: self._set_loading(True))
         self.view.loadFinished.connect(self._on_load_finished)
+        self.view.iconChanged.connect(lambda _i: self.icon_changed.emit(self))
         self.page.renderProcessTerminated.connect(self._on_render_died)
 
     def _on_render_died(self, status, code) -> None:
@@ -281,13 +306,30 @@ class Tab(QWidget):
         return self.view.title()
 
     def is_blank(self) -> bool:
+        """아무것도 열지 않은 탭 (빈 화면이거나 시작 페이지만 본 탭)."""
         u = self.current_url()
-        return (not u or u == "about:blank") and not self.history.entries
+        start_only = all(e.url.startswith(START_URL) for e in self.history.entries)
+        return (not u or u == "about:blank" or u.startswith(START_URL)) and start_only
+
+    def is_start(self) -> bool:
+        return self.current_url().startswith(START_URL)
+
+    def show_start(self) -> None:
+        """시작 페이지 (새 탭·홈). 초점은 옮기지 않는다 (창이 주소창에 둔다)."""
+        self.view.setUrl(QUrl(START_URL))
+
+    def stop(self) -> None:
+        self.view.stop()
+
+    def _set_loading(self, on: bool) -> None:
+        if on != self.loading:
+            self.loading = on
+            self.loading_changed.emit(self, on)
 
     @Slot(QUrl)
     def navigate_url(self, url: QUrl) -> None:
+        self.view.setFocus()          # 먼저: setUrl 이 바로 urlChanged 를 내면 창이 주소창을 고친다
         self.view.setUrl(url)
-        self.view.setFocus()
 
     def go_history(self, entry) -> None:
         if entry is None:
@@ -351,6 +393,7 @@ class Tab(QWidget):
         self.url_changed.emit(self, url)
 
     def _on_load_finished(self, ok: bool) -> None:
+        self._set_loading(False)
         if abs(self.view.zoomFactor() - self.zoom) > 1e-3:     # 다른 출처로 옮기면 엔진이 되돌릴 수 있다
             self.view.setZoomFactor(self.zoom)
         self.apply_theme(self.window_ref.theme)
@@ -416,41 +459,41 @@ class Tab(QWidget):
 
 # ====================================================================== 찾기 막대
 class FindBar(QWidget):
+    """Ctrl+F: 페이지 오른쪽 위에 떠 있는 찾기 상자 (Chrome). [입력 · 1/3 | ⌃ ⌄ ×]"""
+
     def __init__(self, win: "ViewerWindow"):
         super().__init__(win)
         self.win = win
         self.setObjectName("findbar")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setFixedWidth(400)
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(8, 4, 8, 4)
-        lay.setSpacing(6)
-        lay.addWidget(QLabel("찾기", self))
+        lay.setContentsMargins(10, 8, 8, 8)
+        lay.setSpacing(4)
         self.edit = QLineEdit(self)
-        self.edit.setPlaceholderText("문서에서 찾기")
-        self.edit.setClearButtonEnabled(True)
-        self.edit.setMinimumWidth(240)
+        self.edit.setPlaceholderText("페이지에서 찾기")
+        self.edit.setMinimumWidth(200)
         self.edit.installEventFilter(self)
         self.edit.textChanged.connect(lambda _t: self.find(forward=True, incremental=True))
         lay.addWidget(self.edit)
+        self.count = QLabel("", self)
+        self.count.setMinimumWidth(64)
+        self.count.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        lay.addWidget(self.count)
         self.prev_btn = QToolButton(self)
-        self.prev_btn.setText("▲")
         self.prev_btn.setToolTip("이전 (Shift+Enter, Shift+F3)")
         self.prev_btn.clicked.connect(lambda: self.find(forward=False))
         self.next_btn = QToolButton(self)
-        self.next_btn.setText("▼")
         self.next_btn.setToolTip("다음 (Enter, F3)")
         self.next_btn.clicked.connect(lambda: self.find(forward=True))
-        lay.addWidget(self.prev_btn)
-        lay.addWidget(self.next_btn)
-        self.count = QLabel("", self)
-        self.count.setMinimumWidth(90)
-        lay.addWidget(self.count)
-        lay.addStretch(1)
         close = QToolButton(self)
-        close.setText("✕")
         close.setToolTip("닫기 (Esc)")
-        close.setAutoRaise(True)
         close.clicked.connect(self.close_bar)
-        lay.addWidget(close)
+        self.close_btn = close
+        for b in (self.prev_btn, self.next_btn, close):
+            b.setFixedSize(28, 28)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            lay.addWidget(b)
         self.matches = (0, 0)       # (현재, 전체)
         self._page = None
         self.hide()
@@ -466,8 +509,16 @@ class FindBar(QWidget):
                 return True
         return super().eventFilter(obj, ev)
 
+    def set_palette(self, c) -> None:
+        self.prev_btn.setIcon(svg_icon("up", c.icon))
+        self.next_btn.setIcon(svg_icon("down", c.icon))
+        self.close_btn.setIcon(svg_icon("close", c.icon, 18))
+
     def open_bar(self) -> None:
         self.show()
+        area = self.parentWidget()
+        if isinstance(area, PageArea):
+            area.place_overlay()
         self.edit.setFocus()
         self.edit.selectAll()
         if self.edit.text():
@@ -536,9 +587,16 @@ def shared_profile() -> QWebEngineProfile:
     return _profile
 
 
+def _load_bookmarks() -> BookmarkStore:
+    try:
+        return BookmarkStore.load()
+    except Exception:   # noqa: BLE001 - 북마크를 못 읽어도 뷰어는 뜬다
+        return BookmarkStore()
+
+
 class ViewerWindow(QMainWindow):
     def __init__(self, core: Optional[ViewerCore] = None, profile: Optional[QWebEngineProfile] = None,
-                 cwd: Optional[Path] = None):
+                 cwd: Optional[Path] = None, bookmarks: Optional[BookmarkStore] = None):
         super().__init__()
         self.core = core or ViewerCore(cache=TreeCache(default_cache_dir()))
         self.cwd = cwd or Path.cwd()
@@ -562,34 +620,69 @@ class ViewerWindow(QMainWindow):
         self.theme = _read_theme()
         self.core.theme = "" if self.theme == "system" else self.theme
 
-        self.tabs = QTabWidget(self)
-        self.tabs.setDocumentMode(True)
-        self.tabs.setTabsClosable(True)
-        self.tabs.setMovable(True)
-        self.tabs.setElideMode(Qt.TextElideMode.ElideRight)
-        self.tabs.setUsesScrollButtons(True)
+        # ---- 북마크
+        self.bookmarks = bookmarks if bookmarks is not None else _load_bookmarks()
+        self.core.start_bookmarks = self.bookmarks.snapshot
+        self.bookmarks.on_change(self._on_bookmarks_changed)
+        try:
+            self.home_url = str(settings().value("view/home", START_URL) or START_URL)
+            show_bar = settings().value("view/bookmarks_bar", "true") not in ("false", False, "0")
+        except Exception:   # noqa: BLE001
+            self.home_url, show_bar = START_URL, True
+
+        # ---- 네 줄: 탭 줄 · 도구줄 · 북마크바 · 페이지 (Chrome)
+        self.tab_strip = TabStrip(self)
+        self.tabs = TabStack(self.tab_strip.bar, self)
         self.tabs.tabCloseRequested.connect(lambda i: self.close_tab(i))
         self.tabs.currentChanged.connect(self._on_current_changed)
+        self.tab_strip.new_btn.clicked.connect(lambda: self.new_tab())
+        self.tab_strip.bar.new_tab_requested.connect(lambda: self.new_tab())
+        self.tab_strip.bar.context_requested.connect(self._tab_menu)
+        self.navbar = NavBar(self)
+        self.omnibox = self.navbar.omnibox
+        self.address = self.omnibox.edit
+        self.address.returnPressed.connect(lambda: self.navigate(self.address.text()))
+        self.address.escaped.connect(self._restore_address)
+        self.bookmarks_bar = BookmarksBar(self)
+        self.bookmarks_bar.doc_icon = QIcon(str(ICON_PATH)) if ICON_PATH.is_file() else None
+        self.bookmarks_bar.open_requested.connect(self.open_bookmark)
+        self.bookmarks_bar.edit_requested.connect(self.edit_bookmark)
+        self.bookmarks_bar.remove_requested.connect(self.bookmarks.remove)
+        self.bookmarks_bar.add_page_requested.connect(self.bookmark_page)
+        self.bookmarks_bar.add_folder_requested.connect(self.add_bookmark_folder)
+        self.bookmarks_bar.toggle_requested.connect(self.toggle_bookmarks_bar)
+        self.page_area = PageArea(self.tabs, self)
+        self.status = self.page_area.bubble
         self.find_bar = FindBar(self)
+        self.find_bar.setParent(self.page_area)
+        self.find_bar.hide()
+        self.page_area.overlay_top_right = self.find_bar
         central = QWidget(self)
         lay = QVBoxLayout(central)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(0)
-        lay.addWidget(self.tabs, 1)
-        lay.addWidget(self.find_bar)
+        for w in (self.tab_strip, self.navbar, self.bookmarks_bar):
+            lay.addWidget(w)
+        lay.addWidget(self.page_area, 1)
         self.setCentralWidget(central)
+
+        # 진단·확대 표시 (F·J 의 이름 그대로: 주소창의 페이지 정보 단추와 확대 배율 칩이 보여 준다)
+        self.diag_label = QLabel("", self)
+        self.diag_label.hide()
+        self.zoom_label = self.omnibox.zoom
 
         self._build_toolbar()
         self._build_menus()
-        self.diag_label = QLabel("")
-        self.zoom_label = QLabel("100%")
-        self.zoom_label.setToolTip("확대 배율 (Ctrl+0 원래 크기)")
-        self.statusBar().addPermanentWidget(self.diag_label)
-        self.statusBar().addPermanentWidget(self.zoom_label)
+        self.bookmarks_bar.setVisible(show_bar)
+        self.act_bookmarks_bar.setChecked(show_bar)
         self.setWindowTitle(APP_NAME)
-        self.resize(1100, 820)
+        self.resize(1200, 860)
+        hints = QApplication.instance().styleHints() if QApplication.instance() else None
+        if hints is not None and hasattr(hints, "colorSchemeChanged"):
+            hints.colorSchemeChanged.connect(lambda *_: self.theme == "system" and self.apply_chrome_theme())
         self.apply_window_theme()
-        self.new_tab()
+        self._on_bookmarks_changed()
+        self.new_tab(start_page=False)
 
     # ------------------------------------------------------------ 호환 (F 의 단일 뷰 이름)
     @property
@@ -613,23 +706,31 @@ class ViewerWindow(QMainWindow):
         return [self.tabs.widget(i) for i in range(self.tabs.count())]
 
     def new_tab(self, target: Optional[str] = None, background: bool = False,
-                focus_address: bool = True) -> Tab:
+                focus_address: bool = True, start_page: bool = True) -> Tab:
+        """새 탭. 대상이 없으면 시작 페이지(Chrome 의 새 탭 페이지)를 띄우고 주소창에 초점."""
         tab = Tab(self)
         tab.title_changed.connect(self._on_tab_title)
         tab.url_changed.connect(self._on_tab_url)
         tab.load_finished.connect(self._on_tab_loaded)
         tab.zoom_changed.connect(self._on_tab_zoom)
-        tab.view.loadStarted.connect(lambda t=tab: t is self.current_tab()
-                                     and self.statusBar().showMessage("불러오는 중…"))
+        tab.loading_changed.connect(self._on_tab_loading)
+        tab.icon_changed.connect(self._update_tab_icon)
+        # 탐색 판정(acceptNavigationRequest) 안에서 다시 탐색하면 엔진 상태가 꼬이므로 한 박자 미룬다
+        tab.page.start_request.connect(
+            lambda kind, value, t=tab: QTimer.singleShot(0, lambda: self._on_start_request(t, kind, value)))
         tab.page.linkHovered.connect(lambda u, t=tab: t is self.current_tab() and self._on_hover(u))
         cur = self.tabs.currentIndex()
         idx = self.tabs.insertTab(cur + 1 if cur >= 0 else 0, tab, "새 탭")
+        self.tabs.setTabIcon(idx, self._doc_icon())
         if not background:
             self.tabs.setCurrentIndex(idx)
         if target:
             self.navigate(target, tab=tab)
-        elif not background and focus_address:
-            self._focus_address()
+        else:
+            if start_page:
+                tab.show_start()
+            if not background and focus_address:
+                self._focus_address()
         return tab
 
     def close_tab(self, index: Optional[int] = None) -> None:
@@ -696,36 +797,37 @@ class ViewerWindow(QMainWindow):
         return a
 
     def _build_toolbar(self) -> None:
-        tb = QToolBar("탐색", self)
-        tb.setMovable(False)
-        tb.setObjectName("nav")
-        self.addToolBar(tb)
+        """도구줄: ← → ⟳(불러오는 중이면 ×) ⌂ [주소창] ⋮"""
         Std = QKeySequence.StandardKey
         kb = QKeySequence.keyBindings
-        self.act_back = self._act("◀", "뒤로", kb(Std.Back), self.back)
-        self.act_forward = self._act("▶", "앞으로", kb(Std.Forward), self.forward)
-        self.act_reload = self._act("⟳", "새로고침", ["Ctrl+R"] + kb(Std.Refresh), self.reload)
-        self.act_open = self._act("열기", "파일 열기", kb(Std.Open), self.open_file)
-        self.act_focus = self._act("주소", "주소 표시줄", ["Ctrl+L"], self._focus_address)
-        for a in (self.act_back, self.act_forward, self.act_reload):
-            tb.addAction(a)
-        self.address = QLineEdit(self)
-        self.address.setPlaceholderText("htex:// 주소, https 주소, 또는 파일 경로")
-        self.address.setClearButtonEnabled(True)
-        self.address.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.address.returnPressed.connect(lambda: self.navigate(self.address.text()))
-        tb.addWidget(self.address)
-        tb.addAction(self.act_open)
+        nb = self.navbar
+        self.act_back = self._act("뒤로", "뒤로 (Alt+←)", kb(Std.Back), self.back)
+        self.act_forward = self._act("앞으로", "앞으로 (Alt+→)", kb(Std.Forward), self.forward)
+        self.act_reload = self._act("새로고침", "이 페이지 새로고침 (Ctrl+R)", ["Ctrl+R"] + kb(Std.Refresh),
+                                    self.reload)
+        self.act_stop = self._act("중지", "이 페이지 로드 중지", [], self.stop, add=False)
+        self.act_home = self._act("홈", "홈 페이지 열기 (Alt+Home)", ["Alt+Home"], self.go_home)
+        self.act_open = self._act("파일 열기…", "파일 열기 (Ctrl+O)", kb(Std.Open), self.open_file)
+        self.act_focus = self._act("주소창으로", "주소창 (Ctrl+L)", ["Ctrl+L", "Alt+D", "F6"], self._focus_address)
+        self.act_bookmark = self._act("이 탭을 북마크에 추가…", "북마크 (Ctrl+D)", ["Ctrl+D"], self.bookmark_page)
+        self.act_bookmarks_bar = self._act("북마크바 표시", "북마크바 (Ctrl+Shift+B)", ["Ctrl+Shift+B"],
+                                           self.toggle_bookmarks_bar)
+        self.act_bookmarks_bar.setCheckable(True)
+        nb.back.setDefaultAction(self.act_back)
+        nb.forward.setDefaultAction(self.act_forward)
+        nb.reload.setDefaultAction(self.act_reload)
+        nb.home.setDefaultAction(self.act_home)
+        self.omnibox.star.clicked.connect(self.bookmark_page)
+        self.omnibox.info.clicked.connect(self.show_page_info)
+        self.omnibox.zoom.clicked.connect(lambda: self.set_zoom(1.0))
 
     def _build_menus(self) -> None:
+        """⋮ 메뉴 (Chrome 의 앱 메뉴). macOS 는 같은 동작을 화면 위 메뉴 막대에도 둔다."""
         Std = QKeySequence.StandardKey
         kb = QKeySequence.keyBindings
-        mb = self.menuBar()
-        # 파일
-        m = mb.addMenu("파일(&F)")
-        m.addAction(self.act_open)
-        self.act_new_tab = self._act("새 탭", "새 탭", ["Ctrl+T"], lambda: self.new_tab())
-        self.act_close_tab = self._act("탭 닫기", "탭 닫기", ["Ctrl+W"], lambda: self.close_tab())
+        self.act_new_tab = self._act("새 탭", "새 탭 (Ctrl+T)", ["Ctrl+T"], lambda: self.new_tab())
+        self.act_close_tab = self._act("탭 닫기", "탭 닫기 (Ctrl+W)", ["Ctrl+W", "Ctrl+F4"],
+                                       lambda: self.close_tab())
         self.act_next_tab = self._act("다음 탭", "다음 탭",
                                       ["Ctrl+Tab", "Ctrl+PgDown"] + kb(Std.NextChild),
                                       lambda: self.cycle_tab(1))
@@ -734,39 +836,29 @@ class ViewerWindow(QMainWindow):
                                       lambda: self.cycle_tab(-1))
         for n in range(1, 10):
             self._act(f"탭 {n}", f"탭 {n}", [f"Ctrl+{n}"], lambda _=False, n=n: self.select_tab(n))
-        m.addAction(self.act_new_tab)
-        m.addAction(self.act_close_tab)
-        m.addSeparator()
-        m.addAction(self.act_next_tab)
-        m.addAction(self.act_prev_tab)
-        m.addSeparator()
-        self.act_quit = self._act("끝내기", "끝내기", kb(Std.Quit) or ["Ctrl+Q"], self._quit)
+        self.act_quit = self._act("종료", "종료", kb(Std.Quit) or ["Ctrl+Q"], self._quit)
         self.act_quit.setMenuRole(QAction.MenuRole.QuitRole)
-        m.addAction(self.act_quit)
-        # 편집
-        m = mb.addMenu("편집(&E)")
-        self.act_find = self._act("찾기…", "문서에서 찾기", kb(Std.Find) or ["Ctrl+F"],
+        self.act_find = self._act("찾기…", "페이지에서 찾기 (Ctrl+F)", kb(Std.Find) or ["Ctrl+F"],
                                   self.find_bar.open_bar)
         self.act_find_next = self._act("다음 찾기", "다음 찾기", ["F3"] + kb(Std.FindNext),
                                        lambda: self._find_step(True))
         self.act_find_prev = self._act("이전 찾기", "이전 찾기", ["Shift+F3"] + kb(Std.FindPrevious),
                                        lambda: self._find_step(False))
-        m.addAction(self.act_find)
-        m.addAction(self.act_find_next)
-        m.addAction(self.act_find_prev)
-        # 보기
-        m = mb.addMenu("보기(&V)")
         self.act_zoom_in = self._act("확대", "확대", ["Ctrl+=", "Ctrl++"] + kb(Std.ZoomIn),
                                      lambda: self.zoom_step(1))
         self.act_zoom_out = self._act("축소", "축소", ["Ctrl+-"] + kb(Std.ZoomOut),
                                       lambda: self.zoom_step(-1))
         self.act_zoom_reset = self._act("원래 크기", "원래 크기", ["Ctrl+0"],
                                         lambda: self.set_zoom(1.0))
-        m.addAction(self.act_zoom_in)
-        m.addAction(self.act_zoom_out)
-        m.addAction(self.act_zoom_reset)
-        m.addSeparator()
-        tm = m.addMenu("테마")
+        self.act_source = self._act("원본 보기", "현재 문서의 원문을 새 탭에 (Ctrl+U)", ["Ctrl+U"],
+                                    self.view_source)
+        self.act_set_home = self._act("현재 페이지를 홈으로", "홈 단추가 이 페이지를 열게 한다", [],
+                                      self.set_home_to_current, add=False)
+        self.act_reset_home = self._act("홈을 새 탭 페이지로", "홈 단추가 시작 페이지를 열게 한다", [],
+                                        lambda: self.set_home(START_URL), add=False)
+        self.act_about = self._act("HyperTeX 정보", "버전 정보", [], self.show_about, add=False)
+        self.act_about.setMenuRole(QAction.MenuRole.AboutRole)
+
         self.theme_group = QActionGroup(self)
         self.theme_group.setExclusive(True)
         self.theme_actions: dict[str, QAction] = {}
@@ -775,18 +867,328 @@ class ViewerWindow(QMainWindow):
             a.setChecked(key == self.theme)
             a.triggered.connect(lambda _=False, k=key: self.set_theme(k))
             self.theme_group.addAction(a)
-            tm.addAction(a)
             self.theme_actions[key] = a
+
+        # ⋮ 메뉴
+        m = QMenu(self)
+        self.app_menu = m
+        m.addAction(self.act_new_tab)
+        m.addAction(self.act_open)
         m.addSeparator()
-        self.act_source = self._act("원본 보기", "현재 문서의 원문을 새 탭에", ["Ctrl+U"], self.view_source)
+        self.bookmarks_menu = m.addMenu("북마크")
+        self.bookmarks_menu.aboutToShow.connect(self._fill_bookmarks_menu)
+        m.addSeparator()
+        self.zoom_row = ZoomRow(m, lambda: self.zoom_step(-1), lambda: self.zoom_step(1),
+                                lambda: self.set_zoom(1.0))
+        wa = QWidgetAction(m)
+        wa.setDefaultWidget(self.zoom_row)
+        m.addAction(wa)
+        m.aboutToShow.connect(self._sync_zoom_row)
+        m.addSeparator()
+        m.addAction(self.act_find)
         m.addAction(self.act_source)
-        # 이동
-        m = mb.addMenu("이동(&G)")
-        m.addAction(self.act_back)
-        m.addAction(self.act_forward)
-        m.addAction(self.act_reload)
+        tm = m.addMenu("테마")
+        for key, _label in THEMES:
+            tm.addAction(self.theme_actions[key])
+        hm = m.addMenu("홈 페이지")
+        hm.addAction(self.act_set_home)
+        hm.addAction(self.act_reset_home)
         m.addSeparator()
-        m.addAction(self.act_focus)
+        m.addAction(self.act_about)
+        m.addAction(self.act_quit)
+        self.navbar.menu.setMenu(m)
+
+        # 화면 위 메뉴 막대: macOS 만 (Chrome 도 윈도·리눅스에서는 메뉴 막대가 없다)
+        mb = self.menuBar()
+        if chrome.is_mac():
+            f = mb.addMenu("파일")
+            for a in (self.act_new_tab, self.act_open, None, self.act_close_tab, None, self.act_quit):
+                f.addSeparator() if a is None else f.addAction(a)
+            e = mb.addMenu("편집")
+            for a in (self.act_find, self.act_find_next, self.act_find_prev):
+                e.addAction(a)
+            v = mb.addMenu("보기")
+            for a in (self.act_bookmarks_bar, None, self.act_zoom_in, self.act_zoom_out,
+                      self.act_zoom_reset, None, self.act_source):
+                v.addSeparator() if a is None else v.addAction(a)
+            v.addMenu(tm)
+            g = mb.addMenu("이동")
+            for a in (self.act_back, self.act_forward, self.act_reload, self.act_home, None, self.act_focus):
+                g.addSeparator() if a is None else g.addAction(a)
+            bm = mb.addMenu("북마크")
+            bm.aboutToShow.connect(lambda: self._fill_bookmarks_menu(bm))
+            w = mb.addMenu("창")
+            for a in (self.act_next_tab, self.act_prev_tab):
+                w.addAction(a)
+            mb.addMenu("도움말").addAction(self.act_about)
+        else:
+            mb.hide()
+
+    def _fill_bookmarks_menu(self, menu: Optional[QMenu] = None) -> None:
+        m = menu or self.bookmarks_menu
+        m.clear()
+        m.addAction(self.act_bookmark)
+        m.addAction(self.act_bookmarks_bar)
+        m.addSeparator()
+        bar = self.bookmarks_bar
+        if not self.bookmarks.bar:
+            a = m.addAction("(북마크 없음)")
+            a.setEnabled(False)
+        for it in self.bookmarks.bar:
+            if it.is_folder:
+                sub = bar._folder_menu(it)
+                sub.setTitle(it.title.replace("&", "&&"))
+                sub.setIcon(bar._icon_for(it))
+                m.addMenu(sub)
+            else:
+                a = m.addAction(bar._icon_for(it), it.title.replace("&", "&&"))
+                a.triggered.connect(lambda _=False, u=it.url: self.open_bookmark(u, False))
+
+    def _sync_zoom_row(self) -> None:
+        tab = self.current_tab()
+        self.zoom_row.value.setText(f"{round((tab.zoom if tab else 1.0) * 100)}%")
+
+    def _tab_menu(self, index: int, pos) -> None:
+        """탭 우클릭 메뉴 (Chrome 과 같은 순서)."""
+        m = QMenu(self)
+        m.addAction("오른쪽에 새 탭", lambda: (self.tabs.setCurrentIndex(index) if index >= 0 else None,
+                                         self.new_tab()))
+        if index >= 0:
+            tab = self.tabs.widget(index)
+            m.addSeparator()
+            m.addAction("새로고침", lambda: tab.reload())
+            dup = m.addAction("복제", lambda: self.duplicate_tab(index))
+            dup.setEnabled(not tab.is_blank())
+            m.addSeparator()
+            m.addAction("탭 닫기", lambda: self.close_tab(index))
+            others = m.addAction("다른 탭 닫기", lambda: self.close_other_tabs(index))
+            others.setEnabled(self.tabs.count() > 1)
+            right = m.addAction("오른쪽 탭 닫기", lambda: self.close_tabs_right(index))
+            right.setEnabled(index < self.tabs.count() - 1)
+        m.exec(pos)
+
+    def duplicate_tab(self, index: int) -> None:
+        tab = self.tabs.widget(index)
+        if tab is None:
+            return
+        self.tabs.setCurrentIndex(index)
+        new = self.new_tab(focus_address=False, start_page=False)
+        new.set_zoom(tab.zoom)
+        new.navigate_url(QUrl(tab.current_url()))
+
+    def close_other_tabs(self, index: int) -> None:
+        keep = self.tabs.widget(index)
+        for t in [t for t in self.tab_list() if t is not keep]:
+            self.close_tab(self.tabs.indexOf(t))
+
+    def close_tabs_right(self, index: int) -> None:
+        for t in self.tab_list()[index + 1:]:
+            self.close_tab(self.tabs.indexOf(t))
+
+    # ------------------------------------------------------------ 홈·시작 페이지
+    def go_home(self) -> None:
+        tab = self.current_tab() or self.new_tab(start_page=False)
+        if self.home_url.startswith(START_URL):
+            tab.show_start()
+            self._focus_address()
+        else:
+            self.navigate(self.home_url, tab=tab)
+
+    def set_home(self, url: str) -> None:
+        self.home_url = url or START_URL
+        try:
+            settings().setValue("view/home", self.home_url)
+        except Exception:   # noqa: BLE001
+            pass
+        self.status.showMessage("홈 페이지: " + ("새 탭 페이지" if self.home_url.startswith(START_URL)
+                                              else self.home_url), 3000)
+
+    def set_home_to_current(self) -> None:
+        addr = self._bookmark_address()
+        if addr:
+            self.set_home(addr)
+
+    def _on_start_request(self, tab: Tab, kind: str, value: str) -> None:
+        """시작 페이지의 입력 칸·바로가기 타일."""
+        if kind in ("go", "open"):
+            self.navigate(value, tab=tab)
+        elif kind == "action" and value == "open-file":
+            self.open_file()
+
+    # ------------------------------------------------------------ 북마크
+    def _bookmark_address(self, tab: Optional[Tab] = None) -> str:
+        """북마크에 저장할 주소: 주소창에 보이는 것 (로컬 문서는 파일 경로). 원문 보기·빈 탭은 ""."""
+        tab = tab or self.current_tab()
+        if tab is None:
+            return ""
+        url = tab.current_url()
+        if not url or url == "about:blank" or url.startswith(("htexapp://source/", "htexapp://crashed")):
+            return ""
+        if url.startswith(START_URL):
+            return START_URL
+        return urllib.parse.unquote(self.core.display_address(url))
+
+    def bookmark_page(self) -> None:
+        """☆ / Ctrl+D: 북마크가 없으면 바로 추가하고, 이름·폴더를 고치는 상자를 띄운다 (Chrome)."""
+        addr = self._bookmark_address()
+        if not addr:
+            self.status.showMessage("이 페이지는 북마크할 수 없습니다.", 3000)
+            return
+        hit = self.bookmarks.find(addr)
+        new = hit is None
+        if new:
+            tab = self.current_tab()
+            title = (tab.title() if tab else "") or addr
+            self.bookmarks.add("새 탭" if addr == START_URL else title, addr)
+            hit = self.bookmarks.find(addr)
+        folder, item = hit
+        pop = BookmarkPopup(self, item.title, self.bookmarks.folders(), folder, new)
+        pop.done_btn.clicked.connect(lambda: (self.bookmarks.update(
+            item, title=pop.name.text(), folder=pop.folder.currentData()), pop.close()))
+        pop.remove_btn.clicked.connect(lambda: (self.bookmarks.remove(item), pop.close()))
+        pop.show_under(self.omnibox.star)
+        self.last_popup = pop
+
+    def edit_bookmark(self, item) -> None:
+        if item.is_folder:
+            text, ok = QInputDialog.getText(self, "폴더 이름 바꾸기", "이름:", text=item.title)
+            if ok and text.strip():
+                self.bookmarks.update(item, title=text)
+            return
+        text, ok = QInputDialog.getText(self, "북마크 수정", "이름:", text=item.title)
+        if not ok:
+            return
+        url, ok = QInputDialog.getText(self, "북마크 수정", "주소:", text=item.url)
+        if ok:
+            self.bookmarks.update(item, title=text, url=url)
+
+    def add_bookmark_folder(self) -> None:
+        text, ok = QInputDialog.getText(self, "폴더 추가", "이름:", text="새 폴더")
+        if ok:
+            self.bookmarks.add_folder(text)
+
+    def open_bookmark(self, url: str, new_tab: bool = False) -> None:
+        if new_tab:
+            tab = self.new_tab(focus_address=False, start_page=False, background=True)
+        else:
+            tab = self.current_tab() or self.new_tab(start_page=False)
+        if url.startswith(START_URL):
+            tab.show_start()
+        else:
+            self.navigate(url, tab=tab)
+
+    def toggle_bookmarks_bar(self) -> None:
+        on = not self.bookmarks_bar.isVisible()
+        self.bookmarks_bar.setVisible(on)
+        self.act_bookmarks_bar.setChecked(on)
+        try:
+            settings().setValue("view/bookmarks_bar", "true" if on else "false")
+        except Exception:   # noqa: BLE001
+            pass
+
+    def _on_bookmarks_changed(self) -> None:
+        self.bookmarks_bar.set_items(self.bookmarks.bar)
+        self._update_star()
+        for tab in self.tab_list():            # 열려 있는 시작 페이지의 바로가기도 새로
+            if tab.is_start() and not tab.loading:
+                tab.view.reload()
+
+    def _update_star(self) -> None:
+        addr = self._bookmark_address()
+        self.omnibox.set_starred(bool(addr) and self.bookmarks.contains(addr))
+        self.omnibox.star.setEnabled(bool(addr))
+
+    # ------------------------------------------------------------ 페이지 정보 (주소창 왼쪽)
+    def _update_page_info(self) -> None:
+        tab = self.current_tab()
+        url = tab.current_url() if tab else ""
+        ob = self.omnibox
+        if not url or url == "about:blank" or url.startswith(START_URL):
+            ob.set_info("start")
+            return
+        rec = self.core.record_for(url) if url.startswith(("htex:", "htexapp://doc-")) else None
+        if rec is not None:
+            err, _warn = rec.counts()
+            compat = (rec.tree.get("source") or {}).get("mode") == "compat"
+            label = (f"오류 {err}" if err else "") or ("호환 모드" if compat else "")
+            ob.set_info("doc", label, warn=bool(err))
+        elif url.startswith("htexapp://source/"):
+            ob.set_info("source", "원문")
+        elif url.startswith("https:"):
+            ob.set_info("secure")
+        elif url.startswith("http:"):
+            ob.set_info("error", "주의 요함", warn=True)
+        else:
+            ob.set_info("web")
+
+    def show_page_info(self) -> None:
+        tab = self.current_tab()
+        if tab is None:
+            return
+        url = tab.current_url()
+        pop = Popup(self, 380)
+        rec = self.core.record_for(url) if url.startswith(("htex:", "htexapp://doc-")) else None
+        if url.startswith(START_URL) or not url or url == "about:blank":
+            pop.title("새 탭")
+            pop.label("주소창에 htex:// 주소, https 주소, 파일 경로를 입력하세요.", muted=True)
+        elif rec is not None:
+            pop.title(tab.title() or "HyperTeX 문서")
+            pop.label(urllib.parse.unquote(self.core.display_address(url)), muted=True)
+            pop.label(self.diag_label.text())
+            for d in rec.diagnostics[:8]:
+                pop.label(f'{"⛔" if d.get("severity") == "error" else "⚠"} {d.get("message")}', muted=True)
+            if len(rec.diagnostics) > 8:
+                pop.label(f"… 그 밖 {len(rec.diagnostics) - 8}개", muted=True)
+            pop.label(f"해석 {rec.elapsed * 1000:.0f}ms", muted=True)
+        else:
+            pop.title(tab.title() or url)
+            pop.label(url, muted=True)
+            if url.startswith("https:"):
+                pop.label("연결이 안전합니다 (HTTPS).")
+            elif url.startswith("http:"):
+                pop.label("이 사이트와의 연결은 안전하지 않습니다.")
+            elif url.startswith("htexapp://source/"):
+                pop.label("문서의 원문입니다 (읽기 전용, 스크립트 없음).")
+        pop.show_under(self.omnibox.info, align_right=False)
+        self.last_popup = pop
+
+    def show_about(self) -> None:
+        pop = Popup(self, 360)
+        pop.title(f"{APP_NAME} {__version__}")
+        pop.label("LaTeX 문법으로 쓰는 웹 문서 HyperTeX 2.0 의 브라우저", muted=True)
+        pop.label("https://krunyx.com/hypertex/")
+        pop.label("Apache License 2.0", muted=True)
+        pop.show_under(self.navbar.menu)
+        self.last_popup = pop
+
+    # ------------------------------------------------------------ 테마 (창 테두리)
+    def is_dark(self) -> bool:
+        if self.theme in ("light", "dark"):
+            return self.theme == "dark"
+        app = QApplication.instance()
+        hints = app.styleHints() if app else None
+        try:
+            return bool(hints is not None and hints.colorScheme() == Qt.ColorScheme.Dark)
+        except Exception:   # noqa: BLE001
+            return False
+
+    def apply_chrome_theme(self) -> None:
+        c = DARK if self.is_dark() else LIGHT
+        self.chrome_palette = c
+        self.setStyleSheet(chrome.stylesheet(c))
+        nb = self.navbar
+        for btn, name in ((nb.back, "back"), (nb.forward, "forward"), (nb.home, "home"), (nb.menu, "more")):
+            btn.setIcon(svg_icon(name, c.icon))
+        self.act_back.setIcon(svg_icon("back", c.icon))
+        self.act_forward.setIcon(svg_icon("forward", c.icon))
+        self.act_reload.setIcon(svg_icon("reload", c.icon))
+        self.act_stop.setIcon(svg_icon("close", c.icon))
+        self.act_home.setIcon(svg_icon("home", c.icon))
+        self.tab_strip.set_palette(c)
+        self.omnibox.set_palette(c)
+        self.bookmarks_bar.set_palette(c)
+        self.find_bar.set_palette(c)
+        self._update_page_info()
 
     def _quit(self) -> None:
         app = QApplication.instance()
@@ -812,6 +1214,10 @@ class ViewerWindow(QMainWindow):
         self.act_forward.setEnabled(bool(tab and tab.history.can_forward()))
         url = tab.current_url() if tab else ""
         self.act_source.setEnabled(url.startswith(("htex:", "htexapp://doc-")))
+        loading = bool(tab and tab.loading)
+        self.navbar.reload.setDefaultAction(self.act_stop if loading else self.act_reload)
+        self._update_star()
+        self._update_page_info()
 
     # ------------------------------------------------------------ 확대·테마·원문
     def set_zoom(self, z: float) -> None:
@@ -849,7 +1255,14 @@ class ViewerWindow(QMainWindow):
         self.apply_window_theme()
 
     def apply_window_theme(self) -> None:
-        """창 테두리(Qt 위젯) 색. Qt 6.8+ 의 styleHints().setColorScheme. 없으면 그대로."""
+        """창 테두리(Qt 위젯) 색. Qt 6.8+ 의 styleHints().setColorScheme. 없으면 그대로.
+        Chrome 모양 부품(탭 줄·도구줄·북마크바)은 끝에 apply_chrome_theme 으로 따로 칠한다."""
+        try:
+            self._apply_qt_scheme()
+        finally:
+            self.apply_chrome_theme()
+
+    def _apply_qt_scheme(self) -> None:
         app = QApplication.instance()
         hints = app.styleHints() if app else None
         if hints is None or not hasattr(hints, "setColorScheme"):
@@ -877,9 +1290,9 @@ class ViewerWindow(QMainWindow):
             return
         url = self.core.source_url(tab.current_url())
         if url is None:
-            self.statusBar().showMessage("원문을 볼 수 있는 HyperTeX 문서가 아닙니다.", 4000)
+            self.status.showMessage("원문을 볼 수 있는 HyperTeX 문서가 아닙니다.", 4000)
             return
-        src = self.new_tab(focus_address=False)
+        src = self.new_tab(focus_address=False, start_page=False)
         src.pinned_source = True
         src.navigate_url(QUrl(url))
 
@@ -887,11 +1300,14 @@ class ViewerWindow(QMainWindow):
     def navigate(self, text: str, tab: Optional[Tab] = None) -> None:
         tab = tab or self.current_tab()
         if tab is None:
-            tab = self.new_tab()
+            tab = self.new_tab(start_page=False)
+        if text.strip().startswith(START_URL):
+            tab.show_start()
+            return
         try:
             url = self.core.input_to_url(text, self.cwd)
         except ViewerError as e:
-            self.statusBar().showMessage(e.message, 8000)
+            self.status.showMessage(e.message, 8000)
             return
         tab.navigate_url(QUrl(url))
 
@@ -924,6 +1340,50 @@ class ViewerWindow(QMainWindow):
         if self.current_tab():
             self.current_tab().reload()
 
+    def stop(self) -> None:
+        if self.current_tab():
+            self.current_tab().stop()
+
+    def _restore_address(self) -> None:
+        """주소창에서 Esc: 고치던 글을 버리고 지금 주소로 (한 번 더 누르면 페이지로)."""
+        tab = self.current_tab()
+        shown = self._shown_address(tab) if tab else ""
+        if self.address.text() != shown:
+            self.address.setText(shown)
+            self.address.selectAll()
+        elif tab is not None:
+            tab.view.setFocus()
+
+    def _shown_address(self, tab: Tab) -> str:
+        url = tab.current_url()
+        if not url or url == "about:blank" or url.startswith(START_URL):
+            return ""
+        return urllib.parse.unquote(self.core.display_address(url))
+
+    def _doc_icon(self) -> QIcon:
+        if not hasattr(self, "_doc_icon_cache"):
+            self._doc_icon_cache = QIcon(str(ICON_PATH)) if ICON_PATH.is_file() else QIcon()
+        return self._doc_icon_cache
+
+    def _update_tab_icon(self, tab: Tab) -> None:
+        i = self.tabs.indexOf(tab)
+        if i < 0:
+            return
+        url = tab.current_url()
+        icon = tab.view.icon() if url.startswith(("http:", "https:")) else QIcon()
+        if icon.isNull():
+            c = getattr(self, "chrome_palette", LIGHT)
+            icon = (svg_icon("globe", c.icon, 16) if url.startswith(("http:", "https:"))
+                    else svg_icon("doc", c.icon, 16) if url.startswith("htexapp://source/")
+                    else self._doc_icon())
+        self.tabs.setTabIcon(i, icon)
+
+    def _on_tab_loading(self, tab: Tab, on: bool) -> None:
+        i = self.tabs.indexOf(tab)
+        if i >= 0:
+            self.tab_strip.bar.set_loading(i, on)
+        if tab is self.current_tab():
+            self._update_actions()
     def current_url(self) -> str:
         tab = self.current_tab()
         return tab.current_url() if tab else ""
@@ -934,12 +1394,10 @@ class ViewerWindow(QMainWindow):
         if tab is None:
             return
         url = tab.current_url()
-        if url and url != "about:blank":
-            self.address.setText(urllib.parse.unquote(self.core.display_address(url)))
-        else:
-            self.address.clear()
+        self.address.setText(self._shown_address(tab))
+        self.address.setCursorPosition(0)
         self._set_title(tab.title() if url and url != "about:blank" else "")
-        self.zoom_label.setText(f"{round(tab.zoom * 100)}%")
+        self._show_zoom(tab.zoom)
         self._show_diag(tab, True)
         self._update_actions()
         if self.find_bar.isVisible():
@@ -952,23 +1410,31 @@ class ViewerWindow(QMainWindow):
         i = self.tabs.indexOf(tab)
         if i >= 0:
             shown = title or "새 탭"
-            self.tabs.setTabText(i, shown if len(shown) <= 28 else shown[:27] + "…")
+            self.tabs.setTabText(i, shown)          # 막대가 폭에 맞춰 줄여 그린다
             self.tabs.setTabToolTip(i, title)
         if tab is self.current_tab():
             self._set_title(title)
 
     def _on_tab_url(self, tab: Tab, url: str) -> None:
+        self._update_tab_icon(tab)
         if tab is self.current_tab():
             if not self.address.hasFocus():
-                self.address.setText(urllib.parse.unquote(self.core.display_address(url)))
+                self.address.setText(self._shown_address(tab))
+                self.address.setCursorPosition(0)
             self._update_actions()
 
     def _on_tab_zoom(self, tab: Tab, z: float) -> None:
         if tab is self.current_tab():
-            self.zoom_label.setText(f"{round(z * 100)}%")
-            self.statusBar().showMessage(f"확대 {round(z * 100)}%", 1500)
+            self._show_zoom(z)
+            self._sync_zoom_row()
+
+    def _show_zoom(self, z: float) -> None:
+        """주소창 오른쪽 확대 배율 칩: 100% 가 아닐 때만 보인다 (Chrome 의 돋보기 자리)."""
+        self.zoom_label.setText(f"{round(z * 100)}%")
+        self.zoom_label.setVisible(abs(z - 1.0) > 1e-3)
 
     def _on_tab_loaded(self, tab: Tab, ok: bool) -> None:
+        self._update_tab_icon(tab)
         if tab is self.current_tab():
             self._show_diag(tab, ok)
             self._update_actions()
@@ -983,23 +1449,26 @@ class ViewerWindow(QMainWindow):
             self.diag_label.setText(f"{mode}진단: 오류 {err} · 경고 {warn}{watching}")
             self.diag_label.setToolTip("\n".join(f'{d.get("severity")}: {d.get("message")}'
                                                  for d in rec.diagnostics[:30]))
-            self.statusBar().showMessage(f"해석 {rec.elapsed * 1000:.0f}ms", 4000)
+            self.omnibox.info.setToolTip(self.diag_label.text() + " · 눌러서 자세히")
         elif url.startswith(("http:", "https:")):
             self.diag_label.setText("웹 페이지")
             self.diag_label.setToolTip("")
-            self.statusBar().showMessage("" if ok else "페이지를 불러오지 못했습니다.", 4000)
+            self.status.showMessage("" if ok else "페이지를 불러오지 못했습니다.", 4000)
         elif url.startswith("htexapp://source/"):
             self.diag_label.setText("원문 (읽기 전용)")
             self.diag_label.setToolTip("")
         else:
             self.diag_label.setText("")
-            self.statusBar().clearMessage()
+            self.status.clearMessage()
+        if rec is None:
+            self.omnibox.info.setToolTip("페이지 정보")
+        self._update_page_info()
 
     def _on_hover(self, url: str) -> None:
         if url:
-            self.statusBar().showMessage(urllib.parse.unquote(self.core.display_address(url)))
+            self.status.showMessage(urllib.parse.unquote(self.core.display_address(url)))
         else:
-            self.statusBar().clearMessage()
+            self.status.clearMessage()
 
     def closeEvent(self, ev) -> None:  # noqa: N802
         for tab in self.tab_list():
@@ -1225,6 +1694,9 @@ def run(targets: "list[str] | str | None" = None, argv: Optional[list[str]] = No
     file_filter.pending = []
     if initial:
         win.open_targets(initial, raise_window=False)
+    elif win.current_tab() is not None and win.current_tab().is_blank():
+        win.current_tab().show_start()
+        win._focus_address()
     try:
         return app.exec()
     finally:

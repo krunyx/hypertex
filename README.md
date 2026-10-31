@@ -24,18 +24,27 @@ pip install ".[viewer]"    # + 전용 뷰어 (PySide6): htex view, htex-viewer
 pip로 설치한 뷰어를 리눅스 데스크톱에 연결하려면 `packaging/linux/install.sh --pip`.
 직접 빌드·서명·릴리스 방법은 `packaging/README.md`.
 
+### 뷰어 화면
+
+Google Chrome과 같은 배치다. 위에서부터 탭 줄, 도구줄(뒤로·앞으로·새로고침·홈, 주소창, ⋮ 메뉴),
+북마크바, 페이지. 새 탭과 홈은 시작 페이지(주소 입력 칸과 북마크 바로가기)를 연다.
+주소창 왼쪽 단추는 문서의 진단(오류·경고, 호환 모드)을, 오른쪽 ☆는 북마크를 보여 준다.
+테마(시스템·밝게·어둡게)와 홈 페이지 설정은 ⋮ 메뉴. 북마크는 사용자 데이터 폴더의 `bookmarks.json`.
+
 ### 뷰어 단축키 (macOS는 Ctrl 대신 Cmd)
 
 | 동작 | 키 |
 | --- | --- |
 | 새 탭 / 탭 닫기 / 탭 전환 | Ctrl+T / Ctrl+W / Ctrl+Tab, Ctrl+1…9 |
-| 링크를 새 탭으로 | 가운데 클릭 또는 Ctrl+클릭 |
+| 링크를 새 탭으로 / 탭 닫기 | 링크 가운데 클릭 또는 Ctrl+클릭 / 탭 가운데 클릭 |
 | 찾기 | Ctrl+F, 다음 Enter·F3, 이전 Shift+Enter |
 | 확대 / 축소 / 원래 크기 | Ctrl+= / Ctrl+- / Ctrl+0 |
 | 원본(.htex) 보기 | Ctrl+U |
-| 뒤로 / 앞으로 / 새로고침 / 주소창 | Alt+← / Alt+→ / Ctrl+R / Ctrl+L |
+| 뒤로 / 앞으로 / 새로고침 / 홈 | Alt+← / Alt+→ / Ctrl+R / Alt+Home |
+| 주소창 | Ctrl+L, Alt+D, F6 |
+| 북마크 추가 / 북마크바 보이기·숨기기 | Ctrl+D / Ctrl+Shift+B |
 
-테마(시스템·밝게·어둡게)는 보기 메뉴. 열어 둔 로컬 문서는 저장하면 자동으로 다시 그려진다.
+열어 둔 로컬 문서는 저장하면 자동으로 다시 그려진다.
 
 ## 빠른 시작
 
@@ -69,7 +78,7 @@ python -m htex parse examples/oscillator.htex
 
 ```bash
 python -m pip install pytest jsonschema
-python -m pytest -q tests/unit          # 단위 테스트 756건
+python -m pytest -q tests/unit          # 단위 테스트 774건
 python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
 python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
 python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks Project, amsmath 시험 문서 …)
@@ -86,7 +95,7 @@ python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks P
 | `htex/html/` | 문서 트리 → HTML + MathML, 가환 그림(`cd.py`) |
 | `htex/tikz/` | TikZ·pgfplots 부분집합 → SVG |
 | `htex/web/` | `serve`, `build`, 상호작용 스크립트 interact.js |
-| `htex/viewer/` | PySide6 전용 뷰어 (`htex://` 주소, 히스토리, 미리보기, 슬라이더) |
+| `htex/viewer/` | PySide6 전용 뷰어 (Chrome 모양 창 `chrome.py`, 북마크, 시작 페이지, `htex://` 주소, 히스토리, 미리보기, 슬라이더) |
 | `docs/` | 명세 사본, 문서 트리 표현 규칙, 상호작용 규약 |
 | `notes/` | 구현 담당별 질문과 임시 가정 |
 

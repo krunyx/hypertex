@@ -79,3 +79,13 @@ I와 J 사이의 약속:
 - compat(.tex) 전용 처리는 `ctx.mode == "compat"` / `self.mode == "compat"` 안에 둔다. native(.htex) 동작을 바꾸는
   것(수식의 모르는 명령 표시, 중괄호 안의 `$`)은 `notes/K-questions.md` 2절에 적었다.
 - 기존 테스트를 바꾼 곳도 같은 절에 적었다. 명세·스키마·manifest는 고치지 않았다 (1절의 확인 필요 항목 참고).
+
+
+## 5단계 담당 구역 (Chrome 모양 뷰어)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| L 뷰어 모양 | `htex/viewer/` 아래 전부(새 파일 `chrome.py`·`bookmarks.py`·`startpage.py`), `README.md`(뷰어 절), `tests/unit/test_L_*.py`, `notes/L-questions.md` | 탭 줄·도구줄·북마크바·페이지 네 줄, 시작 페이지, 북마크, 기존 F·J 테스트 유지 |
+
+- F·J 테스트가 쓰는 이름(`w.tabs` 의 QTabWidget 꼴 메서드, `address`, `diag_label`, `zoom_label`, `act_back` …)은 그대로 둔다.
+- 결정과 확인 필요 항목은 `notes/L-questions.md`.

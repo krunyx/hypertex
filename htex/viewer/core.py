@@ -536,6 +536,8 @@ class ViewerCore:
         self.clock = clock
         self.link_budget = link_budget
         self.theme = ""              # "", "light", "dark" (J)
+        # 시작 페이지(htexapp://start/)에 보일 북마크 목록을 주는 함수 (L, 창이 정한다). 없으면 빈 목록.
+        self.start_bookmarks: Optional[Callable[[], list]] = None
         self.roots: dict[str, Path] = {}
         self.records: "OrderedDict[str, DocRecord]" = OrderedDict()
         self.by_address: dict[str, str] = {}
@@ -581,7 +583,9 @@ class ViewerCore:
         return p
 
     def display_address(self, url: str) -> str:
-        """주소 표시줄에 보일 주소. 로컬 문서는 파일 경로, 원문 보기는 "원문: <문서 주소>"."""
+        """주소 표시줄에 보일 주소. 로컬 문서는 파일 경로, 원문 보기는 "원문: <문서 주소>", 시작 페이지는 ""."""
+        if url.startswith("htexapp://start"):
+            return ""
         if url.startswith("htexapp://source/"):
             rec = self._record_from_path(urllib.parse.urlsplit(url).path)
             if rec is not None:
@@ -821,6 +825,8 @@ class ViewerCore:
                     return self._respond_fragment(parts, init)
                 if host == "source":
                     return self._respond_source(parts, init)
+                if host == "start":
+                    return self._respond_start(parts)
             return _fail(404, "알 수 없는 주소입니다.")
         except Exception as e:   # noqa: BLE001 - 뷰어가 멈추지 않게
             return self._error(ViewerError("internal", f"내부 오류: {type(e).__name__}: {e}", 500), url)
@@ -895,6 +901,20 @@ class ViewerCore:
         if self.theme:
             r.body = self.themed(r.text).encode("utf-8")
         return r
+
+    def _respond_start(self, parts) -> Response:
+        """새 탭·홈 페이지 (L). /go·/open·/action 은 창이 가로채므로 여기까지 오면 404."""
+        from . import startpage
+        if parts.path not in ("", "/"):
+            return _fail(404, "알 수 없는 주소입니다.")
+        try:
+            items = list(self.start_bookmarks()) if self.start_bookmarks else []
+        except Exception:   # noqa: BLE001 - 시작 페이지는 언제나 뜬다
+            items = []
+        page = startpage.render(items, self.theme)
+        return Response(200, "text/html", page.encode("utf-8"),
+                        {"Content-Security-Policy": startpage.CSP, "X-Content-Type-Options": "nosniff",
+                         "Referrer-Policy": "no-referrer"})
 
     def _respond_source(self, parts, init: str) -> Response:
         """원문 보기 (J): 원문을 escape 해 <pre> 로. 스크립트는 아무것도 실행되지 않는다(CSP default-src 'none')."""
