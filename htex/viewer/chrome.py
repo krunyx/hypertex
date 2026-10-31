@@ -199,7 +199,10 @@ class ChromeTabBar(QTabBar):
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
+        # 아래 setter 들이 곧바로 tabSizeHint 를 부를 수 있으므로(macOS 스타일) 상태를 먼저 둔다
         self.palette_: Palette = LIGHT
+        self.hovered = -1
+        self.available_width: Callable[[], int] = lambda: 1000
         self.setDrawBase(False)
         self.setExpanding(False)
         self.setMovable(True)
@@ -209,8 +212,6 @@ class ChromeTabBar(QTabBar):
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        self.hovered = -1
-        self.available_width: Callable[[], int] = lambda: 1000
         self._spin = 0
         self._spin_timer = QTimer(self)
         self._spin_timer.setInterval(40)
@@ -222,7 +223,8 @@ class ChromeTabBar(QTabBar):
     # ------------------------------------------------------------ 크기
     def tabSizeHint(self, index: int) -> QSize:   # noqa: N802
         n = max(1, self.count())
-        w = int(max(TAB_MIN_W, min(TAB_MAX_W, self.available_width() / n)))
+        avail = getattr(self, "available_width", None)
+        w = int(max(TAB_MIN_W, min(TAB_MAX_W, (avail() if avail else 1000) / n)))
         return QSize(w, TAB_H)
 
     def minimumTabSizeHint(self, index: int) -> QSize:   # noqa: N802

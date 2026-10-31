@@ -76,7 +76,7 @@ SCRIPT = textwrap.dedent(r'''
     w.omnibox.star.click(); pause(0.2)
     res["star_add"] = {"added": len(bm.bar) - n0, "starred": w.omnibox.starred,
                        "last_button": w.bookmarks_bar.buttons[-1].text(),
-                       "popup": w.last_popup.isVisible(), "saved": doc in (WORK / "bookmarks.json").read_text("utf-8")}
+                       "popup": w.last_popup.isVisible(), "saved": any(b.get("url") == doc for b in json.loads((WORK / "bookmarks.json").read_text("utf-8"))["bar"])}
     w.last_popup.remove_btn.click(); pause(0.1)
     res["star_remove"] = {"count": len(bm.bar) - n0, "starred": w.omnibox.starred}
     w.bookmark_page(); w.last_popup.name.setText("진동자"); w.last_popup.done_btn.click(); pause(0.1)
