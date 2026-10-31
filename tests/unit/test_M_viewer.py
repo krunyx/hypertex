@@ -117,8 +117,10 @@ SCRIPT = textwrap.dedent(r'''
     res["html_to_md"] = title()
     # 자동 새로고침 (Markdown 저장)
     w.navigate(str(WORK / "a.md")); wait_until(lambda: title() == "A 문서")
+    # 파일 감시가 켜진 뒤에 고친다 (윈도에서는 감시가 늦게 붙을 수 있다)
+    wait_until(lambda: bool(w.current_tab().watched_files())); pause(0.5)
     p = WORK / "a.md"; p.write_text(p.read_text(encoding="utf-8").replace("첫 판", "둘째 판"), encoding="utf-8")
-    res["reload"] = wait_until(lambda: (js("document.body.textContent.indexOf('둘째 판')>=0", 1) or False), 8)
+    res["reload"] = wait_until(lambda: (js("document.body.textContent.indexOf('둘째 판')>=0", 1) or False), 15)
     # 원본 보기
     w.view_source(); wait_until(lambda: title().startswith("원문"))
     res["source"] = js("document.body.textContent.indexOf('# A 문서')>=0")
