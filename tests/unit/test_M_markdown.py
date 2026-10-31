@@ -1,7 +1,6 @@
 """M: Markdown → 문서 트리. 스키마·일관성 검사(tools/check.py 의 검사기)를 함께 통과해야 한다."""
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
