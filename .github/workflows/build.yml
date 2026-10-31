@@ -84,7 +84,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04        # 오래된 glibc 에서 빌드해야 새 배포판에서도 돈다
-          - os: macos-14            # Apple Silicon (arm64)
+          - os: macos-15            # Apple Silicon (arm64)
           - os: macos-15-intel      # Intel (x86_64). 러너 이름은 GitHub 이 바꾸므로 릴리스 전에 확인
           - os: windows-latest
     env:

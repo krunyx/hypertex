@@ -138,7 +138,7 @@ gio open a.htex ; gio open htex://example.org/doc.htex   # 뷰어가 뜬다
 1. `htex/__init__.py` 의 `__version__` 을 올리고 커밋.
 2. `git tag v<버전> && git push --tags`
 3. 워크플로: **test** (ubuntu·macos·windows × Python 3.11·3.13, + ubuntu 3.12; `pytest tests/unit`, `tools/run_all.py`)
-   → **build** (태그 `v*` 일 때만; ubuntu-22.04, macos-14(arm64), macos-15-intel(x86_64), windows-latest)
+   → **build** (태그 `v*` 일 때만; ubuntu-22.04, macos-15(arm64), macos-15-intel(x86_64), windows-latest)
    → **release** (모든 산출물 + `SHA256SUMS.txt` 를 **초안(draft)** GitHub Release 로). 확인 후 손으로 공개.
    태그에 `-` 가 있으면(`v0.1.0-rc1`) prerelease.
 4. 빌드 단계마다 `check_bundle.py` 와 `smoke_test.py`(화면 없이 예제 문서 열기)가 돌고 스크린숏을 `smoke-<os>` 아티팩트로 올린다.
