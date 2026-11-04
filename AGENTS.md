@@ -96,3 +96,10 @@ I와 J 사이의 약속:
 | 담당 | 수정 가능한 파일 | 완료 기준 |
 | --- | --- | --- |
 | M Markdown·로컬 HTML | 새 파일 `htex/markdown.py`, `htex/parser.py`(형식 고르기), `htex/viewer/` (문서 형식·로컬 파일 응답), `htex/web/common.py`·`build.py`·`server.py`(.md 문서), `htex/html/render.py`·`style.py`(strike, 번호 목록 모양), `schema/document-tree.schema.json`(`mode: markdown`, `strike`), `docs/spec.md`(9.1절), `README.md`, `tests/unit/test_M_*.py`, `notes/M-questions.md` | 실제 .md 파일이 스키마·일관성 검사를 통과, 뷰어에서 .md·.html 열기와 링크 따라가기, 기존 테스트 유지 |
+
+
+## 7단계 담당 구역 (macOS 제목 막대 탭)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| N 제목 막대 탭 | 새 파일 `htex/viewer/macwin.py`, `htex/viewer/app.py`·`chrome.py`(탭 줄 제목 막대 모드), `README.md`(뷰어 절), `tests/unit/test_N_*.py`, `notes/N-questions.md`, `notes/L-questions.md`(1절 갱신) | macOS 에서 탭 줄이 창 맨 위(신호등 단추 옆), 빈 곳 끌기·더블클릭이 제목 막대처럼, 윈도·리눅스는 그대로, 기존 테스트 유지 |
