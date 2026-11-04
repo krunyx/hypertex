@@ -134,7 +134,7 @@ def test_source_endpoint_and_theme(tmp_path):
     # 테마
     assert 'data-theme' not in core.respond(url).text.split(">", 2)[1]
     core.theme = "dark"
-    assert '<html lang="ko" data-theme="dark">' in core.respond(url).text
+    assert '<html lang="en" data-theme="dark">' in core.respond(url).text   # 영어 문서 (문서 언어)
     assert 'data-theme="dark"' in core.respond(src).text
     assert 'data-theme="dark"' in core.respond("htexapp://doc-nothere/a.htex").text   # 오류 페이지
 

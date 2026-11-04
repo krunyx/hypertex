@@ -18,6 +18,8 @@
  */
 (function () {
   "use strict";
+  /* 문서 언어(<html lang>)를 따른다: 렌더러가 본문 글자로 정한다 */
+  var KO = /^ko/i.test((document.documentElement && document.documentElement.lang) || "");
   if (window.HTEX && window.HTEX.version) return; // 두 번 넣어도 한 번만
 
   var DEBOUNCE_MS = 150;
@@ -141,7 +143,7 @@
       input.value = String(def);
       input.className = "htex-param-input";
       input.setAttribute("data-param", name);
-      input.setAttribute("aria-label", sym + " 값 (" + formatNumber(min, decimals) + "–" + formatNumber(max, decimals) + ")");
+      input.setAttribute("aria-label", sym + (KO ? " 값 (" : " value (") + formatNumber(min, decimals) + "–" + formatNumber(max, decimals) + ")");
       input.setAttribute("aria-valuetext", sym + " = " + formatNumber(def, decimals));
       var wrap = document.createElement("span");
       wrap.className = "htex-param-slider";
@@ -154,7 +156,7 @@
       input.addEventListener("change", onSliderInput);
     }
     var label = document.querySelector("aside.htex-parameters .htex-param-label");
-    if (label && Object.keys(params).length) label.textContent = "매개변수";
+    if (label && Object.keys(params).length) label.textContent = KO ? "매개변수" : "Parameters";
   }
 
   function onSliderInput(ev) {
@@ -493,7 +495,7 @@
     if (popFor && popFor !== a) popFor.removeAttribute("aria-describedby");
     popFor = a;
     p.textContent = "";
-    p.appendChild(content || status("불러오는 중…"));
+    p.appendChild(content || status(KO ? "불러오는 중…" : "Loading…"));
     open(p, a);
     if (promise) {
       promise.then(function (text) {

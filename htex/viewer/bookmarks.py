@@ -13,6 +13,7 @@
 - 쓰기는 임시 파일에 쓰고 이름을 바꾼다 (중간에 꺼져도 앞 판이 남는다).
 """
 from __future__ import annotations
+from ..i18n import tr
 
 import json
 import os
@@ -65,7 +66,7 @@ class Bookmark:
         title = str(d.get("title") or "")[:300]
         if isinstance(d.get("children"), list) and depth == 0:
             kids = [b for b in (Bookmark.from_json(c, 1) for c in d["children"]) if b and not b.is_folder]
-            return Bookmark(title or "새 폴더", children=kids)
+            return Bookmark(title or tr('새 폴더'), children=kids)
         url = d.get("url")
         if not isinstance(url, str) or not url.strip():
             return None
@@ -100,7 +101,7 @@ class BookmarkStore:
                 data = json.loads(store.path.read_text(encoding="utf-8"))
                 items = data.get("bar") if isinstance(data, dict) else None
                 if not isinstance(items, list):
-                    raise ValueError("bar 가 목록이 아니다")
+                    raise ValueError(tr('bar 가 목록이 아니다'))
                 store.bar = [b for b in (Bookmark.from_json(d) for d in items) if b]
             except (OSError, ValueError):
                 try:
@@ -109,7 +110,8 @@ class BookmarkStore:
                     pass
                 store.bar = []
         elif seed:
-            store.bar = [b for b in (Bookmark.from_json(d) for d in DEFAULT_BOOKMARKS) if b]
+            store.bar = [b for b in (Bookmark.from_json(dict(d, title=tr(d["title"]))) for d in DEFAULT_BOOKMARKS)
+                         if b]   # 이름은 처음 실행할 때의 화면 언어로
             store.save()
         return store
 
@@ -180,7 +182,7 @@ class BookmarkStore:
         return b
 
     def add_folder(self, title: str, index: Optional[int] = None) -> Bookmark:
-        f = Bookmark((title or "새 폴더").strip()[:300] or "새 폴더", children=[])
+        f = Bookmark((title or tr('새 폴더')).strip()[:300] or tr('새 폴더'), children=[])
         with self._lock:
             self.bar.insert(len(self.bar) if index is None else max(0, min(index, len(self.bar))), f)
         self._changed()

@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import parse_qsl, quote, urlsplit
 
+from ..i18n import tr
 from .common import (CSP_HTML, CSP_SVG, DocCache, PathRejected, error_page, interact_js,
                      is_document, listing_entries, listing_page, plain_title, quick_title,
                      resolve_in_root, split_request_path, url_path, INTERACT_JS_PATH)
@@ -138,12 +139,12 @@ class Handler(BaseHTTPRequestHandler):
             pass
         except Exception as exc:  # noqa: BLE001 - 서버는 멈추지 않는다
             try:
-                self.send_error_page(500, f"서버 내부 오류: {type(exc).__name__}")
+                self.send_error_page(500, tr('서버 내부 오류: {name__}', name__=type(exc).__name__))
             except Exception:  # noqa: BLE001
                 pass
 
     def _not_allowed(self) -> None:
-        self.send(405, "GET, HEAD 만 허용\n", "text/plain; charset=utf-8",
+        self.send(405, tr("GET, HEAD 만 허용") + "\n", "text/plain; charset=utf-8",
                   extra={"Allow": "GET, HEAD"})
 
     do_POST = do_PUT = do_DELETE = do_PATCH = _not_allowed  # type: ignore[assignment]
@@ -155,12 +156,12 @@ class Handler(BaseHTTPRequestHandler):
     def route(self) -> None:
         raw = self.path
         if not raw.startswith("/"):  # 절대 형식 요청(프록시식 GET http://…)은 받지 않는다
-            self.send_error_page(400, "요청 주소는 /로 시작해야 한다.")
+            self.send_error_page(400, tr('요청 주소는 /로 시작해야 한다.'))
             return
         # urlsplit 은 '//호스트/…' 를 주소로 해석하므로 쓰지 않는다
         path, _, query = raw.split("#", 1)[0].partition("?")
         if len(query) > MAX_QUERY:
-            self.send_text(414, "질의가 너무 길다")
+            self.send_text(414, tr('질의가 너무 길다'))
             return
         if path.startswith(PREFIX) or path == PREFIX.rstrip("/"):
             self.route_internal(path, query)
@@ -168,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             target = resolve_in_root(self.server.root, split_request_path(path))
         except PathRejected as rej:
-            self.send_error_page(rej.status, "이 경로는 열 수 없다.")
+            self.send_error_page(rej.status, tr('이 경로는 열 수 없다.'))
             return
         if target.is_dir():
             if not path.endswith("/"):
@@ -181,7 +182,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.serve_static(target)
         else:
-            self.send_error_page(404, "문서를 찾을 수 없다.")
+            self.send_error_page(404, tr('문서를 찾을 수 없다.'))
 
     def redirect(self, location: str) -> None:
         self.send(301, "", "text/plain; charset=utf-8", extra={"Location": location})
@@ -195,7 +196,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path.startswith(PICTURE_URL + "/"):
             self.serve_picture(path[len(PICTURE_URL):], query)
         else:
-            self.send_text(404, "없는 주소")
+            self.send_text(404, tr('없는 주소'))
 
     # ------------------------------------------------------------ 문서
     def load_doc(self, target: Path, with_html: bool):
@@ -237,8 +238,8 @@ class Handler(BaseHTTPRequestHandler):
             source = target.read_text(encoding="utf-8", errors="replace")
         except OSError:
             source = None
-        self.send_html(500, error_page("문서를 표시할 수 없다",
-                                       "이 문서를 HTML로 바꾸는 중 내부 오류가 났다. 원문을 대신 보인다.",
+        self.send_html(500, error_page(tr('문서를 표시할 수 없다'),
+                                       tr('이 문서를 HTML로 바꾸는 중 내부 오류가 났다. 원문을 대신 보인다.'),
                                        ent.error or "", source))
 
     def serve_static(self, target: Path) -> None:
@@ -309,23 +310,23 @@ class Handler(BaseHTTPRequestHandler):
         q = dict(parse_qsl(query, keep_blank_values=True))
         doc, label = q.get("doc", ""), q.get("label", "")
         if not label or len(label) > 256:
-            self.send_text(400, "label 이 필요하다")
+            self.send_text(400, tr('label 이 필요하다'))
             return
         p = self.doc_from_address(doc)
         if p is None:
-            self.send_text(404, "이 서버의 문서가 아니다")
+            self.send_text(404, tr('이 서버의 문서가 아니다'))
             return
         ent = self.load_doc(p, False)
         if ent.tree is None:
-            self.send_text(404, "문서를 읽을 수 없다")
+            self.send_text(404, tr('문서를 읽을 수 없다'))
             return
         try:
             frag = render_fragment(ent.tree, label, doc_href=url_path(self.server.root, p))
         except Exception:  # noqa: BLE001
-            self.send_text(500, "조각을 만들 수 없다")
+            self.send_text(500, tr('조각을 만들 수 없다'))
             return
         if frag is None:
-            self.send_text(404, "라벨을 찾을 수 없다")
+            self.send_text(404, tr('라벨을 찾을 수 없다'))
             return
         self.send(200, frag, "text/html; charset=utf-8", csp=CSP_HTML,
                   extra={"Cache-Control": "no-cache"})
@@ -335,10 +336,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             p = resolve_in_root(self.server.root, split_request_path(doc_path))
         except PathRejected as rej:
-            self.send_text(rej.status, "이 경로는 열 수 없다")
+            self.send_text(rej.status, tr('이 경로는 열 수 없다'))
             return
         if not (p.is_file() and is_document(p)):
-            self.send_text(404, "문서를 찾을 수 없다")
+            self.send_text(404, tr('문서를 찾을 수 없다'))
             return
         pairs = parse_qsl(query, keep_blank_values=True)
         node = ""
@@ -350,18 +351,18 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 f = float(v)
             except ValueError:
-                self.send_text(400, f"숫자가 아닌 값: {k}")
+                self.send_text(400, tr('숫자가 아닌 값: {k}', k=k))
                 return
             if not math.isfinite(f):
-                self.send_text(400, f"유한하지 않은 값: {k}")
+                self.send_text(400, tr('유한하지 않은 값: {k}', k=k))
                 return
             values[k] = f
         if not node:
-            self.send_text(400, "node 가 필요하다")
+            self.send_text(400, tr('node 가 필요하다'))
             return
         ent = self.load_doc(p, False)
         if ent.tree is None:
-            self.send_text(404, "문서를 읽을 수 없다")
+            self.send_text(404, tr('문서를 읽을 수 없다'))
             return
         declared = {pp.get("name") for pp in ent.tree.get("parameters") or []}
         values = {k: v for k, v in values.items() if k in declared}
@@ -369,11 +370,11 @@ class Handler(BaseHTTPRequestHandler):
             from ..tikz import render_picture_node
             res = render_picture_node(ent.tree, node, values)
         except Exception:  # noqa: BLE001 - 렌더러는 예외를 내지 않는 계약이지만 방어
-            self.send_text(500, "그림 렌더러 오류")
+            self.send_text(500, tr('그림 렌더러 오류'))
             return
         svg = getattr(res, "svg", None)
         if not svg:
-            why = "; ".join(getattr(res, "problems", None) or []) or "그림을 그릴 수 없다"
+            why = "; ".join(getattr(res, "problems", None) or []) or tr('그림을 그릴 수 없다')
             self.send_text(404 if not _has_picture(ent.tree, node) else 422, why)
             return
         self.send(200, svg, "image/svg+xml; charset=utf-8", csp=CSP_SVG,
@@ -397,9 +398,9 @@ def make_server(root: Path | str, host: str = "127.0.0.1", port: int = 8000,
 
 def serve(root: Path | str, host: str = "127.0.0.1", port: int = 8000) -> int:
     srv = make_server(root, host, port)
-    print(f"HyperTeX 문서 폴더 {srv.root} 를 {srv.url} 에서 엽니다 (멈추려면 Ctrl+C).", file=sys.stderr)
+    print(tr('HyperTeX 문서 폴더 {root} 를 {url} 에서 엽니다 (멈추려면 Ctrl+C).', root=srv.root, url=srv.url), file=sys.stderr)
     if host not in ("127.0.0.1", "localhost", "::1"):
-        print("경고: 127.0.0.1 이 아닌 주소에 바인딩했다. 같은 네트워크의 누구나 이 폴더를 읽을 수 있다.",
+        print(tr('경고: 127.0.0.1 이 아닌 주소에 바인딩했다. 같은 네트워크의 누구나 이 폴더를 읽을 수 있다.'),
               file=sys.stderr)
     try:
         srv.serve_forever()
