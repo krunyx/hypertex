@@ -47,6 +47,7 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from .. import __version__
+from .. import images
 from ..parser import parse_text
 
 USER_AGENT = f"HyperTeX-Viewer/{__version__} (HyperTeX 2.0; +htex)"
@@ -175,6 +176,15 @@ def https_to_htex(url: str) -> str:
     if parts.scheme.lower() != "https":
         raise ViewerError("insecure", f"https 주소가 아닙니다: {url}")
     return normalize_htex("htex" + url[len(parts.scheme):].split("#", 1)[0])
+
+
+def viewer_image_url(src: str) -> str:
+    """렌더러의 image_url: PDF·확장자 없는 그림에 그림 표시를 붙인다. https 그림은 뷰어를 거치게 htex: 로."""
+    if not images.needs_help(src):
+        return src
+    if src.lower().startswith("https:"):
+        src = https_to_htex(src)
+    return images.mark(src)
 
 
 def split_fragment(url: str) -> tuple[str, str]:
@@ -716,7 +726,7 @@ class ViewerCore:
             return rec.html
         from ..html import render
         tree = self.resolve_links(rec)
-        page = run_with_limit(lambda: render(tree, head_extra=self.head_extra(rec)),
+        page = run_with_limit(lambda: render(tree, head_extra=self.head_extra(rec), image_url=viewer_image_url),
                               self.render_limit)
         page = self._fill_transclusions(rec, page)
         rec.html = page
@@ -863,6 +873,8 @@ class ViewerCore:
             address = normalize_htex(split_fragment(url)[0])
         except ViewerError as e:
             return self._error(e, url)
+        if images.has_mark(address):
+            return self._respond_remote_image(images.strip_mark(address))
         path = urllib.parse.urlsplit(address).path
         ext = posixpath.splitext(urllib.parse.unquote(path))[1].lower()
         if ext in IMAGE_TYPES:
@@ -890,6 +902,8 @@ class ViewerCore:
         # 로컬 문서에는 사용자가 직접 연 것(initiator 없음)이나 같은 뿌리의 문서만 닿는다.
         if init and init != f"htexapp://{host}":
             return self._error(ViewerError("forbidden", "다른 출처에서 로컬 파일을 열 수 없습니다.", 403), url)
+        if images.has_mark(url):
+            return self._respond_local_image(images.strip_mark(split_fragment(url)[0]))
         try:
             path = self.local_path(split_fragment(url)[0])
         except ViewerError as e:
@@ -911,6 +925,51 @@ class ViewerCore:
         except ViewerError as e:
             return self._error(e, url)
         return self._page_response(rec, url)
+
+    # ------------------------------------------------------------ PDF 그림·확장자 없는 그림
+    def _respond_local_image(self, url: str) -> Response:
+        """?htex-image=1 이 붙은 로컬 그림: 확장자 없으면 LaTeX 처럼 찾고, PDF 면 첫 쪽을 그린다."""
+        try:
+            path = images.find_local(self.local_path(url))
+        except ViewerError:
+            return _fail(403, "열어 둔 폴더 밖의 그림입니다.")
+        if path is None or not _under(path.resolve(), self.local_path(url).parent.resolve()):
+            return _fail(404, "그림 파일이 없습니다.")
+        try:
+            if path.stat().st_size > MAX_BYTES:
+                return _fail(413, _too_large(MAX_BYTES))
+            data = path.read_bytes()
+        except OSError:
+            return _fail(404, "그림 파일이 없습니다.")
+        return self._image_bytes(data, path.suffix.lower())
+
+    def _respond_remote_image(self, address: str) -> Response:
+        try:
+            res = self.fetcher.fetch(htex_to_https(address), accept="image/*,application/pdf")
+        except ViewerError:
+            return _fail(502, "그림을 가져오지 못했습니다.")
+        ext = images.ext_of(address)
+        ctype = res.content_type.split(";")[0].strip().lower()
+        if ctype == "application/pdf":
+            ext = ".pdf"
+        elif ctype in IMAGE_TYPES.values():
+            ext = next(k for k, v in IMAGE_TYPES.items() if v == ctype)
+        return self._image_bytes(res.content, ext)
+
+    def _image_bytes(self, data: bytes, ext: str) -> Response:
+        headers = {"X-Content-Type-Options": "nosniff", "Content-Security-Policy": "default-src 'none'"}
+        if ext == ".pdf" or images.is_pdf(data):
+            from . import pdfimage
+            try:
+                svg = pdfimage.render_svg(data)
+            except pdfimage.PdfImageError as e:
+                return _fail(415, str(e))
+            # SVG 안의 data: PNG 를 그리도록 (그림 문서 안에서만)
+            headers["Content-Security-Policy"] = "default-src 'none'; img-src data:"
+            return Response(200, "image/svg+xml", svg, headers)
+        if ext in IMAGE_TYPES:
+            return Response(200, IMAGE_TYPES[ext], data, headers)
+        return _fail(415, "보여 줄 수 없는 그림 형식입니다.")
 
     def _respond_local_file(self, path: Path, ext: str) -> Response:
         """로컬 HTML 과 그것이 부르는 CSS·JS·글꼴 (M). 열어 둔 폴더 안만 (local_path 가 이미 확인)."""

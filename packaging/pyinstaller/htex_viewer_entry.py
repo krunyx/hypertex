@@ -66,7 +66,9 @@ def _install_smoke(out: str) -> None:
                        "js": js_state, "frozen": bool(getattr(sys, "frozen", False))})
             view.page().runJavaScript(
                 "JSON.stringify({htex: typeof window.HTEX, math: document.querySelectorAll('math').length,"
-                " svg: document.querySelectorAll('svg').length})", 0, got)
+                " svg: document.querySelectorAll('svg').length,"
+                " images: Array.from(document.querySelectorAll('img.htex-image')).map(i => i.naturalWidth)})",
+                0, got)
 
         def poll():
             view = find_view(app)

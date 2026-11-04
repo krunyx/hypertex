@@ -49,6 +49,29 @@ def _doc_html_name(rel: str, taken: set[str]) -> str:
     return cand
 
 
+def make_image_url(root: Path, rel: str, rep: "BuildReport"):
+    """정적 빌드의 그림 주소: 확장자 없는 그림은 웹 형식 파일을 찾아 주고, PDF 그림은 같은 이름의
+    SVG·PNG 가 있으면 그것으로. 없으면 경고 (브라우저는 <img> 로 PDF 를 못 그린다. 뷰어는 그린다)."""
+    from .. import images
+    doc_dir = (root / rel).parent
+
+    def fix(src: str) -> str:
+        if not images.needs_help(src):
+            return src
+        if "://" in src or src.startswith(("/", "data:")):
+            rep.warnings.append(f"{rel}: 웹에서는 이 그림을 보일 수 없다 (PDF·확장자 없음): {src}")
+            return src
+        path_part = src.split("#", 1)[0].split("?", 1)[0]
+        tail = src[len(path_part):]
+        sub = images.web_substitute(doc_dir / unquote(path_part))
+        if sub is None:
+            rep.warnings.append(f"{rel}: 웹에서 보일 그림 파일이 없다 (같은 이름의 SVG·PNG 를 두면 쓴다): {src}")
+            return src
+        head = path_part.rpartition("/")[0]
+        return (head + "/" if head else "") + quote(sub.name) + tail
+    return fix
+
+
 def make_doc_url(rel_dir: str, html_names: dict[str, str]):
     """렌더러 doc_url: 상대 주소의 .htex/.tex 문서 링크를 .html 로."""
 
@@ -147,7 +170,8 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
             titles[rel] = plain_title(tree)
             tree = _resolve_links(tree, root, root / rel, parse_file, trees)   # 다른 문서 번호 (J)
             text = render(tree, web_fallback=True, head_extra=head,
-                          doc_url=make_doc_url(rel_dir, html_names))
+                          doc_url=make_doc_url(rel_dir, html_names),
+                          image_url=make_image_url(root, rel, rep))
         except Exception as exc:  # noqa: BLE001
             rep.errors.append(f"{rel}: {type(exc).__name__}: {exc}")
             src = (root / rel).read_text(encoding="utf-8", errors="replace")

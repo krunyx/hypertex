@@ -64,7 +64,8 @@ python packaging/smoke_test.py dist/htex-viewer/htex-viewer   # → dist/smoke.p
 | AppImage | 164 MB |
 
 spec 이 하는 정리:
-- 뷰어가 쓰지 않는 Qt 모듈(3D, Charts, Multimedia, Pdf, Quick3D, QuickControls2, Labs, …)과 모든 QML 파일 제외 (`EXCLUDE_QT`, `_UNUSED_LIB`).
+- 뷰어가 쓰지 않는 Qt 모듈(3D, Charts, Multimedia, PdfWidgets, Quick3D, QuickControls2, Labs, …)과 모든 QML 파일 제외 (`EXCLUDE_QT`, `_UNUSED_LIB`).
+  QtPdf 는 PDF 그림을 그리는 데 쓰므로 남긴다 (v0.6.0부터).
   QtQuick·QtQuickWidgets·QtQml·QmlModels·QmlMeta·QmlWorkerScript·WebChannel·Positioning·PrintSupport·OpenGL 은
   libQt6WebEngineCore/Widgets 가 링크하므로 **남겨야 한다** (빼면 import 단계에서 `ImportError`).
   `check_bundle.py` 가 리눅스에서 `readelf` 로 이를 확인한다.

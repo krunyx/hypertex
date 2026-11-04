@@ -76,8 +76,10 @@ _PERCENT = re.compile(r"^[0-9]+(\.[0-9]+)?%$")
 # ====================================================================== 렌더러
 class _Renderer:
     def __init__(self, tree: dict[str, Any], web_fallback: bool,
-                 head_extra: str = "", doc_url: Callable[[str], str] | None = None):
+                 head_extra: str = "", doc_url: Callable[[str], str] | None = None,
+                 image_url: Callable[[str], str] | None = None):
         self.tree = tree
+        self.image_url = image_url        # 그림 주소만 한 번 더 바꾸기 (뷰어: PDF 그림·확장자 없는 그림)
         self.web = web_fallback
         self.head_extra = head_extra      # 호스트(뷰어·웹 서버)가 넣는 <head> 조각 (신뢰된 HTML)
         self.doc_url = doc_url            # 다른 문서 주소 바꾸기 (예: 정적 빌드의 .htex → .html)
@@ -443,6 +445,8 @@ class _Renderer:
 
     def b_image(self, b: dict[str, Any]) -> str:
         src = self.url(b.get("src"))
+        if src is not None and self.image_url is not None:
+            src = self.image_url(src)
         alt = b.get("alt", "")
         if src is None:
             return (f'<span class="htex-error htex-blocked-image"{self.id_attr(b)} '
@@ -831,12 +835,15 @@ def split_top_level_amp(tex: str) -> list[str] | None:
 
 
 def render(tree: dict[str, Any], *, web_fallback: bool = False, head_extra: str = "",
-           doc_url: Callable[[str], str] | None = None) -> str:
+           doc_url: Callable[[str], str] | None = None,
+           image_url: Callable[[str], str] | None = None) -> str:
     """문서 트리 → 완결된 HTML5 문서 하나.
 
     web_fallback: htex:// 주소를 https:// 로 바꾼다.
     head_extra: 호스트가 넣는 신뢰된 <head> 조각 (상호작용 스크립트, 그림 주소 meta 등.
                 docs/interaction-protocol.md). 문서 내용에서 오면 안 된다.
     doc_url: 안전 검사를 통과한 링크·그림 주소를 한 번 더 바꾸는 함수 (예: 정적 빌드의 .htex → .html).
+    image_url: 그림(\\includegraphics) 주소만 doc_url 다음에 한 번 더 바꾸는 함수
+               (뷰어: PDF 그림을 PNG 로 그려 달라는 표시, 정적 빌드: 확장자 없는 그림 찾기).
     """
-    return _Renderer(tree, web_fallback, head_extra, doc_url).document()
+    return _Renderer(tree, web_fallback, head_extra, doc_url, image_url).document()

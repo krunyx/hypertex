@@ -26,6 +26,7 @@ def check(root: Path) -> list[str]:
         "icudtl.dat": "icudtl.dat",
         "qtwebengine_resources.pak": "qtwebengine_resources.pak",
         "qtwebengine_locales/en-US.pak": "en-US.pak",
+        "QtPdf (PDF 그림)": "*Qt*Pdf*",
     }
     for what, pat in need.items():
         if not _any(root, pat):

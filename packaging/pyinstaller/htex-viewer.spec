@@ -35,11 +35,12 @@ ICONS = ROOT / "packaging" / "icons"
 # --- 뷰어가 쓰지 않는 Qt 모듈 (필요해지면 여기서 빼기) ------------------------------------
 # QtWebEngine 이 의존하는 QtNetwork, QtPositioning, QtQml/QtQuick(WebEngineCore 링크),
 # QtWebChannel, QtPrintSupport, QtOpenGL 은 남겨 둔다. 빼면 QtWebEngineCore 를 불러올 수 없다.
+# QtPdf 는 PDF 그림(\includegraphics{fig.pdf})을 그리려고 남긴다 (htex/viewer/pdfimage.py). QtPdfWidgets 는 뺀다.
 EXCLUDE_QT = [
     "Qt3DAnimation", "Qt3DCore", "Qt3DExtras", "Qt3DInput", "Qt3DLogic", "Qt3DRender",
     "QtBluetooth", "QtCharts", "QtConcurrent", "QtDataVisualization", "QtDesigner",
     "QtGraphs", "QtGraphsWidgets", "QtHelp", "QtHttpServer", "QtLocation", "QtMultimedia",
-    "QtMultimediaWidgets", "QtNfc", "QtPdf", "QtPdfWidgets", "QtQuick3D", "QtQuickControls2",
+    "QtMultimediaWidgets", "QtNfc", "QtPdfWidgets", "QtQuick3D", "QtQuickControls2",
     "QtQuickTest", "QtRemoteObjects", "QtScxml", "QtSensors",
     "QtSerialBus", "QtSerialPort", "QtSpatialAudio", "QtSql", "QtStateMachine", "QtSvgWidgets",
     "QtTest", "QtTextToSpeech", "QtUiTools", "QtWebSockets", "QtWebView", "QtXml",
@@ -51,7 +52,7 @@ EXCLUDES = ["PySide6." + m for m in EXCLUDE_QT] + [
 
 datas = collect_data_files("htex", includes=["**/*.js", "**/*.css", "**/*.json", "**/*.svg",
                                              "**/*.png", "**/*.txt", "**/*.html"])
-hiddenimports = collect_submodules("htex")
+hiddenimports = collect_submodules("htex") + ["PySide6.QtPdf"]   # PDF 그림 (pdfimage 는 함수 안에서 부른다)
 
 a = Analysis(                                                       # noqa: F821
     [str(ROOT / "packaging" / "pyinstaller" / "htex_viewer_entry.py")],
