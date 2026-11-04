@@ -70,7 +70,10 @@ SCRIPT = textwrap.dedent(r'''
     res["flags"] = [bool(flags & Qt.WindowType.ExpandedClientAreaHint),
                     bool(flags & Qt.WindowType.NoTitleBarBackgroundHint),
                     not w.testAttribute(Qt.WidgetAttribute.WA_ContentsMarginsRespectsSafeArea)]
-    res["strip_top"] = w.tab_strip.mapTo(w, QPoint(0, 0)).y()
+    # 탭 줄 위에는 아무것도 없다. (offscreen 맥에서는 메뉴 막대가 화면 위가 아니라 창 안에 들어가므로 그 높이만 뺀다)
+    mb = w.menuBar()
+    in_window_menu = mb.height() if (mb.isVisible() and mb.geometry().top() == 0 and mb.actions()) else 0
+    res["strip_top"] = w.tab_strip.mapTo(w, QPoint(0, 0)).y() - in_window_menu
     res["inset"] = w.tab_strip.left_inset
     first = w.tab_strip.bar.tabRect(0).topLeft()
     res["first_tab_x"] = w.tab_strip.bar.mapTo(w, first).x()
