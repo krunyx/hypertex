@@ -2,6 +2,7 @@
 설정값 해석과 창 쪽 논리(플래그·신호등 자리·빈 곳 끌기/더블클릭)를 화면 없이 확인한다."""
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import subprocess
@@ -14,6 +15,16 @@ import pytest
 from htex.viewer import macwin
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_native_struct_layout():
+    # NSRect 는 double 넷 (arm64·x86_64 공통). 틀리면 맥에서 단추가 엉뚱한 데로 간다.
+    assert ctypes.sizeof(macwin.NSRect) == 32 and ctypes.sizeof(macwin.NSPoint) == 16
+
+
+def test_native_calls_are_noops_off_cocoa():
+    assert macwin.hide_title_text(None) is False
+    assert macwin.place_traffic_lights(None, 40, 25) is False
 
 
 def test_double_click_setting_values():
@@ -75,6 +86,7 @@ SCRIPT = textwrap.dedent(r'''
     in_window_menu = mb.height() if (mb.isVisible() and mb.geometry().top() == 0 and mb.actions()) else 0
     res["strip_top"] = w.tab_strip.mapTo(w, QPoint(0, 0)).y() - in_window_menu
     res["inset"] = w.tab_strip.left_inset
+    res["tab_center"] = w.tab_strip.tab_center_y()
     first = w.tab_strip.bar.tabRect(0).topLeft()
     res["first_tab_x"] = w.tab_strip.bar.mapTo(w, first).x()
 
@@ -145,6 +157,7 @@ def test_titlebar_mode_window(run):
     assert run["flags"] == [True, True, True]
     assert run["strip_top"] == 0                       # 탭 줄이 창 맨 위
     assert run["inset"] == macwin.TRAFFIC_LIGHTS_W
+    assert 20 <= run["tab_center"] <= 30                # 신호등 단추를 맞출 탭 몸통 가운데 (pt)
     assert run["first_tab_x"] >= macwin.TRAFFIC_LIGHTS_W   # 첫 탭이 신호등 단추와 겹치지 않는다
 
 
@@ -158,3 +171,48 @@ def test_empty_area_acts_as_titlebar(run):
 def test_fullscreen_drops_inset(run):
     assert run["fullscreen_inset"] == 0
     assert run["normal_inset"] == macwin.TRAFFIC_LIGHTS_W
+
+
+COCOA_SCRIPT = textwrap.dedent(r'''
+    import json, sys, ctypes
+    sys.path.insert(0, sys.argv[1])
+    from PySide6.QtCore import Qt, QEventLoop, QTimer
+    from PySide6.QtWidgets import QApplication, QMainWindow, QWidget
+    app = QApplication([])
+    from htex.viewer import macwin
+    def pause(s):
+        loop = QEventLoop(); QTimer.singleShot(int(s * 1000), loop.quit); loop.exec()
+    w = QMainWindow(); w.setCentralWidget(QWidget())
+    w.setWindowFlag(Qt.WindowType.ExpandedClientAreaHint, True)
+    w.setWindowFlag(Qt.WindowType.NoTitleBarBackgroundHint, True)
+    w.setWindowTitle("제목"); w.resize(600, 400); w.show(); pause(0.5)
+    res = {"platform": app.platformName(), "supported": macwin.supported()}
+    res["hidden"] = macwin.hide_title_text(w)
+    res["placed"] = macwin.place_traffic_lights(w, 40, 25)
+    pause(0.2)
+    win = macwin._ns_window(w)
+    close = macwin._send(win, "standardWindowButton:", 0, argtypes=(ctypes.c_ulong,))
+    bf = macwin._send(close, "frame", restype=macwin.NSRect)
+    cf = macwin._send(macwin._send(close, "superview"), "frame", restype=macwin.NSRect)
+    res["center_from_top"] = cf.size.height - (bf.origin.y + bf.size.height / 2)
+    res["error"] = macwin.last_error
+    print(json.dumps(res))
+''')
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="실제 맥 창이 있어야 한다")
+def test_real_cocoa_window(tmp_path):
+    """GitHub 맥 실행기에는 화면 세션이 있다: 실제 NSWindow 에 네이티브 호출이 먹는지 본다."""
+    script = tmp_path / "cocoa.py"
+    script.write_text(COCOA_SCRIPT, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items() if k != "QT_QPA_PLATFORM"}
+    p = subprocess.run([sys.executable, str(script), str(ROOT)], env=env, capture_output=True, text=True,
+                       timeout=120)
+    lines = [ln for ln in p.stdout.splitlines() if ln.startswith("{")]
+    if not lines:
+        pytest.skip("맥 화면 세션 없음:\n" + p.stderr[-1500:])
+    res = json.loads(lines[-1])
+    if res["platform"] != "cocoa":
+        pytest.skip("cocoa 아님")
+    assert res["supported"] and res["hidden"] and res["placed"], res
+    assert abs(res["center_from_top"] - 25) < 1.5, res

@@ -33,7 +33,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Iterable, Optional
 
-from PySide6.QtCore import (QBuffer, QByteArray, QEvent, QObject, QSettings, Qt, QTimer, QUrl,
+from PySide6.QtCore import (QBuffer, QByteArray, QEvent, QObject, QPoint, QSettings, Qt, QTimer, QUrl,
                             QFileSystemWatcher, Signal, Slot)
 from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QIcon, QKeySequence
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -728,6 +728,23 @@ class ViewerWindow(QMainWindow):
             return
         # 전체 화면에서는 신호등 단추가 숨으므로 비우지 않는다 (Chrome 과 같다)
         self.tab_strip.set_left_inset(0 if self.isFullScreen() else macwin.TRAFFIC_LIGHTS_W)
+        self._fix_native_titlebar()
+
+    def _fix_native_titlebar(self) -> None:
+        """제목 글자 숨기기 + 신호등 단추를 탭 높이 가운데로. AppKit 이 창 크기·상태가 바뀔 때 단추 위치를
+        되돌리므로 그때마다 다시 한다 (가볍다)."""
+        if not getattr(self, "titlebar_tabs", False) or not getattr(self, "_titlebar_ready", False):
+            return
+        macwin.hide_title_text(self)
+        if not self.isFullScreen():
+            strip = self.tab_strip
+            top = strip.mapTo(self, QPoint(0, 0)).y()
+            macwin.place_traffic_lights(self, top + strip.height(), top + strip.tab_center_y())
+
+    def _fix_native_titlebar_soon(self) -> None:
+        # 창을 띄운 직후·전체 화면 전환 직후에는 AppKit 이 한 번 더 배치하므로 조금 뒤에도 한다
+        for ms in (0, 150, 600):
+            QTimer.singleShot(ms, self._fix_native_titlebar)
 
     def _titlebar_double_click(self) -> None:
         action = macwin.double_click_action()
@@ -740,13 +757,21 @@ class ViewerWindow(QMainWindow):
         super().showEvent(e)
         if getattr(self, "titlebar_tabs", False) and not self._titlebar_ready:
             self._titlebar_ready = True
-            macwin.hide_title_text(self)          # 제목 글자만 숨긴다 (Dock·윈도 메뉴에는 그대로)
             self._update_titlebar_inset()
+            self._fix_native_titlebar_soon()
+
+    def resizeEvent(self, e) -> None:   # noqa: N802
+        super().resizeEvent(e)
+        self._fix_native_titlebar()
 
     def changeEvent(self, e) -> None:   # noqa: N802
         super().changeEvent(e)
-        if e.type() == QEvent.Type.WindowStateChange:
+        t = e.type()
+        if t == QEvent.Type.WindowStateChange:
             self._update_titlebar_inset()
+            self._fix_native_titlebar_soon()
+        elif t in (QEvent.Type.ActivationChange, QEvent.Type.WindowTitleChange):
+            self._fix_native_titlebar()
 
     # ------------------------------------------------------------ 호환 (F 의 단일 뷰 이름)
     @property

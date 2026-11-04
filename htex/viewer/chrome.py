@@ -470,6 +470,10 @@ class TabStrip(QWidget):
         self.layout().setContentsMargins(8 + self.left_inset, 4, 8, 0)
         self.bar.relayout()
 
+    def tab_center_y(self) -> float:
+        """탭 몸통의 세로 가운데 (탭 줄 위 기준). macOS 신호등 단추를 여기에 맞춘다."""
+        return self.bar.y() + TAB_TOP + (self.bar.height() - TAB_TOP) / 2.0
+
     def start_window_drag(self) -> bool:
         """빈 곳을 누르면 창 끌기를 운영체제에 맡긴다."""
         if not self.titlebar_mode:
