@@ -2,4 +2,4 @@
 from .parser import parse_file, parse_text
 
 __all__ = ["parse_file", "parse_text"]
-__version__ = "0.5.0"
+__version__ = "0.6.0"
