@@ -50,7 +50,7 @@ from .core import (DOC_EXTS, HTML_EXTS, History, Response, TreeCache, ViewerCore
                    default_cache_dir, https_to_htex, is_doc_path, split_fragment)
 from .instance import (REPLY_OK, decode_message, encode_message, file_signature, instance_name,
                        local_dependencies, normalize_targets)
-from . import chrome
+from . import chrome, macwin
 from .bookmarks import BookmarkStore
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
                      TabStrip, ZoomRow, svg_icon)
@@ -602,7 +602,8 @@ def _load_bookmarks() -> BookmarkStore:
 
 class ViewerWindow(QMainWindow):
     def __init__(self, core: Optional[ViewerCore] = None, profile: Optional[QWebEngineProfile] = None,
-                 cwd: Optional[Path] = None, bookmarks: Optional[BookmarkStore] = None):
+                 cwd: Optional[Path] = None, bookmarks: Optional[BookmarkStore] = None,
+                 titlebar_tabs: Optional[bool] = None):
         super().__init__()
         self.core = core or ViewerCore(cache=TreeCache(default_cache_dir()))
         self.cwd = cwd or Path.cwd()
@@ -671,6 +672,7 @@ class ViewerWindow(QMainWindow):
             lay.addWidget(w)
         lay.addWidget(self.page_area, 1)
         self.setCentralWidget(central)
+        self._setup_titlebar(titlebar_tabs)
 
         # 진단·확대 표시 (F·J 의 이름 그대로: 주소창의 페이지 정보 단추와 확대 배율 칩이 보여 준다)
         self.diag_label = QLabel("", self)
@@ -689,6 +691,62 @@ class ViewerWindow(QMainWindow):
         self.apply_window_theme()
         self._on_bookmarks_changed()
         self.new_tab(start_page=False)
+
+    # ------------------------------------------------------------ 제목 막대 탭 (macOS)
+    def _setup_titlebar(self, enabled: Optional[bool]) -> None:
+        """macOS 에서는 탭 줄을 제목 막대 자리로 올린다 (Chrome). 설정 view/titlebar_tabs=false 면 예전처럼.
+        윈도·리눅스는 운영체제 제목 막대 아래 탭 줄 그대로."""
+        if enabled is None:
+            try:
+                want = settings().value("view/titlebar_tabs", "true") not in ("false", False, "0")
+            except Exception:   # noqa: BLE001
+                want = True
+            enabled = want and macwin.supported()
+        self.titlebar_tabs = bool(enabled)
+        if not self.titlebar_tabs:
+            return
+        self.setWindowFlag(Qt.WindowType.ExpandedClientAreaHint, True)
+        self.setWindowFlag(Qt.WindowType.NoTitleBarBackgroundHint, True)
+        # 창이 안전 영역(제목 막대)만큼 내용을 내리지 않게 한다. 탭 줄이 그 자리를 쓴다.
+        self.setAttribute(Qt.WidgetAttribute.WA_ContentsMarginsRespectsSafeArea, False)
+        self.centralWidget().setAttribute(Qt.WidgetAttribute.WA_ContentsMarginsRespectsSafeArea, False)
+        self.tab_strip.set_titlebar_mode(True)
+        self.tab_strip.titlebar_double_clicked.connect(self._titlebar_double_click)
+        self._titlebar_ready = False
+        self._update_titlebar_inset()
+
+    def _set_titlebar_tabs_pref(self, on: bool) -> None:
+        try:
+            settings().setValue("view/titlebar_tabs", "true" if on else "false")
+        except Exception:   # noqa: BLE001
+            pass
+        if on != self.titlebar_tabs:
+            self.status.showMessage("HyperTeX 를 다시 시작하면 적용됩니다", 4000)
+
+    def _update_titlebar_inset(self, *_) -> None:
+        if not getattr(self, "titlebar_tabs", False):
+            return
+        # 전체 화면에서는 신호등 단추가 숨으므로 비우지 않는다 (Chrome 과 같다)
+        self.tab_strip.set_left_inset(0 if self.isFullScreen() else macwin.TRAFFIC_LIGHTS_W)
+
+    def _titlebar_double_click(self) -> None:
+        action = macwin.double_click_action()
+        if action == "minimize":
+            self.showMinimized()
+        elif action == "zoom":
+            self.showNormal() if self.isMaximized() else self.showMaximized()
+
+    def showEvent(self, e) -> None:   # noqa: N802
+        super().showEvent(e)
+        if getattr(self, "titlebar_tabs", False) and not self._titlebar_ready:
+            self._titlebar_ready = True
+            macwin.hide_title_text(self)          # 제목 글자만 숨긴다 (Dock·윈도 메뉴에는 그대로)
+            self._update_titlebar_inset()
+
+    def changeEvent(self, e) -> None:   # noqa: N802
+        super().changeEvent(e)
+        if e.type() == QEvent.Type.WindowStateChange:
+            self._update_titlebar_inset()
 
     # ------------------------------------------------------------ 호환 (F 의 단일 뷰 이름)
     @property
@@ -918,6 +976,14 @@ class ViewerWindow(QMainWindow):
                       self.act_zoom_reset, None, self.act_source):
                 v.addSeparator() if a is None else v.addAction(a)
             v.addMenu(tm)
+            v.addSeparator()
+            self.act_titlebar_tabs = QAction("탭을 제목 막대에 표시", self)
+            self.act_titlebar_tabs.setCheckable(True)
+            self.act_titlebar_tabs.setChecked(self.titlebar_tabs)
+            self.act_titlebar_tabs.setEnabled(macwin.supported())
+            self.act_titlebar_tabs.setToolTip("새로 여는 창부터 적용됩니다")
+            self.act_titlebar_tabs.toggled.connect(self._set_titlebar_tabs_pref)
+            v.addAction(self.act_titlebar_tabs)
             g = mb.addMenu("이동")
             for a in (self.act_back, self.act_forward, self.act_reload, self.act_home, None, self.act_focus):
                 g.addSeparator() if a is None else g.addAction(a)

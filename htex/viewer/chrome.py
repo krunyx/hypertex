@@ -317,9 +317,25 @@ class ChromeTabBar(QTabBar):
                 return
         super().mouseReleaseEvent(e)
 
+    def _strip(self):
+        p = self.parent()
+        return p if isinstance(p, TabStrip) else None
+
+    def mousePressEvent(self, e) -> None:   # noqa: N802
+        strip = self._strip()
+        if (e.button() == Qt.MouseButton.LeftButton and strip is not None
+                and self.tabAt(e.position().toPoint()) < 0 and strip.start_window_drag()):
+            e.accept()
+            return
+        super().mousePressEvent(e)
+
     def mouseDoubleClickEvent(self, e) -> None:   # noqa: N802
         if self.tabAt(e.position().toPoint()) < 0:
-            self.new_tab_requested.emit()
+            strip = self._strip()
+            if strip is not None and strip.titlebar_mode:
+                strip.titlebar_double_clicked.emit()    # macOS: 제목 막대처럼 (확대·최소화)
+            else:
+                self.new_tab_requested.emit()
             return
         super().mouseDoubleClickEvent(e)
 
@@ -410,18 +426,25 @@ class ChromeTabBar(QTabBar):
 
 
 class TabStrip(QWidget):
-    """탭 줄 한 줄: [탭들][+]. 탭이 많으면 줄어들고, 최소 폭 아래로는 스크롤 단추가 생긴다."""
+    """탭 줄 한 줄: [탭들][+]. 탭이 많으면 줄어들고, 최소 폭 아래로는 스크롤 단추가 생긴다.
+
+    제목 막대 모드(macOS): 탭 줄이 창 맨 위, 운영체제 제목 막대 자리에 놓인다. 왼쪽은 신호등 단추 자리로
+    비우고(left_inset), 빈 곳을 끌면 창이 움직이며, 빈 곳 더블클릭은 titlebar_double_clicked 를 낸다."""
+
+    titlebar_double_clicked = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("tabstrip")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFixedHeight(TAB_H + 4)
+        self.titlebar_mode = False
+        self.left_inset = 0
         lay = QHBoxLayout(self)
         lay.setContentsMargins(8, 4, 8, 0)
         lay.setSpacing(4)
         self.bar = ChromeTabBar(self)
-        self.bar.available_width = lambda: max(TAB_MIN_W, self.width() - 16 - 4 - 36 - 8)
+        self.bar.available_width = lambda: max(TAB_MIN_W, self.width() - 16 - self.left_inset - 4 - 36 - 8)
         self.new_btn = QToolButton(self)
         self.new_btn.setObjectName("newtab")
         self.new_btn.setFixedSize(30, 30)
@@ -435,6 +458,37 @@ class TabStrip(QWidget):
     def resizeEvent(self, e) -> None:   # noqa: N802
         super().resizeEvent(e)
         self.bar.relayout()
+
+    # ------------------------------------------------------------ 제목 막대 모드
+    def set_titlebar_mode(self, on: bool) -> None:
+        self.titlebar_mode = on
+        self.set_left_inset(self.left_inset)
+
+    def set_left_inset(self, px: int) -> None:
+        """왼쪽에 비워 둘 폭 (신호등 단추 자리). 전체 화면에서는 0."""
+        self.left_inset = max(0, int(px))
+        self.layout().setContentsMargins(8 + self.left_inset, 4, 8, 0)
+        self.bar.relayout()
+
+    def start_window_drag(self) -> bool:
+        """빈 곳을 누르면 창 끌기를 운영체제에 맡긴다."""
+        if not self.titlebar_mode:
+            return False
+        handle = self.window().windowHandle()
+        return bool(handle is not None and handle.startSystemMove())
+
+    def mousePressEvent(self, e) -> None:   # noqa: N802
+        if e.button() == Qt.MouseButton.LeftButton and self.start_window_drag():
+            e.accept()
+            return
+        super().mousePressEvent(e)
+
+    def mouseDoubleClickEvent(self, e) -> None:   # noqa: N802
+        if e.button() == Qt.MouseButton.LeftButton and self.titlebar_mode:
+            self.titlebar_double_clicked.emit()
+            e.accept()
+            return
+        super().mouseDoubleClickEvent(e)
 
     def set_palette(self, c: Palette) -> None:
         self.bar.set_palette(c)
