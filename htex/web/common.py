@@ -5,6 +5,7 @@
 - 목록 페이지·오류 페이지 HTML. 본문 CSS는 렌더러(htex.html.style.CSS)를 그대로 쓴다.
 """
 from __future__ import annotations
+from ..i18n import tr, ui_language
 
 import html
 import os
@@ -62,23 +63,23 @@ def split_request_path(raw_path: str) -> list[str]:
     - '.' 으로 시작하는 조각(숨김 파일·폴더)은 404.
     """
     if "\x00" in raw_path:
-        raise PathRejected(403, "NUL 문자")
+        raise PathRejected(403, tr('NUL 문자'))
     try:
         decoded = unquote(raw_path, encoding="utf-8", errors="strict")
     except UnicodeDecodeError:
-        raise PathRejected(404, "UTF-8 이 아닌 경로") from None
+        raise PathRejected(404, tr('UTF-8 이 아닌 경로')) from None
     if "\x00" in decoded or "\\" in decoded or "\\" in raw_path:
-        raise PathRejected(403, "허용되지 않는 문자")
+        raise PathRejected(403, tr('허용되지 않는 문자'))
     parts = []
     for seg in decoded.split("/"):
         if seg == "":
             continue
         if seg in (".", ".."):
-            raise PathRejected(403, "상위 폴더 이동")
+            raise PathRejected(403, tr('상위 폴더 이동'))
         if seg.startswith("."):
-            raise PathRejected(404, "숨김 파일")
+            raise PathRejected(404, tr('숨김 파일'))
         if re.match(r"^[A-Za-z]:", seg):  # 윈도 드라이브 문자
-            raise PathRejected(403, "절대 경로")
+            raise PathRejected(403, tr('절대 경로'))
         parts.append(seg)
     return parts
 
@@ -89,11 +90,11 @@ def resolve_in_root(root: Path, parts: list[str]) -> Path:
     target = root.joinpath(*parts) if parts else root
     real = Path(os.path.realpath(target))
     if real != root and root not in real.parents:
-        raise PathRejected(403, "루트 폴더 밖")
+        raise PathRejected(403, tr('루트 폴더 밖'))
     # 심볼릭 링크로 숨김 파일을 가리키는 경우도 막는다
     rel = real.relative_to(root).parts if real != root else ()
     if any(p.startswith(".") for p in rel):
-        raise PathRejected(404, "숨김 파일")
+        raise PathRejected(404, tr('숨김 파일'))
     return real
 
 
@@ -164,13 +165,13 @@ def _load(path: Path, key, render_html, old: Optional[DocEntry]) -> DocEntry:
         try:
             tree = parse_file(path)
         except Exception:  # noqa: BLE001 - 파서는 예외를 내지 않는 계약이지만 방어
-            return DocEntry(key, None, None, "파서 예외\n" + traceback.format_exc(limit=5))
+            return DocEntry(key, None, None, tr("파서 예외") + "\n" + traceback.format_exc(limit=5))
     if render_html is None:
         return DocEntry(key, tree, None)
     try:
         out = render_html(tree, path)
     except Exception:  # noqa: BLE001
-        return DocEntry(key, tree, None, "HTML 변환 예외\n" + traceback.format_exc(limit=5))
+        return DocEntry(key, tree, None, tr("HTML 변환 예외") + "\n" + traceback.format_exc(limit=5))
     return DocEntry(key, tree, out)
 
 
@@ -219,7 +220,7 @@ def _css() -> str:
 
 
 def page(title: str, body: str, head_extra: str = "") -> str:
-    return ("<!doctype html>\n<html lang=\"ko\">\n<head>\n<meta charset=\"utf-8\">\n"
+    return (f"<!doctype html>\n<html lang=\"{ui_language()}\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
             "<meta name=\"color-scheme\" content=\"light dark\">\n"
             f"<title>{e(title)}</title>\n<style>{_css()}</style>\n{head_extra}</head>\n"
@@ -238,14 +239,14 @@ def listing_page(display_path: str, entries: list[ListingEntry], parent: bool) -
     items = []
     if parent:
         items.append('<li><a class="htex-listing-name" href="../">../</a>'
-                     '<span class="htex-listing-kind">상위 폴더</span></li>')
-    kinds = {"folder": "폴더", "document": "문서", "file": "파일"}
+                     f'<span class="htex-listing-kind">{e(tr("상위 폴더"))}</span></li>')
+    kinds = {"folder": tr('폴더'), "document": tr('문서'), "file": tr('파일')}
     for en in entries:
         title = (f'<span class="htex-listing-title">{e(en.title)}</span>' if en.title else "")
         items.append(f'<li><a class="htex-listing-name" href="{e(en.href)}">{e(en.name)}</a>'
                      f'{title}<span class="htex-listing-kind">{kinds.get(en.kind, "")}</span></li>')
     body = (f'<header class="htex-header"><h1 class="htex-title">{e(display_path)}</h1>'
-            f'<p class="htex-date">HyperTeX 문서 목록</p></header>'
+            f'<p class="htex-date">{e(tr("HyperTeX 문서 목록"))}</p></header>'
             f'<ul class="htex-listing">{"".join(items)}</ul>')
     return page(display_path, body)
 
@@ -254,9 +255,9 @@ def error_page(title: str, message: str, detail: str = "", source: str | None = 
     body = [f'<header class="htex-header"><h1 class="htex-title">{e(title)}</h1></header>',
             f'<div class="htex-errorpage"><p>{e(message)}</p>']
     if detail:
-        body.append(f"<details><summary>자세히</summary><pre>{e(detail)}</pre></details>")
+        body.append(f"<details><summary>{e(tr('자세히'))}</summary><pre>{e(detail)}</pre></details>")
     if source is not None:
-        body.append(f"<h2>원문</h2><pre>{e(source)}</pre>")
+        body.append(f"<h2>{e(tr('원문'))}</h2><pre>{e(source)}</pre>")
     body.append("</div>")
     return page(title, "\n".join(body))
 

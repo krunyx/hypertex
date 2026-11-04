@@ -13,6 +13,7 @@
   탭 막대는 페이지 위가 아니라 창 맨 위 줄에 따로 놓이므로 QTabWidget 대신 막대 + QStackedWidget 으로 만든다.
 """
 from __future__ import annotations
+from ..i18n import tr
 
 import sys
 from dataclasses import dataclass
@@ -265,7 +266,7 @@ class ChromeTabBar(QTabBar):
         btn.setFixedSize(20, 20)
         btn.setIconSize(QSize(14, 14))
         btn.setIcon(svg_icon("close", self.palette_.icon, 16))
-        btn.setToolTip("탭 닫기 (Ctrl+W)")
+        btn.setToolTip(tr('탭 닫기 (Ctrl+W)'))
         btn.setCursor(Qt.CursorShape.ArrowCursor)
         btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         btn.setStyleSheet(f"QToolButton{{border:none;border-radius:10px;background:transparent}}"
@@ -449,7 +450,7 @@ class TabStrip(QWidget):
         self.new_btn.setObjectName("newtab")
         self.new_btn.setFixedSize(30, 30)
         self.new_btn.setIconSize(QSize(18, 18))
-        self.new_btn.setToolTip("새 탭 (Ctrl+T)")
+        self.new_btn.setToolTip(tr('새 탭 (Ctrl+T)'))
         self.new_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         lay.addWidget(self.bar, 0, Qt.AlignmentFlag.AlignBottom)
         lay.addWidget(self.new_btn, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -649,15 +650,15 @@ class Omnibox(QFrame):
         self.info.setIconSize(QSize(16, 16))
         self.info.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.info.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.info.setToolTip("페이지 정보")
+        self.info.setToolTip(tr('페이지 정보'))
         self.edit = AddressEdit(self)
-        self.edit.setPlaceholderText("htex:// 주소, https 주소 또는 파일 경로 입력")
+        self.edit.setPlaceholderText(tr('htex:// 주소, https 주소 또는 파일 경로 입력'))
         self.edit.setFrame(False)
         self.zoom = QToolButton(self)
         self.zoom.setObjectName("zoomchip")
         self.zoom.setFixedHeight(26)
         self.zoom.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.zoom.setToolTip("확대 배율 · 누르면 원래 크기 (Ctrl+0)")
+        self.zoom.setToolTip(tr('확대 배율 · 누르면 원래 크기 (Ctrl+0)'))
         self.zoom.setText("100%")
         self.zoom.hide()
         self.star = QToolButton(self)
@@ -665,7 +666,7 @@ class Omnibox(QFrame):
         self.star.setFixedSize(28, 26)
         self.star.setIconSize(QSize(18, 18))
         self.star.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.star.setToolTip("이 탭을 북마크에 추가 (Ctrl+D)")
+        self.star.setToolTip(tr('이 탭을 북마크에 추가 (Ctrl+D)'))
         lay.addWidget(self.info)
         lay.addWidget(self.edit, 1)
         lay.addWidget(self.zoom)
@@ -683,7 +684,7 @@ class Omnibox(QFrame):
         self.starred = on
         c = self.palette_
         self.star.setIcon(svg_icon("star_filled", c.accent) if on else svg_icon("star", c.icon))
-        self.star.setToolTip("이 탭의 북마크 수정 (Ctrl+D)" if on else "이 탭을 북마크에 추가 (Ctrl+D)")
+        self.star.setToolTip(tr('이 탭의 북마크 수정 (Ctrl+D)') if on else tr('이 탭을 북마크에 추가 (Ctrl+D)'))
 
     def set_info(self, kind: str, text: str = "", warn: bool = False) -> None:
         """kind: doc | web | secure | start | source | error."""
@@ -724,7 +725,7 @@ class NavBar(QWidget):
         self.omnibox = Omnibox(self)
         self.menu = nav_button(self)
         self.menu.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.menu.setToolTip("HyperTeX 설정 및 기타")
+        self.menu.setToolTip(tr('HyperTeX 설정 및 기타'))
         for w in (self.back, self.forward, self.reload, self.home):
             lay.addWidget(w)
         lay.addSpacing(4)
@@ -754,12 +755,12 @@ class BookmarksBar(QWidget):
         self.lay.setSpacing(0)
         self.buttons: list[QToolButton] = []
         self.items: list = []
-        self.hint = QLabel("빠르게 이동하려면 북마크를 여기 북마크바에 추가하세요. (Ctrl+D)", self)
+        self.hint = QLabel(tr('빠르게 이동하려면 북마크를 여기 북마크바에 추가하세요. (Ctrl+D)'), self)
         self.hint.setObjectName("bmhint")
         self.more = QToolButton(self)
         self.more.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.more.setFixedSize(28, 28)
-        self.more.setToolTip("다른 북마크")
+        self.more.setToolTip(tr('다른 북마크'))
         self.more.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.more.hide()
         self.palette_ = LIGHT
@@ -828,7 +829,7 @@ class BookmarksBar(QWidget):
     def _folder_menu(self, folder) -> QMenu:
         m = QMenu(self)
         if not folder.children:
-            a = m.addAction("(비어 있음)")
+            a = m.addAction(tr('(비어 있음)'))
             a.setEnabled(False)
         for ch in folder.children or []:
             a = m.addAction(self._icon_for(ch), ch.title.replace("&", "&&"))
@@ -836,7 +837,7 @@ class BookmarksBar(QWidget):
             a.triggered.connect(lambda _=False, u=ch.url: self.open_requested.emit(u, False))
         if folder.children:
             m.addSeparator()
-            a = m.addAction(f"모두 새 탭에서 열기 ({len(folder.children)})")
+            a = m.addAction(tr('모두 새 탭에서 열기 ({a1})', a1=len(folder.children)))
             a.triggered.connect(lambda _=False, f=folder: [self.open_requested.emit(c.url, True)
                                                            for c in f.children or []])
         return m
@@ -844,22 +845,22 @@ class BookmarksBar(QWidget):
     def _item_menu(self, item, pos: QPoint) -> None:
         m = QMenu(self)
         if not item.is_folder:
-            m.addAction("열기").triggered.connect(lambda: self.open_requested.emit(item.url, False))
-            m.addAction("새 탭에서 열기").triggered.connect(lambda: self.open_requested.emit(item.url, True))
+            m.addAction(tr('열기')).triggered.connect(lambda: self.open_requested.emit(item.url, False))
+            m.addAction(tr('새 탭에서 열기')).triggered.connect(lambda: self.open_requested.emit(item.url, True))
             m.addSeparator()
-            m.addAction("수정…").triggered.connect(lambda: self.edit_requested.emit(item))
+            m.addAction(tr('수정…')).triggered.connect(lambda: self.edit_requested.emit(item))
         else:
-            m.addAction("이름 바꾸기…").triggered.connect(lambda: self.edit_requested.emit(item))
-        m.addAction("삭제").triggered.connect(lambda: self.remove_requested.emit(item))
+            m.addAction(tr('이름 바꾸기…')).triggered.connect(lambda: self.edit_requested.emit(item))
+        m.addAction(tr('삭제')).triggered.connect(lambda: self.remove_requested.emit(item))
         m.addSeparator()
         self._common_actions(m)
         m.exec(pos)
 
     def _common_actions(self, m: QMenu) -> None:
-        m.addAction("이 페이지 북마크에 추가…").triggered.connect(self.add_page_requested)
-        m.addAction("폴더 추가…").triggered.connect(self.add_folder_requested)
+        m.addAction(tr('이 페이지 북마크에 추가…')).triggered.connect(self.add_page_requested)
+        m.addAction(tr('폴더 추가…')).triggered.connect(self.add_folder_requested)
         m.addSeparator()
-        a = m.addAction("북마크바 표시")
+        a = m.addAction(tr('북마크바 표시'))
         a.setCheckable(True)
         a.setChecked(True)
         a.triggered.connect(self.toggle_requested)
@@ -1031,10 +1032,10 @@ class BookmarkPopup(Popup):
 
     def __init__(self, parent: QWidget, title: str, folders: list, current_folder, new: bool):
         super().__init__(parent)
-        self.title("북마크 추가됨" if new else "북마크 수정")
+        self.title(tr('북마크 추가됨') if new else tr('북마크 수정'))
         row = QHBoxLayout()
         row.setSpacing(8)
-        name_lab = QLabel("이름", self)
+        name_lab = QLabel(tr('이름'), self)
         name_lab.setFixedWidth(40)
         self.name = QLineEdit(title, self)
         self.name.selectAll()
@@ -1043,10 +1044,10 @@ class BookmarkPopup(Popup):
         self.lay.addLayout(row)
         row = QHBoxLayout()
         row.setSpacing(8)
-        f_lab = QLabel("폴더", self)
+        f_lab = QLabel(tr('폴더'), self)
         f_lab.setFixedWidth(40)
         self.folder = QComboBox(self)
-        self.folder.addItem("북마크바", None)
+        self.folder.addItem(tr('북마크바'), None)
         for f in folders:
             self.folder.addItem(f.title, f)
         if current_folder is not None:
@@ -1058,8 +1059,8 @@ class BookmarkPopup(Popup):
         self.lay.addLayout(row)
         btns = QHBoxLayout()
         btns.addStretch(1)
-        self.remove_btn = QPushButton("삭제", self)
-        self.done_btn = QPushButton("완료", self)
+        self.remove_btn = QPushButton(tr('삭제'), self)
+        self.done_btn = QPushButton(tr('완료'), self)
         self.done_btn.setDefault(True)
         btns.addWidget(self.remove_btn)
         btns.addWidget(self.done_btn)
@@ -1076,17 +1077,17 @@ class ZoomRow(QWidget):
         self.setObjectName("zoomrow")
         lay = QHBoxLayout(self)
         lay.setContentsMargins(28, 4, 12, 4)
-        lay.addWidget(QLabel("확대/축소", self))
+        lay.addWidget(QLabel(tr('확대/축소'), self))
         lay.addStretch(1)
         self.minus = QToolButton(self)
         self.minus.setText("−")
-        self.minus.setToolTip("축소 (Ctrl+-)")
+        self.minus.setToolTip(tr('축소 (Ctrl+-)'))
         self.value = QToolButton(self)
-        self.value.setToolTip("원래 크기 (Ctrl+0)")
+        self.value.setToolTip(tr('원래 크기 (Ctrl+0)'))
         self.value.setMinimumWidth(52)
         self.plus = QToolButton(self)
         self.plus.setText("+")
-        self.plus.setToolTip("확대 (Ctrl+=)")
+        self.plus.setToolTip(tr('확대 (Ctrl+=)'))
         self.minus.clicked.connect(zoom_out)
         self.plus.clicked.connect(zoom_in)
         self.value.clicked.connect(reset)

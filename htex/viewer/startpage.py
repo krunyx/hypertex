@@ -17,6 +17,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Iterable, Optional
 
+from ..i18n import tr, ui_language
 from .bookmarks import Bookmark
 
 START_URL = "htexapp://start/"
@@ -121,22 +122,23 @@ def render(bookmarks: Iterable[Bookmark], theme: str = "") -> str:
                else f'<span class="dot" style="background:{color}">{html.escape(_initial(b.title))}</span>')
         tiles.append(f'<a class="tile" href="{html.escape(open_url(b.url))}" title="{html.escape(b.url)}">'
                      f'{dot}<span class="name">{html.escape(b.title)}</span></a>')
-    tiles.append(f'<a class="tile" href="{START_URL}action?do=open-file" title="파일 열기 (Ctrl+O)">'
+    tiles.append(f'<a class="tile" href="{START_URL}action?do=open-file" '
+                 f'title="{html.escape(tr("파일 열기"))} (Ctrl+O)">'
                  f'<span class="dot" style="background:#5f6368">+</span>'
-                 f'<span class="name">파일 열기</span></a>')
+                 f'<span class="name">{html.escape(tr("파일 열기"))}</span></a>')
     theme_attr = f' data-theme="{theme}"' if theme in ("light", "dark") else ""
     logo = f'<img class="logo" src="{_LOGO}" alt="">' if _LOGO else ""
     return f"""<!doctype html>
-<html lang="ko"{theme_attr}><head><meta charset="utf-8">
+<html lang="{ui_language()}"{theme_attr}><head><meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="{html.escape(CSP)}">
-<title>새 탭</title><style>{CSS}</style></head>
+<title>{html.escape(tr("새 탭"))}</title><style>{CSS}</style></head>
 <body><main>
 {logo}
 <h1>HyperTeX</h1>
 <form action="{START_URL}go" method="get" autocomplete="off">
-<input name="q" type="text" placeholder="htex:// 주소, https 주소 또는 파일 경로 입력" aria-label="주소">
+<input name="q" type="text" placeholder="{html.escape(tr("htex:// 주소, https 주소 또는 파일 경로 입력"))}" aria-label="{html.escape(tr("주소"))}">
 </form>
 <nav class="tiles">{"".join(tiles)}</nav>
-<p class="hint">북마크바의 북마크가 여기에 바로가기로 보입니다 · 북마크 추가 <kbd>Ctrl</kbd>+<kbd>D</kbd> · 북마크바 보이기 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></p>
+<p class="hint">{html.escape(tr("북마크바의 북마크가 여기에 바로가기로 보입니다"))} · {html.escape(tr("북마크 추가"))} <kbd>Ctrl</kbd>+<kbd>D</kbd> · {html.escape(tr("북마크바 보이기"))} <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd></p>
 </main></body></html>"""

@@ -110,3 +110,13 @@ I와 J 사이의 약속:
 | 담당 | 수정 가능한 파일 | 완료 기준 |
 | --- | --- | --- |
 | O 그림 형식 | 새 파일 `htex/images.py`·`htex/viewer/pdfimage.py`, `htex/viewer/core.py`(그림 응답), `htex/html/render.py`·`__init__.py`(`image_url`), `htex/web/build.py`(정적 빌드 대체 그림), `htex/build_blocks.py`(EPS 진단), `packaging/`(QtPdf 포함·스모크 테스트), `docs/spec.md`·`README.md`, `tests/unit/test_O_*.py`, `notes/O-questions.md` | 뷰어에서 PDF 그림·확장자 없는 그림이 보임, 묶인 앱 스모크 테스트에서도, 기존 테스트 유지 |
+
+
+## 9단계 담당 구역 (화면 글자 영어·한국어)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| P 언어 | 새 파일 `htex/i18n.py`·`htex/i18n_en.py`, 화면 글자가 있는 `htex/viewer/`·`htex/web/`·`htex/__main__.py`(문자열을 `tr()` 로), `htex/html/render.py`·`style.py`(문서 언어), `htex/web/interact.js`, `packaging/macos/Info.plist.in`, `tests/unit/test_P_*.py`·`conftest.py`, `notes/P-questions.md`, `README.md` | 운영체제 언어가 한국어면 한국어, 그 밖에는 영어. 문서 안 이름은 문서 언어. 모든 한국어 화면 글자에 영어가 있음 |
+
+- 새 화면 글자는 한국어 원문으로 `tr("…")` 에 넣고 `htex/i18n_en.py` 에 영어를 더한다. `test_P_i18n.py` 가 빠진 것을 찾는다.
+- 테스트는 `HTEX_LANG=ko` 로 돈다 (`tests/unit/conftest.py`).

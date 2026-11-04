@@ -15,14 +15,29 @@ import html
 import re
 from typing import Any, Callable, Iterable
 
+from ..i18n import doc_language, doc_word
 from . import mathml
 from .style import CSS
 
 __all__ = ["render", "safe_url"]
 
-THEOREM_FALLBACK = "정리"
-FLOAT_NAMES = {"figure": "그림", "table": "표"}
-DIAG_SEVERITY = {"error": "오류", "warning": "경고"}
+# 문서 안의 이름은 문서 언어(본문에 한글이 많으면 한국어, 아니면 영어)를 따른다. htex/i18n.py DOC_WORDS.
+FLOAT_KEYS = {"figure": "figure", "table": "table"}
+
+
+def _texts(node: Any, out: list[str], limit: int = 20000) -> None:
+    """트리의 글자(text·source 제외)를 모은다. 문서 언어 고르기용."""
+    if sum(map(len, out)) > limit:
+        return
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if k == "text" and isinstance(v, str):
+                out.append(v)
+            elif k not in ("source", "span", "raw", "tex"):
+                _texts(v, out, limit)
+    elif isinstance(node, list):
+        for v in node:
+            _texts(v, out, limit)
 
 _SECTION_TAG = {1: "h2", 2: "h3", 3: "h4", 4: "h5"}
 
@@ -83,6 +98,10 @@ class _Renderer:
         self.web = web_fallback
         self.head_extra = head_extra      # 호스트(뷰어·웹 서버)가 넣는 <head> 조각 (신뢰된 HTML)
         self.doc_url = doc_url            # 다른 문서 주소 바꾸기 (예: 정적 빌드의 .htex → .html)
+        sample: list[str] = []
+        _texts(tree.get("meta"), sample)
+        _texts(tree.get("body"), sample)
+        self.lang = doc_language("".join(sample))   # "ko" | "en"
         self.labels: dict[str, dict[str, Any]] = tree.get("labels") or {}
         self.params = {p["name"]: p.get("default") for p in tree.get("parameters") or []}
         self.bib = tree.get("bibliography") or []
@@ -148,17 +167,24 @@ class _Renderer:
             u = self.doc_url(u)
         return u
 
+    # ------------------------------------------------------------ 문서 언어
+    def w(self, key: str) -> str:
+        return doc_word(key, self.lang)
+
+    def k(self, ko: str, en: str) -> str:
+        return ko if self.lang == "ko" else en
+
     # ------------------------------------------------------------ 문서
     def document(self) -> str:
         meta = self.tree.get("meta") or {}
-        title_text = _plain(meta.get("title") or []) or "HyperTeX 문서"
+        title_text = _plain(meta.get("title") or []) or self.w("untitled")
         head = [
             "<!doctype html>",
-            '<html lang="ko">',
+            f'<html lang="{self.lang}">',
             "<head>",
             '<meta charset="utf-8">',
             '<meta name="viewport" content="width=device-width, initial-scale=1">',
-            '<meta name="generator" content="HyperTeX 2.0 기준 구현 (htex.html)">',
+            '<meta name="generator" content="HyperTeX 2.0 reference implementation (htex.html)">',
             '<meta name="color-scheme" content="light dark">',
             f"<title>{_e(title_text)}</title>",
         ]
@@ -210,10 +236,10 @@ class _Renderer:
             out.append(f'<p class="htex-date">{_e(meta["date"])}</p>')
         if meta.get("keywords"):
             kws = "".join(f'<li>{_e(k)}</li>' for k in meta["keywords"])
-            out.append(f'<div class="htex-keywords"><span class="htex-kw-label">핵심어</span>'
+            out.append(f'<div class="htex-keywords"><span class="htex-kw-label">{_e(self.w("keywords"))}</span>'
                        f'<ul>{kws}</ul></div>')
         if meta.get("abstract"):
-            out.append('<section class="htex-abstract"><h2>요약</h2>'
+            out.append(f'<section class="htex-abstract"><h2>{_e(self.w("abstract"))}</h2>'
                        f'{self.blocks(meta["abstract"])}</section>')
         if not out:
             return ""
@@ -229,7 +255,7 @@ class _Renderer:
             sym = mathml.GREEK.get(name, name)
             rng = f'{mathml.format_number(p["min"])}–{mathml.format_number(p["max"])}'
             if "step" in p:
-                rng += f', 간격 {mathml.format_number(p["step"])}'
+                rng += f', {self.k("간격", "step")} {mathml.format_number(p["step"])}'
             items.append(
                 f'<li><span class="htex-param-name">{_e(sym)}</span> = '
                 f'<output class="htex-param" data-param="{_a(name)}" '
@@ -238,8 +264,8 @@ class _Renderer:
                 + (f' data-step="{_a(p["step"])}"' if "step" in p else "")
                 + f'>{_e(mathml.format_number(p["default"]))}</output> '
                 f'<span class="htex-param-range">({_e(rng)})</span></li>')
-        return ('<aside class="htex-parameters" aria-label="매개변수">'
-                '<span class="htex-param-label">매개변수 (기본값)</span>'
+        return (f'<aside class="htex-parameters" aria-label="{_a(self.w("parameters"))}">'
+                f'<span class="htex-param-label">{_e(self.w("parameters_default"))}</span>'
                 f'<ul>{"".join(items)}</ul></aside>')
 
     # ------------------------------------------------------------ 블록
@@ -250,7 +276,7 @@ class _Renderer:
         fn = getattr(self, "b_" + str(b.get("kind", "")), None)
         if fn is None:
             return (f'<div class="htex-error"{self.id_attr(b)} data-code="unknown-node">'
-                    f'{_e("알 수 없는 노드: " + str(b.get("kind")))}</div>')
+                    f'{_e(self.k("알 수 없는 노드: ", "Unknown node: ") + str(b.get("kind")))}</div>')
         return fn(b)
 
     def b_section(self, b: dict[str, Any]) -> str:
@@ -381,7 +407,7 @@ class _Renderer:
 
     # -- 정리·증명·상호작용
     def b_theorem(self, b: dict[str, Any]) -> str:
-        name = b.get("name") or THEOREM_FALLBACK
+        name = b.get("name") or self.w("theorem")
         head = f'<strong class="htex-thm-name">{_e(name)}'
         if b.get("number"):
             head += f' <span class="htex-thm-num">{_e(b["number"])}</span>'
@@ -401,8 +427,8 @@ class _Renderer:
         return f'<p class="htex-head-only">{head}</p>' + self.blocks(children)
 
     def b_proof(self, b: dict[str, Any]) -> str:
-        title = self.inlines(b["title"]) if b.get("title") else "증명"
-        qed = '<span class="htex-qed" aria-label="증명 끝">∎</span>'
+        title = self.inlines(b["title"]) if b.get("title") else _e(self.w("proof"))
+        qed = f'<span class="htex-qed" aria-label="{_a(self.w("end_of_proof"))}">∎</span>'
         children = b.get("children") or []
         if b.get("collapsed"):
             return (f'<details class="htex-proof htex-collapsed"{self.id_attr(b)}>'
@@ -429,7 +455,7 @@ class _Renderer:
     # -- 그림·표
     def b_float(self, b: dict[str, Any]) -> str:
         ft = b.get("floatType", "figure")
-        name = FLOAT_NAMES.get(ft, "그림")
+        name = self.w(FLOAT_KEYS.get(ft, "figure"))
         cap = ""
         if b.get("caption") is not None or b.get("number"):
             label = f'<span class="htex-float-name">{_e(name)}'
@@ -450,7 +476,7 @@ class _Renderer:
         alt = b.get("alt", "")
         if src is None:
             return (f'<span class="htex-error htex-blocked-image"{self.id_attr(b)} '
-                    f'title="허용되지 않는 주소">{_e(b.get("src", ""))}</span>')
+                    f'title="{_a(self.k("허용되지 않는 주소", "Address not allowed"))}">{_e(b.get("src", ""))}</span>')
         style = ""
         w = b.get("width")
         if isinstance(w, str) and _PERCENT.match(w):
@@ -511,7 +537,7 @@ class _Renderer:
             items = "".join(f"<li>{_e(p)}</li>" for p in problems[:10])
             notes = (f'<details class="htex-picture-notes" style="font-size:.8rem;text-align:left;'
                      f'font-family:var(--sans-font);color:var(--muted);border:0;padding:0;margin:.25rem 0">'
-                     f'<summary>그림 주석 {len(problems)}건</summary>'
+                     f'<summary>{_e(self.k(f"그림 주석 {len(problems)}건", f"{len(problems)} figure notes"))}</summary>'
                      f'<ul>{items}</ul></details>')
         return f'<figure class="htex-picture"{self.id_attr(b)}{extra}>{svg}{notes}</figure>'
 
@@ -522,13 +548,13 @@ class _Renderer:
                 else f'<span class="htex-blocked-url">{text}</span>')
         return (f'<div class="htex-transclusion"{self.id_attr(b)} '
                 f'data-href="{_a(b.get("href", ""))}">'
-                f'<span class="htex-transclusion-label">가져올 내용:</span> {link}</div>')
+                f'<span class="htex-transclusion-label">{_e(self.w("transclusion"))}</span> {link}</div>')
 
     def b_bibliography(self, b: dict[str, Any]) -> str:
         return self.bibliography(b)
 
     def bibliography(self, b: dict[str, Any]) -> str:
-        title = self.inlines(b["title"]) if b.get("title") else "참고문헌"
+        title = self.inlines(b["title"]) if b.get("title") else _e(self.w("bibliography"))
         items = []
         if not self.bib_done:
             self.bib_done = True
@@ -606,7 +632,7 @@ class _Renderer:
                    f'title="{_a(x.get("code", ""))}">{_e(x.get("raw", ""))}</code>')
             kids = self.inlines(x.get("children") or [])
             return raw + (f'<span class="htex-error-args">{kids}</span>' if kids else "")
-        return f'<span class="htex-error" title="알 수 없는 인라인">{_e(k)}</span>'
+        return f'<span class="htex-error" title="{_a(self.k("알 수 없는 인라인", "Unknown inline"))}">{_e(k)}</span>'
 
     # -- 링크
     def link(self, x: dict[str, Any]) -> str:
@@ -624,7 +650,7 @@ class _Renderer:
         else:
             text = self.inlines(x.get("children") or []) or _e(url)
         if href is None:
-            return f'<span class="htex-blocked-url" title="허용되지 않는 주소">{text}</span>'
+            return f'<span class="htex-blocked-url" title="{_a(self.k("허용되지 않는 주소", "Address not allowed"))}">{text}</span>'
         return f'<a class="htex-link" href="{_a(href)}">{text}</a>'
 
     def ref(self, x, lt, tgt, res) -> str:
@@ -645,7 +671,7 @@ class _Renderer:
         node = res.get("node") or (known or {}).get("node")
         if res.get("broken") or (known is None and not res.get("node")):
             return (f'<span class="htex-ref htex-broken" title="'
-                    f'{_a("깨진 링크: 라벨 " + label + "을(를) 찾을 수 없습니다")}">'
+                    f'{_a(self.k(f"깨진 링크: 라벨 {label}을(를) 찾을 수 없습니다", f"Broken link: label {label} not found"))}">'
                     f'{_e(wrap("??"))}</span>')
         shown = kids or _e(wrap(number if number else "??"))
         title = (known or {}).get("display")
@@ -672,9 +698,9 @@ class _Renderer:
                              f'{_e(num or k)}</a>')
             else:
                 parts.append(f'<span class="htex-broken" title="'
-                             f'{_a("깨진 인용: 키 " + k + "을(를) 찾을 수 없습니다")}">??</span>')
+                             f'{_a(self.k(f"깨진 인용: 키 {k}을(를) 찾을 수 없습니다", f"Broken citation: key {k} not found"))}">??</span>')
         if not keys:
-            parts.append('<span class="htex-broken" title="빈 인용">??</span>')
+            parts.append(f'<span class="htex-broken" title="{_a(self.k("빈 인용", "Empty citation"))}">??</span>')
         kids = self.inlines(x.get("children") or [])
         inner = ", ".join(parts)
         return f'<span class="htex-cite">[{inner}]</span>' + (f" {kids}" if kids else "")
@@ -691,10 +717,10 @@ class _Renderer:
             fid = f.get("id", "")
             body = self.blocks(f.get("children") or [])
             back = (f'<a class="htex-fnback" href="#{_a(fid)}" role="doc-backlink" '
-                    f'aria-label="본문으로">↩</a>')
+                    f'aria-label="{_a(self.w("back_to_text"))}">↩</a>')
             out.append(f'<li id="{_a(_fn_id(fid))}"><span class="htex-fnnum">'
                        f'{_e(f.get("number", "?"))}.</span>{body}{back}</li>')
-        return ('<section class="htex-footnotes" role="doc-endnotes"><h2>각주</h2>'
+        return (f'<section class="htex-footnotes" role="doc-endnotes"><h2>{_e(self.w("footnotes"))}</h2>'
                 f'<ol>{"".join(out)}</ol></section>')
 
     def diagnostics(self) -> str:
@@ -709,16 +735,19 @@ class _Renderer:
             where = ""
             sp = d.get("span")
             if sp:
-                where = f' <span class="htex-diag-pos">({_e(sp.get("line"))}행 {_e(sp.get("col"))}열)</span>'
+                pos = self.k(f"{sp.get('line')}행 {sp.get('col')}열", f"line {sp.get('line')}, column {sp.get('col')}")
+                where = f' <span class="htex-diag-pos">({_e(pos)})</span>'
             node = ""
             if d.get("node"):
-                node = f' <a href="#{_a(d["node"])}">위치로</a>'
+                node = f' <a href="#{_a(d["node"])}">{_e(self.k("위치로", "Go to"))}</a>'
             items.append(f'<li class="htex-diag-{_a(sev)}"><span class="htex-diag-sev">'
-                         f'{_e(DIAG_SEVERITY.get(sev, sev))}</span> '
+                         f'{_e(self.w(sev) if sev in ("error", "warning") else sev)}</span> '
                          f'<code>{_e(d.get("code", ""))}</code> {_e(d.get("message", ""))}'
                          f'{where}{node}</li>')
-        return (f'<details class="htex-diagnostics"><summary>진단 {len(ds)}건 '
-                f'(오류 {n_err}, 경고 {n_warn})</summary><ul>{"".join(items)}</ul></details>')
+        summary = self.k(f"진단 {len(ds)}건 (오류 {n_err}, 경고 {n_warn})",
+                         f"{len(ds)} diagnostics ({n_err} errors, {n_warn} warnings)")
+        return (f'<details class="htex-diagnostics"><summary>{_e(summary)}</summary>'
+                f'<ul>{"".join(items)}</ul></details>')
 
 
 # ====================================================================== 도우미

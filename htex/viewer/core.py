@@ -46,6 +46,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from ..i18n import tr, ui_language
 from .. import __version__
 from .. import images
 from ..parser import parse_text
@@ -105,7 +106,7 @@ class FetchError(ViewerError):
 class RenderTimeout(ViewerError):
     def __init__(self, limit: float):
         super().__init__("render-timeout",
-                         f"문서 해석이 시간 상한({limit:g}초)을 넘어 중단했습니다.", 503)
+                         tr('문서 해석이 시간 상한({limit:g}초)을 넘어 중단했습니다.', limit=limit), 503)
 
 
 class WebPage(Exception):
@@ -141,16 +142,16 @@ def normalize_htex(url: str) -> str:
     잘못된 주소면 ViewerError."""
     parts = urllib.parse.urlsplit(url.strip())
     if parts.scheme.lower() != "htex":
-        raise ViewerError("bad-url", f"htex:// 주소가 아닙니다: {url}")
+        raise ViewerError("bad-url", tr('htex:// 주소가 아닙니다: {url}', url=url))
     netloc = parts.netloc
     if not netloc or "@" in netloc or not _HOST_RE.match(netloc):
-        raise ViewerError("bad-url", f"호스트가 올바르지 않습니다: {url}")
+        raise ViewerError("bad-url", tr('호스트가 올바르지 않습니다: {url}', url=url))
     host, _, port = netloc.partition(":") if not netloc.startswith("[") else (netloc, "", "")
     host = host.lower().rstrip(".")
     if port == "443":
         port = ""
     if port and not (port.isdigit() and 0 < int(port) < 65536):
-        raise ViewerError("bad-url", f"포트가 올바르지 않습니다: {url}")
+        raise ViewerError("bad-url", tr('포트가 올바르지 않습니다: {url}', url=url))
     path = _norm_path(parts.path or "/")
     netloc = host + (":" + port if port else "")
     return urllib.parse.urlunsplit(("htex", netloc, path, parts.query, ""))
@@ -174,7 +175,7 @@ def htex_to_https(url: str) -> str:
 def https_to_htex(url: str) -> str:
     parts = urllib.parse.urlsplit(url)
     if parts.scheme.lower() != "https":
-        raise ViewerError("insecure", f"https 주소가 아닙니다: {url}")
+        raise ViewerError("insecure", tr('https 주소가 아닙니다: {url}', url=url))
     return normalize_htex("htex" + url[len(parts.scheme):].split("#", 1)[0])
 
 
@@ -210,7 +211,7 @@ def classify_input(text: str, cwd: Optional[Path] = None) -> Target:
     example.org/a.htex 처럼 스킴 없는 도메인 → https 로 보고 위 규칙."""
     s = text.strip()
     if not s:
-        raise ViewerError("empty", "주소가 비어 있습니다.")
+        raise ViewerError("empty", tr('주소가 비어 있습니다.'))
     cwd = Path(cwd) if cwd is not None else Path.cwd()
     m = _SCHEME_RE.match(s)
     scheme = m.group(1).lower() if m else ""
@@ -222,7 +223,7 @@ def classify_input(text: str, cwd: Optional[Path] = None) -> Target:
         path = urllib.parse.urlsplit(s).path
         if is_doc_path(path):
             if scheme == "http":
-                raise ViewerError("insecure", "HyperTeX 문서는 HTTPS 로만 가져옵니다: " + s)
+                raise ViewerError("insecure", tr('HyperTeX 문서는 HTTPS 로만 가져옵니다: ') + s)
             return Target("remote", https_to_htex(s) + _frag(s))
         return Target("web", s)
     if scheme == "file":
@@ -231,7 +232,7 @@ def classify_input(text: str, cwd: Optional[Path] = None) -> Target:
     if scheme == "htexapp":
         return Target("internal", s)
     if scheme:
-        raise ViewerError("bad-scheme", f"지원하지 않는 주소 형식입니다: {scheme}:")
+        raise ViewerError("bad-scheme", tr('지원하지 않는 주소 형식입니다: {scheme}:', scheme=scheme))
     p = Path(os.path.expanduser(s))
     if not p.is_absolute():
         p = cwd / p
@@ -239,7 +240,7 @@ def classify_input(text: str, cwd: Optional[Path] = None) -> Target:
         return Target("local", path=p.resolve())
     if _DOMAINISH.match(s):
         return classify_input("https://" + s, cwd)
-    raise ViewerError("not-found", f"파일을 찾을 수 없습니다: {s}", 404)
+    raise ViewerError("not-found", tr('파일을 찾을 수 없습니다: {s}', s=s), 404)
 
 
 def _frag(s: str) -> str:
@@ -252,7 +253,7 @@ class HTTPSOnlyRedirect(urllib.request.HTTPRedirectHandler):
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         if urllib.parse.urlsplit(newurl).scheme.lower() != "https":
-            raise FetchError("insecure-redirect", f"https 가 아닌 곳으로 리다이렉트: {newurl}")
+            raise FetchError("insecure-redirect", tr('https 가 아닌 곳으로 리다이렉트: {newurl}', newurl=newurl))
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -287,7 +288,7 @@ class Fetcher:
 
     def fetch(self, url: str, accept: str = "text/x-hypertex, text/plain;q=0.8, */*;q=0.1") -> FetchResult:
         if urllib.parse.urlsplit(url).scheme.lower() != "https":
-            raise FetchError("insecure", f"https 주소만 가져옵니다: {url}")
+            raise FetchError("insecure", tr('https 주소만 가져옵니다: {url}', url=url))
         req = urllib.request.Request(url, headers={"User-Agent": self.user_agent, "Accept": accept})
         deadline = self.clock() + self.timeout
         try:
@@ -295,21 +296,21 @@ class Fetcher:
         except FetchError:
             raise
         except urllib.error.HTTPError as e:
-            raise FetchError("http-error", f"서버 응답 {e.code}: {url}", 502) from None
+            raise FetchError("http-error", tr('서버 응답 {code}: {url}', code=e.code, url=url), 502) from None
         except (socket.timeout, TimeoutError):
-            raise FetchError("timeout", f"시간 제한({self.timeout:g}초)을 넘었습니다: {url}", 504) from None
+            raise FetchError("timeout", tr('시간 제한({timeout:g}초)을 넘었습니다: {url}', timeout=self.timeout, url=url), 504) from None
         except urllib.error.URLError as e:
             if isinstance(e.reason, (socket.timeout, TimeoutError)):
-                raise FetchError("timeout", f"시간 제한({self.timeout:g}초)을 넘었습니다: {url}", 504) from None
+                raise FetchError("timeout", tr('시간 제한({timeout:g}초)을 넘었습니다: {url}', timeout=self.timeout, url=url), 504) from None
             if isinstance(e.reason, FetchError):
                 raise e.reason from None
-            raise FetchError("network", f"가져오지 못했습니다: {url} ({e.reason})", 502) from None
+            raise FetchError("network", tr('가져오지 못했습니다: {url} ({reason})', url=url, reason=e.reason), 502) from None
         except (OSError, ValueError) as e:
-            raise FetchError("network", f"가져오지 못했습니다: {url} ({e})", 502) from None
+            raise FetchError("network", tr('가져오지 못했습니다: {url} ({e})', url=url, e=e), 502) from None
         try:
             final = resp.geturl() if hasattr(resp, "geturl") else url
             if urllib.parse.urlsplit(final).scheme.lower() != "https":
-                raise FetchError("insecure-redirect", f"https 가 아닌 곳으로 옮겨졌습니다: {final}")
+                raise FetchError("insecure-redirect", tr('https 가 아닌 곳으로 옮겨졌습니다: {final}', final=final))
             headers = getattr(resp, "headers", None) or {}
             length = headers.get("Content-Length") if hasattr(headers, "get") else None
             if length and str(length).isdigit() and int(length) > self.max_bytes:
@@ -317,11 +318,11 @@ class Fetcher:
             chunks, total = [], 0
             while True:
                 if self.clock() > deadline:
-                    raise FetchError("timeout", f"시간 제한({self.timeout:g}초)을 넘었습니다: {url}", 504)
+                    raise FetchError("timeout", tr('시간 제한({timeout:g}초)을 넘었습니다: {url}', timeout=self.timeout, url=url), 504)
                 try:
                     chunk = resp.read(65536)
                 except (socket.timeout, TimeoutError):
-                    raise FetchError("timeout", f"시간 제한({self.timeout:g}초)을 넘었습니다: {url}", 504) from None
+                    raise FetchError("timeout", tr('시간 제한({timeout:g}초)을 넘었습니다: {url}', timeout=self.timeout, url=url), 504) from None
                 if not chunk:
                     break
                 total += len(chunk)
@@ -340,7 +341,7 @@ class Fetcher:
 
 
 def _too_large(n: int) -> str:
-    return f"문서가 크기 상한({n // (1024 * 1024)}MB)을 넘습니다."
+    return tr('문서가 크기 상한({a1}MB)을 넘습니다.', a1=n // (1024 * 1024))
 
 
 # ====================================================================== 시간 상한
@@ -585,7 +586,7 @@ class ViewerCore:
                     rel = p.relative_to(root).as_posix()
                     return f"htexapp://doc-{key}/" + urllib.parse.quote(rel)
         if not register:
-            raise ViewerError("forbidden", f"열어 둔 폴더 밖의 파일입니다: {p}", 403)
+            raise ViewerError("forbidden", tr('열어 둔 폴더 밖의 파일입니다: {p}', p=p), 403)
         key = self.allow_root(p.parent)
         return f"htexapp://doc-{key}/" + urllib.parse.quote(p.name)
 
@@ -594,16 +595,16 @@ class ViewerCore:
         parts = urllib.parse.urlsplit(url)
         host = parts.netloc.lower()
         if not host.startswith("doc-"):
-            raise ViewerError("bad-url", f"로컬 문서 주소가 아닙니다: {url}")
+            raise ViewerError("bad-url", tr('로컬 문서 주소가 아닙니다: {url}', url=url))
         root = self.roots.get(host[4:])
         if root is None:
-            raise ViewerError("forbidden", "열어 둔 폴더가 아닙니다.", 403)
+            raise ViewerError("forbidden", tr('열어 둔 폴더가 아닙니다.'), 403)
         rel = urllib.parse.unquote(parts.path).lstrip("/")
         if "\x00" in rel or "\\" in rel:
-            raise ViewerError("forbidden", "허용되지 않는 경로입니다.", 403)
+            raise ViewerError("forbidden", tr('허용되지 않는 경로입니다.'), 403)
         p = (root / rel).resolve()
         if not _under(p, root):
-            raise ViewerError("forbidden", "열어 둔 폴더 밖의 파일입니다.", 403)
+            raise ViewerError("forbidden", tr('열어 둔 폴더 밖의 파일입니다.'), 403)
         return p
 
     def display_address(self, url: str) -> str:
@@ -613,7 +614,7 @@ class ViewerCore:
         if url.startswith("htexapp://source/"):
             rec = self._record_from_path(urllib.parse.urlsplit(url).path)
             if rec is not None:
-                return "원문: " + self.display_address(rec.address)
+                return tr('원문: ') + self.display_address(rec.address)
         if url.startswith("htexapp://doc-"):
             base, frag = split_fragment(url)
             try:
@@ -641,12 +642,12 @@ class ViewerCore:
         elif address.startswith("htexapp://doc-"):
             path = self.local_path(address)
             if path.suffix.lower() not in DOC_EXTS:
-                raise ViewerError("not-document", f"HyperTeX 문서가 아닙니다: {path.name}", 415)
+                raise ViewerError("not-document", tr('HyperTeX 문서가 아닙니다: {name}', name=path.name), 415)
             text = _read_local(path)
             remote = False
             base_dir, parse_url = path.parent, path.name
         else:
-            raise ViewerError("bad-url", f"문서 주소가 아닙니다: {address}")
+            raise ViewerError("bad-url", tr('문서 주소가 아닙니다: {address}', address=address))
 
         sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
         key = hashlib.sha256(f"{address}\n{sha}".encode("utf-8")).hexdigest()[:20]
@@ -741,12 +742,12 @@ class ViewerCore:
         if target.lower().startswith("htex:"):
             target = normalize_htex(target)
         if base.remote and not target.lower().startswith("htex:"):
-            raise ViewerError("forbidden", "원격 문서는 로컬 문서를 가리킬 수 없습니다.", 403)
+            raise ViewerError("forbidden", tr('원격 문서는 로컬 문서를 가리킬 수 없습니다.'), 403)
         if (not base.remote and target.startswith("htexapp://")
                 and urllib.parse.urlsplit(target).netloc != urllib.parse.urlsplit(base.address).netloc):
-            raise ViewerError("forbidden", "다른 폴더의 로컬 문서는 가리킬 수 없습니다.", 403)
+            raise ViewerError("forbidden", tr('다른 폴더의 로컬 문서는 가리킬 수 없습니다.'), 403)
         if not (target.lower().startswith("htex:") or target.startswith("htexapp://doc-")):
-            raise ViewerError("bad-url", f"문서 주소가 아닙니다: {target}")
+            raise ViewerError("bad-url", tr('문서 주소가 아닙니다: {target}', target=target))
         return target
 
     def resolve_links(self, rec: "DocRecord") -> dict:
@@ -795,7 +796,7 @@ class ViewerCore:
             target = _a(self._absolute(rec, href))
             return (f'<div class="htex-transclusion htex-transcluded"{m.group(1) or ""} '
                     f'data-href="{m.group(2)}">{frag}'
-                    f'<a class="htex-transclusion-source" href="{target}">출처: {_e(href)}</a></div>')
+                    f'<a class="htex-transclusion-source" href="{target}">{_e(tr("출처: {href}", href=href))}</a></div>')
 
         return self._TRANSCLUSION.sub(repl, page)
 
@@ -813,12 +814,12 @@ class ViewerCore:
         if target.lower().startswith("https:"):
             target = https_to_htex(target)
         if base.remote and not target.lower().startswith("htex:"):
-            raise ViewerError("forbidden", "원격 문서는 로컬 문서를 가리킬 수 없습니다.", 403)
+            raise ViewerError("forbidden", tr('원격 문서는 로컬 문서를 가리킬 수 없습니다.'), 403)
         if (not base.remote and target.startswith("htexapp://")
                 and urllib.parse.urlsplit(target).netloc != urllib.parse.urlsplit(base.address).netloc):
-            raise ViewerError("forbidden", "다른 폴더의 로컬 문서는 가리킬 수 없습니다.", 403)
+            raise ViewerError("forbidden", tr('다른 폴더의 로컬 문서는 가리킬 수 없습니다.'), 403)
         if not (target.lower().startswith("htex:") or target.startswith("htexapp://doc-")):
-            raise ViewerError("bad-url", f"문서 주소가 아닙니다: {target}")
+            raise ViewerError("bad-url", tr('문서 주소가 아닙니다: {target}', target=target))
         if budget_deadline is not None and self.clock() > budget_deadline:
             return None
         rec = base if target == base.address else self.load(target)
@@ -840,7 +841,7 @@ class ViewerCore:
                 if host.startswith("doc-"):
                     return self._respond_local(url, host, init, reload)
                 if init and not init.startswith(("htex:", "htexapp:")):
-                    return _fail(403, "웹 페이지에서는 쓸 수 없는 주소입니다.")
+                    return _fail(403, tr('웹 페이지에서는 쓸 수 없는 주소입니다.'))
                 if host == "asset":
                     return self._respond_asset(parts.path)
                 if host == "picture":
@@ -851,9 +852,9 @@ class ViewerCore:
                     return self._respond_source(parts, init)
                 if host == "start":
                     return self._respond_start(parts)
-            return _fail(404, "알 수 없는 주소입니다.")
+            return _fail(404, tr('알 수 없는 주소입니다.'))
         except Exception as e:   # noqa: BLE001 - 뷰어가 멈추지 않게
-            return self._error(ViewerError("internal", f"내부 오류: {type(e).__name__}: {e}", 500), url)
+            return self._error(ViewerError("internal", tr('내부 오류: {name__}: {e}', name__=type(e).__name__, e=e), 500), url)
 
     def themed(self, page: str) -> str:
         """<html> 에 data-theme (J). 시스템 설정이면 그대로."""
@@ -881,7 +882,7 @@ class ViewerCore:
             try:
                 res = self.fetcher.fetch(htex_to_https(address), accept="image/*")
             except ViewerError:
-                return _fail(502, "그림을 가져오지 못했습니다.")
+                return _fail(502, tr('그림을 가져오지 못했습니다.'))
             ctype = res.content_type.split(";")[0].strip().lower()
             if ctype not in IMAGE_TYPES.values():
                 ctype = IMAGE_TYPES[ext]
@@ -901,7 +902,7 @@ class ViewerCore:
     def _respond_local(self, url: str, host: str, init: str, reload: bool) -> Response:
         # 로컬 문서에는 사용자가 직접 연 것(initiator 없음)이나 같은 뿌리의 문서만 닿는다.
         if init and init != f"htexapp://{host}":
-            return self._error(ViewerError("forbidden", "다른 출처에서 로컬 파일을 열 수 없습니다.", 403), url)
+            return self._error(ViewerError("forbidden", tr('다른 출처에서 로컬 파일을 열 수 없습니다.'), 403), url)
         if images.has_mark(url):
             return self._respond_local_image(images.strip_mark(split_fragment(url)[0]))
         try:
@@ -917,7 +918,7 @@ class ViewerCore:
                                 {"X-Content-Type-Options": "nosniff",
                                  "Content-Security-Policy": "default-src 'none'"})
             except OSError:
-                return _fail(404, "그림 파일이 없습니다.")
+                return _fail(404, tr('그림 파일이 없습니다.'))
         if ext in HTML_EXTS or ext in ASSET_TYPES:
             return self._respond_local_file(path, ext)
         try:
@@ -932,22 +933,22 @@ class ViewerCore:
         try:
             path = images.find_local(self.local_path(url))
         except ViewerError:
-            return _fail(403, "열어 둔 폴더 밖의 그림입니다.")
+            return _fail(403, tr('열어 둔 폴더 밖의 그림입니다.'))
         if path is None or not _under(path.resolve(), self.local_path(url).parent.resolve()):
-            return _fail(404, "그림 파일이 없습니다.")
+            return _fail(404, tr('그림 파일이 없습니다.'))
         try:
             if path.stat().st_size > MAX_BYTES:
                 return _fail(413, _too_large(MAX_BYTES))
             data = path.read_bytes()
         except OSError:
-            return _fail(404, "그림 파일이 없습니다.")
+            return _fail(404, tr('그림 파일이 없습니다.'))
         return self._image_bytes(data, path.suffix.lower())
 
     def _respond_remote_image(self, address: str) -> Response:
         try:
             res = self.fetcher.fetch(htex_to_https(address), accept="image/*,application/pdf")
         except ViewerError:
-            return _fail(502, "그림을 가져오지 못했습니다.")
+            return _fail(502, tr('그림을 가져오지 못했습니다.'))
         ext = images.ext_of(address)
         ctype = res.content_type.split(";")[0].strip().lower()
         if ctype == "application/pdf":
@@ -969,7 +970,7 @@ class ViewerCore:
             return Response(200, "image/svg+xml", svg, headers)
         if ext in IMAGE_TYPES:
             return Response(200, IMAGE_TYPES[ext], data, headers)
-        return _fail(415, "보여 줄 수 없는 그림 형식입니다.")
+        return _fail(415, tr('보여 줄 수 없는 그림 형식입니다.'))
 
     def _respond_local_file(self, path: Path, ext: str) -> Response:
         """로컬 HTML 과 그것이 부르는 CSS·JS·글꼴 (M). 열어 둔 폴더 안만 (local_path 가 이미 확인)."""
@@ -978,7 +979,7 @@ class ViewerCore:
                 return _fail(413, _too_large(MAX_BYTES))
             data = path.read_bytes()
         except OSError:
-            return _fail(404, "파일이 없습니다.")
+            return _fail(404, tr('파일이 없습니다.'))
         if ext in HTML_EXTS:
             return Response(200, "text/html", data,
                             {"Content-Security-Policy": LOCAL_HTML_CSP, "X-Content-Type-Options": "nosniff",
@@ -995,7 +996,7 @@ class ViewerCore:
         """새 탭·홈 페이지 (L). /go·/open·/action 은 창이 가로채므로 여기까지 오면 404."""
         from . import startpage
         if parts.path not in ("", "/"):
-            return _fail(404, "알 수 없는 주소입니다.")
+            return _fail(404, tr('알 수 없는 주소입니다.'))
         try:
             items = list(self.start_bookmarks()) if self.start_bookmarks else []
         except Exception:   # noqa: BLE001 - 시작 페이지는 언제나 뜬다
@@ -1009,9 +1010,9 @@ class ViewerCore:
         """원문 보기 (J): 원문을 escape 해 <pre> 로. 스크립트는 아무것도 실행되지 않는다(CSP default-src 'none')."""
         rec = self._record_from_path(parts.path)
         if rec is None:
-            return _fail(404, "문서를 찾을 수 없습니다.")
+            return _fail(404, tr('문서를 찾을 수 없습니다.'))
         if init.startswith("htex:") and not rec.remote:
-            return _fail(403, "허용되지 않는 요청입니다.")
+            return _fail(403, tr('허용되지 않는 요청입니다.'))
         page = source_page(rec.source, self.display_address(rec.address), rec.title)
         return Response(200, "text/html", self.themed(page).encode("utf-8"),
                         {"Content-Security-Policy": SOURCE_CSP, "X-Content-Type-Options": "nosniff"})
@@ -1023,7 +1024,7 @@ class ViewerCore:
 
     def _respond_asset(self, path: str) -> Response:
         if path.strip("/") != "interact.js":
-            return _fail(404, "없는 자원입니다.")
+            return _fail(404, tr('없는 자원입니다.'))
         try:
             body = self.interact_js.read_bytes()
         except OSError:
@@ -1041,24 +1042,24 @@ class ViewerCore:
     def _respond_picture(self, parts, init: str) -> Response:
         rec = self._record_from_path(parts.path)
         if rec is None:
-            return _fail(404, "문서를 찾을 수 없습니다.")
+            return _fail(404, tr('문서를 찾을 수 없습니다.'))
         if init.startswith("htex:") and not rec.remote:
-            return _fail(403, "허용되지 않는 요청입니다.")
+            return _fail(403, tr('허용되지 않는 요청입니다.'))
         q = urllib.parse.parse_qs(parts.query, keep_blank_values=True)
         node = (q.pop("node", [""]) or [""])[0]
         if not node:
-            return _fail(400, "node 가 없습니다.")
+            return _fail(400, tr('node 가 없습니다.'))
         values: dict[str, float] = {}
         for k, v in q.items():
             try:
                 values[k] = float(v[-1])
             except ValueError:
-                return _fail(400, f"값이 수가 아닙니다: {k}")
+                return _fail(400, tr('값이 수가 아닙니다: {k}', k=k))
         if node not in _picture_ids(rec.tree):
-            return _fail(404, "그 그림이 없습니다.")
+            return _fail(404, tr('그 그림이 없습니다.'))
         svg = picture_svg(rec.tree, node, values, self.picture_renderer)
         if svg is None:
-            return _fail(422, "그림을 그리지 못했습니다.")     # G 서버와 같은 코드
+            return _fail(422, tr('그림을 그리지 못했습니다.'))     # G 서버와 같은 코드
         headers = {"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
                    "X-Content-Type-Options": "nosniff", **self._cors(init)}
         return Response(200, "image/svg+xml", svg.encode("utf-8"), headers)
@@ -1069,21 +1070,21 @@ class ViewerCore:
         doc = (q.get("doc") or [""])[0]
         label = (q.get("label") or [""])[0]
         if rec is None:
-            return _fail(404, "문서를 찾을 수 없습니다.")
+            return _fail(404, tr('문서를 찾을 수 없습니다.'))
         if not label and "#" in doc:
             doc, label = doc.split("#", 1)
         if not label:
-            return _fail(400, "label 이 없습니다.")
+            return _fail(400, tr('label 이 없습니다.'))
         if init.startswith("htex:") and not rec.remote:
-            return _fail(403, "허용되지 않는 요청입니다.")
+            return _fail(403, tr('허용되지 않는 요청입니다.'))
         try:
             frag = self.fragment_for(rec, doc, label=label)
         except WebPage:
-            return _fail(404, "HyperTeX 문서가 아닙니다.")
+            return _fail(404, tr('HyperTeX 문서가 아닙니다.'))
         except ViewerError as e:
             return _fail(e.status if 400 <= e.status < 600 else 400, e.message)
         if frag is None:
-            return _fail(404, "라벨을 찾을 수 없습니다.")
+            return _fail(404, tr('라벨을 찾을 수 없습니다.'))
         return Response(200, "text/html", frag.encode("utf-8"),
                         {"X-Content-Type-Options": "nosniff", **self._cors(init)})
 
@@ -1163,11 +1164,11 @@ def _read_local(path: Path) -> str:
             raise ViewerError("too-large", _too_large(MAX_BYTES), 413)
         return _decode(path.read_bytes())
     except FileNotFoundError:
-        raise ViewerError("not-found", f"파일이 없습니다: {path.name}", 404) from None
+        raise ViewerError("not-found", tr('파일이 없습니다: {name}', name=path.name), 404) from None
     except IsADirectoryError:
-        raise ViewerError("not-found", f"폴더입니다: {path.name}", 404) from None
+        raise ViewerError("not-found", tr('폴더입니다: {name}', name=path.name), 404) from None
     except OSError as e:
-        raise ViewerError("io", f"파일을 읽지 못했습니다: {path.name} ({e})", 500) from None
+        raise ViewerError("io", tr('파일을 읽지 못했습니다: {name} ({e})', name=path.name, e=e), 500) from None
 
 
 def _decode(data: bytes) -> str:
@@ -1191,14 +1192,14 @@ def _fail(status: int, message: str) -> Response:
 
 def error_page(err: ViewerError, url: str = "") -> Response:
     page = f"""<!doctype html>
-<html lang="ko"><head><meta charset="utf-8">
+<html lang="{ui_language()}"><head><meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="{_a("default-src 'none'; style-src 'unsafe-inline'")}">
-<title>열 수 없음</title>
+<title>{_e(tr("열 수 없음"))}</title>
 <style>{ERROR_CSS}</style></head>
 <body><main class="htex-viewer-error" data-code="{_a(err.code)}">
 <p class="code">{_e(err.status)} · {_e(err.code)}</p>
-<h1>문서를 열 수 없습니다</h1>
+<h1>{_e(tr("문서를 열 수 없습니다"))}</h1>
 <p class="msg">{_e(err.message)}</p>
 {f'<p class="url"><code>{_e(url)}</code></p>' if url else ''}
 </main></body></html>
@@ -1234,12 +1235,12 @@ def source_page(text: str, address: str, title: str = "") -> str:
                    for i, line in enumerate(lines, 1))
     name = re.split(r"[/\\]", address)[-1] or address   # 윈도 경로(\)도
     return f"""<!doctype html>
-<html lang="ko"><head><meta charset="utf-8">
+<html lang="{ui_language()}"><head><meta charset="utf-8">
 <meta name="color-scheme" content="light dark">
 <meta http-equiv="Content-Security-Policy" content="{_a("default-src 'none'; style-src 'unsafe-inline'")}">
-<title>원문: {_e(name)}</title>
+<title>{_e(tr("원문: {name}", name=name))}</title>
 <style>{SOURCE_CSS}</style></head>
-<body><header class="htex-source-head"><strong>원문 (읽기 전용)</strong> <code>{_e(address)}</code>{(" · " + _e(title)) if title else ""}</header>
+<body><header class="htex-source-head"><strong>{_e(tr("원문 (읽기 전용)"))}</strong> <code>{_e(address)}</code>{(" · " + _e(title)) if title else ""}</header>
 <pre class="htex-source">{rows}</pre></body></html>
 """
 

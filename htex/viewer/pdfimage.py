@@ -6,6 +6,7 @@
 결과는 (내용 해시)로 작은 LRU 에 담아 둔다. 스레드 안전 (뷰어 처리기는 작업 스레드에서 부른다).
 """
 from __future__ import annotations
+from ..i18n import tr
 
 import hashlib
 import threading
@@ -64,7 +65,7 @@ def _render(data: bytes, page: int) -> "tuple[bytes, tuple[float, float]]":
         from PySide6.QtGui import QColor, QImage, QPainter
         from PySide6.QtPdf import QPdfDocument
     except Exception as e:   # noqa: BLE001
-        raise PdfImageError("PDF 그림을 그릴 모듈(QtPdf)이 없습니다.") from e
+        raise PdfImageError(tr('PDF 그림을 그릴 모듈(QtPdf)이 없습니다.')) from e
     with _RENDER_LOCK:
         buf = QBuffer()
         buf.setData(QByteArray(data))
@@ -74,7 +75,7 @@ def _render(data: bytes, page: int) -> "tuple[bytes, tuple[float, float]]":
         if doc.status() != QPdfDocument.Status.Ready or doc.pageCount() <= page:
             err = doc.error()
             doc.close()
-            raise PdfImageError(f"PDF 를 열 수 없습니다 ({getattr(err, 'name', err)}).")
+            raise PdfImageError(tr('PDF 를 열 수 없습니다 ({a1}).', a1=getattr(err, 'name', err)))
         pts = doc.pagePointSize(page)          # 1pt = 1/72 in, CSS px 와 거의 같다
         w, h = max(1.0, pts.width()), max(1.0, pts.height())
         scale = min(SCALE, MAX_SIDE / max(w, h))
@@ -82,7 +83,7 @@ def _render(data: bytes, page: int) -> "tuple[bytes, tuple[float, float]]":
         img = doc.render(page, size)
         doc.close()
         if img.isNull():
-            raise PdfImageError("PDF 를 그리지 못했습니다.")
+            raise PdfImageError(tr('PDF 를 그리지 못했습니다.'))
         out = QImage(img.size(), QImage.Format.Format_RGB32)
         out.fill(QColor("white"))
         p = QPainter(out)
@@ -92,7 +93,7 @@ def _render(data: bytes, page: int) -> "tuple[bytes, tuple[float, float]]":
         ob = QBuffer(ba)
         ob.open(QIODevice.OpenModeFlag.WriteOnly)
         if not out.save(ob, "PNG"):
-            raise PdfImageError("PNG 로 저장하지 못했습니다.")
+            raise PdfImageError(tr('PNG 로 저장하지 못했습니다.'))
         ob.close()
         return bytes(ba.data()), (w, h)
 

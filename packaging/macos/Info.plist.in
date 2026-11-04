@@ -14,6 +14,10 @@
   <key>NSRequiresAquaSystemAppearance</key> <false/>
   <key>LSApplicationCategoryType</key>    <string>public.app-category.productivity</string>
   <key>NSHumanReadableCopyright</key>     <string>HyperTeX contributors</string>
+  <!-- 화면 글자는 영어·한국어 (htex/i18n.py). macOS 가 서비스·숨기기 같은 시스템 메뉴도 사용자 언어로 보이게 -->
+  <key>CFBundleDevelopmentRegion</key>    <string>en</string>
+  <key>CFBundleLocalizations</key>        <array><string>en</string><string>ko</string></array>
+  <key>CFBundleAllowMixedLocalizations</key> <true/>
 
   <!-- htex:// 주소 -->
   <key>CFBundleURLTypes</key>

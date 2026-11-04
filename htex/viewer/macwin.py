@@ -12,6 +12,7 @@ ctypes 로 직접 부른다(추가 의존성 없음):
 다른 운영체제·Qt 6.9 미만·네이티브 호출 실패 때는 모두 조용히 아무것도 하지 않는다 (예전처럼 제목 막대 아래 탭 줄).
 """
 from __future__ import annotations
+from ..i18n import tr
 
 import ctypes
 import ctypes.util
@@ -113,7 +114,7 @@ def hide_title_text(widget) -> bool:
     try:
         win = _ns_window(widget)
         if not win:
-            raise RuntimeError("NSWindow 없음")
+            raise RuntimeError(tr('NSWindow 없음'))
         _send(win, "setTitleVisibility:", 1, restype=None, argtypes=(ctypes.c_long,))   # NSWindowTitleHidden
         return _send(win, "titleVisibility", restype=ctypes.c_long) == 1
     except Exception as e:   # noqa: BLE001
@@ -131,14 +132,14 @@ def place_traffic_lights(widget, strip_height: float, center_from_top: float) ->
     try:
         win = _ns_window(widget)
         if not win:
-            raise RuntimeError("NSWindow 없음")
+            raise RuntimeError(tr('NSWindow 없음'))
         close = _send(win, "standardWindowButton:", 0, argtypes=(ctypes.c_ulong,))
         if not close:
-            raise RuntimeError("단추 없음")
+            raise RuntimeError(tr('단추 없음'))
         titlebar_view = _send(close, "superview")
         container = _send(titlebar_view, "superview") if titlebar_view else None
         if not container:
-            raise RuntimeError("제목 막대 컨테이너 없음")
+            raise RuntimeError(tr('제목 막대 컨테이너 없음'))
         win_frame = _send(win, "frame", restype=NSRect)
         frame = _send(container, "frame", restype=NSRect)
         frame.size.height = float(strip_height)

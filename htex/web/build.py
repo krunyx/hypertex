@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote, unquote, urlsplit
 
+from ..i18n import tr
 from .common import (CSP_META, INTERACT_JS_PATH, PathRejected, e, error_page, is_document,
                      ListingEntry, listing_page, plain_title, resolve_in_root, rel_href)
 
@@ -59,13 +60,13 @@ def make_image_url(root: Path, rel: str, rep: "BuildReport"):
         if not images.needs_help(src):
             return src
         if "://" in src or src.startswith(("/", "data:")):
-            rep.warnings.append(f"{rel}: 웹에서는 이 그림을 보일 수 없다 (PDF·확장자 없음): {src}")
+            rep.warnings.append(tr('{rel}: 웹에서는 이 그림을 보일 수 없다 (PDF·확장자 없음): {src}', rel=rel, src=src))
             return src
         path_part = src.split("#", 1)[0].split("?", 1)[0]
         tail = src[len(path_part):]
         sub = images.web_substitute(doc_dir / unquote(path_part))
         if sub is None:
-            rep.warnings.append(f"{rel}: 웹에서 보일 그림 파일이 없다 (같은 이름의 SVG·PNG 를 두면 쓴다): {src}")
+            rep.warnings.append(tr('{rel}: 웹에서 보일 그림 파일이 없다 (같은 이름의 SVG·PNG 를 두면 쓴다): {src}', rel=rel, src=src))
             return src
         head = path_part.rpartition("/")[0]
         return (head + "/" if head else "") + quote(sub.name) + tail
@@ -107,7 +108,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
     if not root.is_dir():
         raise NotADirectoryError(str(root))
     if out == root:
-        raise ValueError("출력 폴더가 입력 폴더와 같다")
+        raise ValueError(tr('출력 폴더가 입력 폴더와 같다'))
     rep = BuildReport()
 
     # 1) 파일 모으기
@@ -131,7 +132,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
                 continue
             p = d / n
             if not _inside(root, p) or not p.resolve().is_file():
-                rep.warnings.append(f"건너뜀(루트 밖 링크): {(rel_d + '/' if rel_d else '') + n}")
+                rep.warnings.append(tr('건너뜀(루트 밖 링크): {a1}', a1=(rel_d + '/' if rel_d else '') + n))
                 continue
             rel = (rel_d + "/" if rel_d else "") + n
             (docs if is_document(n) else statics).append(rel)
@@ -142,7 +143,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
     for rel in sorted(docs, key=lambda r: (not r.lower().endswith(".htex"), r)):
         name = _doc_html_name(rel, taken)
         if name != rel.rsplit(".", 1)[0] + ".html":
-            rep.warnings.append(f"이름 충돌: {rel} → {name}")
+            rep.warnings.append(tr('이름 충돌: {rel} → {name}', rel=rel, name=name))
         taken.add(name)
         html_names[rel] = name
 
@@ -175,7 +176,7 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
         except Exception as exc:  # noqa: BLE001
             rep.errors.append(f"{rel}: {type(exc).__name__}: {exc}")
             src = (root / rel).read_text(encoding="utf-8", errors="replace")
-            text = error_page("문서를 표시할 수 없다", "HTML 변환 중 오류가 났다. 원문을 대신 보인다.",
+            text = error_page(tr('문서를 표시할 수 없다'), tr('HTML 변환 중 오류가 났다. 원문을 대신 보인다.'),
                               f"{type(exc).__name__}: {exc}", src)
         dst = out / name
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -213,10 +214,10 @@ def build(root: Path | str, out: Path | str, *, quiet: bool = True) -> BuildRepo
 
     if not quiet:
         for w in rep.warnings:
-            print("경고:", w, file=sys.stderr)
+            print(tr('경고:'), w, file=sys.stderr)
         for er in rep.errors:
-            print("오류:", er, file=sys.stderr)
-        print(f"문서 {len(rep.documents)}개, 파일 {len(rep.copied)}개, 목록 {len(rep.listings)}개 → {out}",
+            print(tr('오류:'), er, file=sys.stderr)
+        print(tr('문서 {a1}개, 파일 {a3}개, 목록 {a5}개 → {out}', a1=len(rep.documents), a3=len(rep.copied), a5=len(rep.listings), out=out),
               file=sys.stderr)
     return rep
 

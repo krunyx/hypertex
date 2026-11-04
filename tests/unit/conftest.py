@@ -1,6 +1,11 @@
 """pytest 공통 설정."""
 from __future__ import annotations
 
+import os
+
+# 화면 글자는 한국어 원문 기준으로 시험한다 (영어는 test_P_i18n.py 가 따로). 하위 프로세스도 물려받는다.
+os.environ["HTEX_LANG"] = "ko"
+
 
 def pytest_make_parametrize_id(config, val, argname):
     """긴 매개변수 값은 테스트 이름을 짧게 만든다.

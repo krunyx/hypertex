@@ -11,6 +11,7 @@ import json
 import sys
 from pathlib import Path
 
+from .i18n import tr
 from .parser import parse_file
 
 
@@ -22,17 +23,17 @@ def main(argv=None) -> int:
         sp.add_argument("file", type=Path)
         sp.add_argument("-o", "--output", type=Path)
     # --- G: 웹 폴백 ---
-    sp = sub.add_parser("serve", help="폴더의 HyperTeX 문서를 일반 브라우저용으로 제공")
+    sp = sub.add_parser("serve", help=tr('폴더의 HyperTeX 문서를 일반 브라우저용으로 제공'))
     sp.add_argument("dir", type=Path)
     sp.add_argument("--port", type=int, default=8000)
     sp.add_argument("--host", default="127.0.0.1")
-    sp = sub.add_parser("build", help="폴더를 정적 HTML 사이트로")
+    sp = sub.add_parser("build", help=tr('폴더를 정적 HTML 사이트로'))
     sp.add_argument("dir", type=Path)
     sp.add_argument("-o", "--output", type=Path, required=True)
     # --- F: 전용 뷰어 ---
-    sp = sub.add_parser("view", help="전용 뷰어로 열기 (PySide6 필요)")
+    sp = sub.add_parser("view", help=tr('전용 뷰어로 열기 (PySide6 필요)'))
     sp.add_argument("targets", nargs="*", metavar="target",
-                    help="파일 경로, htex:// 또는 https:// 주소 (여러 개 가능)")
+                    help=tr('파일 경로, htex:// 또는 https:// 주소 (여러 개 가능)'))
     args = ap.parse_args(argv)
 
     if args.cmd == "serve":
@@ -65,10 +66,10 @@ def _view(targets) -> int:
         import PySide6  # noqa: F401
         from PySide6 import QtWebEngineWidgets  # noqa: F401
     except ImportError:
-        _err(
-            "htex view 에는 PySide6(QtWebEngine 포함)가 필요합니다.\n"
-            "  설치: python -m pip install PySide6   (또는 pip install 'htex[viewer]')\n"
-            "그동안은 'python -m htex html 문서.htex -o 문서.html' 로 만든 HTML 을 브라우저에서 볼 수 있습니다.\n")
+        _err(tr("htex view 에는 PySide6(QtWebEngine 포함)가 필요합니다.") + "\n"
+             "  " + tr("설치") + ": python -m pip install PySide6   (pip install 'htex[viewer]')\n"
+             + tr("그동안은 'python -m htex html 문서.htex -o 문서.html' 로 만든 HTML 을 브라우저에서 볼 수 있습니다.")
+             + "\n")
         return 2
     from .viewer.app import run
     return _call_run(run, targets)
