@@ -50,6 +50,7 @@ def main(argv=None) -> int:
     ap.add_argument("doc", type=Path, nargs="?", default=ROOT / "examples" / "oscillator.htex")
     ap.add_argument("--out", default=str(ROOT / "dist" / "smoke"))
     ap.add_argument("--timeout", type=float, default=60)
+    ap.add_argument("--no-pdf", action="store_true", help="PDF 그림 확인을 건너뛴다")
     a = ap.parse_args(argv)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     res = run(a.exe, a.doc.resolve(), a.out, a.timeout)
@@ -62,7 +63,23 @@ def main(argv=None) -> int:
     ok = bool(res.get("ok")) and res.get("title") and js.get("htex") == "object" and js.get("math", 0) > 0 \
         and Path(a.out + ".png").exists()
     print("스모크 테스트:", "통과" if ok else "실패", f"(스크린숏 {a.out}.png)")
+    if ok and not a.no_pdf:
+        ok = check_pdf_figure(a.exe, a.out + "-pdf", a.timeout)
     return 0 if ok else 1
+
+
+def check_pdf_figure(exe: Path, out: str, timeout: float) -> bool:
+    """묶인 앱에 QtPdf 가 들어 있어 PDF 그림(확장자 있음·없음)이 그려지는지."""
+    res = run(exe, (ROOT / "packaging" / "smoke" / "pdf-figure.tex").resolve(), out, timeout)
+    try:
+        js = json.loads(res.get("js") or "{}")
+    except ValueError:
+        js = {}
+    imgs = js.get("images") or []
+    ok = bool(res.get("ok")) and len(imgs) == 2 and all(w > 0 for w in imgs)
+    print(json.dumps({"pdf_figure": res, "images": imgs}, ensure_ascii=False, indent=2))
+    print("PDF 그림:", "통과" if ok else "실패", f"(스크린숏 {out}.png)")
+    return ok
 
 
 if __name__ == "__main__":

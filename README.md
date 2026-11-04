@@ -76,6 +76,8 @@ python -m htex parse examples/oscillator.htex
 호환 모드는 실제 원고에서 흔한 것들을 받는다: 인수·구분자 있는 `\def`, `\let`, `\newenvironment`,
 `\@ifnextchar`와 TeX 조건문, `\cref`, 옛 글꼴 전환(`{\bf …}`), `\chapter`, 가환 그림(`\xymatrix`, `tikzcd`, amscd `CD`),
 그리고 표시와 무관한 조판·색인 명령은 조용히 버린다. 자세한 목록과 결정은 `notes/K-questions.md`.
+그림은 SVG·PNG·JPEG 외에 pdflatex 원고의 PDF 그림도 뷰어가 첫 쪽을 그려 보여 주고, 확장자를 생략한
+`\includegraphics{fig}`는 LaTeX처럼 파일을 찾는다. `htex build`는 같은 이름의 SVG·PNG 가 있으면 그것을 쓴다 (`notes/O-questions.md`).
 
 ## 테스트
 

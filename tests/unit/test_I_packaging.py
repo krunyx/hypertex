@@ -72,6 +72,7 @@ def _spec_regex():
     "libQt6Positioning.so.6", "libQt6PrintSupport.so.6", "libQt6OpenGL.so.6", "libQt6Network.so.6",
     "libQt6Svg.so.6", "libQt6XcbQpa.so.6", "Qt6WebEngineCore.dll", "Qt6Qml.dll", "Qt6QuickWidgets.dll",
     "QtWebEngineCore", "QtQuick", "QtQml",
+    "libQt6Pdf.so.6", "Qt6Pdf.dll", "QtPdf",          # PDF 그림 (O)
 ])
 def test_spec_keeps_webengine_dependencies(name):
     """QtWebEngine 이 링크하는 Qt 라이브러리를 정리 규칙이 지우면 실행 파일이 뜨지 않는다."""
@@ -79,7 +80,8 @@ def test_spec_keeps_webengine_dependencies(name):
 
 
 @pytest.mark.parametrize("name", ["libQt63DCore.so.6", "libQt6Quick3D.so.6", "libQt6ChartsQml.so.6",
-                                  "Qt6Pdf.dll", "libQt6QuickControls2.so.6", "libQt6Multimedia.so.6"])
+                                  "Qt6PdfWidgets.dll", "Qt6PdfQuick.dll", "libQt6QuickControls2.so.6",
+                                  "libQt6Multimedia.so.6"])
 def test_spec_drops_unused(name):
     assert _spec_regex().match(name)
 

@@ -103,3 +103,10 @@ I와 J 사이의 약속:
 | 담당 | 수정 가능한 파일 | 완료 기준 |
 | --- | --- | --- |
 | N 제목 막대 탭 | 새 파일 `htex/viewer/macwin.py`, `htex/viewer/app.py`·`chrome.py`(탭 줄 제목 막대 모드), `README.md`(뷰어 절), `tests/unit/test_N_*.py`, `notes/N-questions.md`, `notes/L-questions.md`(1절 갱신) | macOS 에서 탭 줄이 창 맨 위(신호등 단추 옆), 빈 곳 끌기·더블클릭이 제목 막대처럼, 윈도·리눅스는 그대로, 기존 테스트 유지 |
+
+
+## 8단계 담당 구역 (PDF 그림, 확장자 없는 그림)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| O 그림 형식 | 새 파일 `htex/images.py`·`htex/viewer/pdfimage.py`, `htex/viewer/core.py`(그림 응답), `htex/html/render.py`·`__init__.py`(`image_url`), `htex/web/build.py`(정적 빌드 대체 그림), `htex/build_blocks.py`(EPS 진단), `packaging/`(QtPdf 포함·스모크 테스트), `docs/spec.md`·`README.md`, `tests/unit/test_O_*.py`, `notes/O-questions.md` | 뷰어에서 PDF 그림·확장자 없는 그림이 보임, 묶인 앱 스모크 테스트에서도, 기존 테스트 유지 |

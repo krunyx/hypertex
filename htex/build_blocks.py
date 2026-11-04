@@ -1,6 +1,7 @@
 """트리 빌더: 블록 노드 (절, 단락, 환경, 디스플레이 수식, 그림·표, 참고문헌). (담당: C)"""
 from __future__ import annotations
 
+import posixpath
 import re
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
@@ -708,6 +709,9 @@ class BlockMixin:
             self.emit({"kind": "error", "code": "insecure-resource",
                        "raw": detok(self.toks[start:self.pos])})
             return
+        if posixpath.splitext(src.split("?", 1)[0].split("#", 1)[0])[1].lower() in (".eps", ".ps"):
+            self.sink.add("missing-resource",
+                          f"EPS 그림은 보여 줄 수 없다 (PDF·SVG·PNG 로 바꿔 주세요): {src}", tok.span)
         node: dict = {"kind": "image", "id": self.new_id(), "span": span_json(tok), "src": src}
         if opt is not None:
             for kv in raw_text(opt).split(","):

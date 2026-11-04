@@ -42,7 +42,7 @@ URL 스킴: 표준 주소는 htex://호스트/경로, 전송은 HTTPS. 일반 �
 | 수식 | $…$, \[…\], equation, align, gather, multline (별표 형 포함), cases, matrix 계열 |
 | 수식 기호 | amsmath·amssymb 수준 |
 | 정리 환경 | theorem, lemma, proposition, corollary, definition, example, remark, proof, \newtheorem |
-| 그림 | figure, \includegraphics (SVG·PNG·JPEG, URL), \caption |
+| 그림 | figure, \includegraphics (SVG·PNG·JPEG·GIF·WebP, URL; 뷰어는 PDF 첫 쪽도. 확장자를 생략하면 .svg → .png → .jpg → .pdf 순으로 찾는다), \caption |
 | 표 | table, tabular (\| l c r, \hline, \multicolumn) |
 | 링크 | \label, \ref, \eqref, \href, \url, \cite, \transclude |
 | 메타 | \title, \author, \date, \abstract, \keywords, \maketitle |
