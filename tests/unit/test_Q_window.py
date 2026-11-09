@@ -44,6 +44,7 @@ SCRIPT = textwrap.dedent(r'''
     from htex.viewer.bookmarks import BookmarkStore
     from htex.viewer.core import ViewerCore, TreeCache, Fetcher
     from test_F_core import FakeOpener
+    from htex.viewer import editing
     REMOTE = (WORK / "remote.tex").read_text("utf-8")
     op = FakeOpener({"https://ex.org/d/r.tex": REMOTE, "https://ex.org/d/sec1.tex": "원격 SECTION",
                      "https://ex.org/d/fig.png": (b"\x89PNG\r\n\x1a\n0000", "image/png")})
@@ -99,7 +100,8 @@ SCRIPT = textwrap.dedent(r'''
     wait_until(lambda: not pane.dirty, 5)
     res["saved"] = {"file": "NEWTEXT" in (WORK / "doc.htex").read_text("utf-8"), "dirty": pane.dirty,
                     "tab": w.tabs.tabText(w.tabs.indexOf(tab)),
-                    "backups": len(list((Path(sys.argv[4]) / "hypertex" / "backups").glob("*doc.htex")))}
+                    "backups": len(list(editing.default_backup_dir().glob("*doc.htex"))),
+                    "backup_in_tmp": str(editing.default_backup_dir()).startswith(sys.argv[4])}
     # 밖에서 파일을 바꾸면 (고친 것이 없을 때) 편집기도 새 내용
     (WORK / "doc.htex").write_text((WORK / "doc.htex").read_text("utf-8").replace("NEWTEXT", "OUTSIDE"), "utf-8")
     wait_until(lambda: "OUTSIDE" in (js(pane.page, "HtexEditor.getText()") or ""), 6)
@@ -166,8 +168,9 @@ def result(tmp_path_factory):
     cache = tmp / "cache"
     env = dict(os.environ, QT_QPA_PLATFORM="offscreen", QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox --disable-gpu",
                XDG_CONFIG_HOME=str(tmp / "config"), XDG_CACHE_HOME=str(cache),
-               XDG_DATA_HOME=str(tmp / "data"), HOME=str(tmp))
-    p = subprocess.run([sys.executable, str(script), str(ROOT), str(out), str(work), str(cache)], env=env,
+               XDG_DATA_HOME=str(tmp / "data"), HOME=str(tmp), LOCALAPPDATA=str(tmp / "local"),
+               USERPROFILE=str(tmp))
+    p = subprocess.run([sys.executable, str(script), str(ROOT), str(out), str(work), str(tmp)], env=env,
                        capture_output=True, text=True, timeout=240)
     if not out.exists():
         pytest.fail("창 스크립트 실패:\n" + p.stdout[-3000:] + p.stderr[-4000:])
@@ -195,7 +198,7 @@ def test_typing_updates_preview_not_file(result):
 def test_save_writes_file_and_backup(result):
     s = result["saved"]
     assert s["file"] and not s["dirty"] and not s["tab"].startswith("●")
-    assert s["backups"] == 1
+    assert s["backups"] == 1 and s["backup_in_tmp"]
 
 
 def test_outside_change_reloads_clean_editor(result):
