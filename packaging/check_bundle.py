@@ -24,6 +24,7 @@ def check(root: Path) -> list[str]:
         "htex/web/interact.js": "interact.js",
         "htex/viewer/editor.js (원문 편집기)": "editor.js",
         "QtWebChannel (편집기와 창 사이)": "*Qt*WebChannel*",
+        "certifi (https 인증서: Mozilla 묶음)": "cacert.pem",
         "QtWebEngineProcess": "QtWebEngineProcess*",
         "icudtl.dat": "icudtl.dat",
         "qtwebengine_resources.pak": "qtwebengine_resources.pak",
