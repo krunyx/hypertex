@@ -88,6 +88,8 @@ def doc_language(text: str) -> str:
 
 DOC_WORDS = {
     "figure": ("그림", "Figure"), "table": ("표", "Table"), "theorem": ("정리", "Theorem"),
+    "lemma": ("보조정리", "Lemma"), "proposition": ("명제", "Proposition"), "corollary": ("따름정리", "Corollary"),
+    "definition": ("정의", "Definition"), "example": ("예", "Example"), "remark": ("참고", "Remark"),
     "proof": ("증명", "Proof"), "bibliography": ("참고문헌", "References"), "abstract": ("요약", "Abstract"),
     "keywords": ("핵심어", "Keywords"), "footnotes": ("각주", "Notes"), "warning": ("경고", "Warning"),
     "error": ("오류", "Error"), "untitled": ("HyperTeX 문서", "HyperTeX document"),

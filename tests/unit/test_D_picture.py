@@ -150,3 +150,11 @@ def test_random_fuzz_never_raises():
         src = "".join(rnd.choice(alphabet) for _ in range(rnd.randint(0, 80)))
         info, _ = run(src, {"omega"})
         assert isinstance(info, PictureInfo)
+
+
+def test_braced_expression_starting_with_paren_is_not_parametric():
+    # {(1+x)*(1-x)} 는 식 하나다 (매개변수 꼴은 중괄호 밖의 ({x},{y}) 뿐)
+    for src in [r"\begin{axis}\addplot {(1+x)*(1-x)};\end{axis}",
+                r"\begin{axis}\addplot expression {(1+x)*(1-x)};\end{axis}"]:
+        assert run(src)[1] == Counter(), src
+    assert run(r"\begin{axis}\addplot ({cos(x r)}, {sin(x r)});\end{axis}")[1] == Counter()

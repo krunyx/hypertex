@@ -16,6 +16,7 @@ import re
 from typing import Any, Callable, Iterable
 
 from ..i18n import doc_language, doc_word
+from ..commands import THEOREM_NAMES
 from . import mathml
 from .style import CSS
 
@@ -407,7 +408,11 @@ class _Renderer:
 
     # -- 정리·증명·상호작용
     def b_theorem(self, b: dict[str, Any]) -> str:
-        name = b.get("name") or self.w("theorem")
+        env_name = b.get("env", "theorem")
+        name = b.get("name")
+        if not name or THEOREM_NAMES.get(env_name) == name:
+            # 기본 정리류 이름(빌더가 넣은 한국어 기본값)은 문서 언어로: Theorem·Lemma·Proposition…
+            name = self.w(env_name if env_name in THEOREM_NAMES else "theorem")
         head = f'<strong class="htex-thm-name">{_e(name)}'
         if b.get("number"):
             head += f' <span class="htex-thm-num">{_e(b["number"])}</span>'

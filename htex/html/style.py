@@ -117,9 +117,10 @@ figcaption{font-family:var(--sans-font);font-size:.92rem;color:var(--muted);marg
 .htex-picture:has(> pre)::before{content:"Figure (TikZ, shown as source in this view)";display:block;
   font-family:var(--sans-font);font-size:.8rem;color:var(--muted);text-align:left}
 :lang(ko) .htex-picture:has(> pre)::before{content:"그림 (TikZ, 이 보기에서는 원문으로 표시)"}
+/* 표 칸에서 anywhere 는 최소 폭을 0 으로 만들어 1.5 같은 짧은 수도 끊는다. 칸은 낱말 단위로만 (넓으면 표가 가로로 밀린다). */
 .htex-table-wrap{overflow-x:auto;max-width:100%}
 .htex-tabular{border-collapse:collapse;margin:0 auto;font-variant-numeric:tabular-nums}
-.htex-tabular td{padding:.3rem .75rem;vertical-align:top}
+.htex-tabular td{padding:.3rem .75rem;vertical-align:top;overflow-wrap:break-word}
 .htex-tabular td.htex-l{text-align:left}.htex-tabular td.htex-c{text-align:center}
 .htex-tabular td.htex-r{text-align:right}
 .htex-tabular .htex-rule-left{border-left:1px solid var(--fg)}
