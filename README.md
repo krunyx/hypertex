@@ -92,7 +92,7 @@ python -m htex parse examples/oscillator.htex
 
 ```bash
 python -m pip install pytest jsonschema
-python -m pytest -q tests/unit          # 단위 테스트 850건
+python -m pytest -q tests/unit          # 단위 테스트 850여 건
 python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
 python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
 python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks Project, amsmath 시험 문서 …)
