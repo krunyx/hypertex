@@ -22,6 +22,15 @@ L 이 더한 것 (Chrome 모양, 부품은 chrome.py)
   Ctrl+= / Ctrl++ 확대 · Ctrl+- 축소 · Ctrl+0 원래 크기 · Ctrl+U 원문 보기
   Ctrl+O 열기 · Ctrl+L 주소 · Ctrl+R/F5 새로고침 · Alt+←/→ (macOS Cmd+[ ]) 뒤로·앞으로 · Ctrl+Q 끝내기
   Alt+Home 홈 · Ctrl+D 북마크 · Ctrl+Shift+B 북마크바 보이기/숨기기 · 탭 가운데 클릭 = 탭 닫기
+  Ctrl+E 편집 (왼쪽 원문 · 오른쪽 미리보기) · Ctrl+S 저장 · Ctrl+Shift+S 다른 이름으로 저장
+
+Q 가 더한 것 (원문 편집, 부품은 editor.py · 파일 쓰기는 editing.py)
+- 도구줄 ✎ 단추·Ctrl+E: 지금 탭을 두 칸으로 — 왼쪽 원문 편집기(CodeMirror), 오른쪽 미리보기.
+  입력을 멈추면(0.3초) core.set_draft 로 고친 원문을 넣고 미리보기를 다시 그린다 (스크롤 유지). 진단은 편집기 줄에.
+- 로컬 파일은 그 자리에 저장 (UTF-8·BOM·줄바꿈 유지, 처음 저장할 때 원본 백업, 밖에서 바뀌었으면 묻기).
+  원격 문서(htex://)는 '다른 이름으로 저장': 본문과 \\input·\\usemacros·그림 등을 같은 서버에서 가져와 로컬에.
+  저장하면 탭은 저장한 로컬 파일을 보여 주고 편집을 이어 간다.
+- 편집 중 미리보기의 링크는 새 탭에서 열린다 (편집하는 문서를 떠나지 않게). 고친 것이 있으면 닫을 때 묻는다.
 """
 from __future__ import annotations
 
@@ -42,8 +51,8 @@ from PySide6.QtWebEngineCore import (QWebEnginePage, QWebEngineProfile, QWebEngi
                                      QWebEngineUrlSchemeHandler)
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QInputDialog, QLabel,
-                               QLineEdit, QMainWindow, QMenu, QToolButton, QVBoxLayout, QWidget,
-                               QWidgetAction)
+                               QLineEdit, QMainWindow, QMenu, QMessageBox, QSplitter, QToolButton,
+                               QVBoxLayout, QWidget, QWidgetAction)
 
 from ..i18n import set_language, tr, ui_language
 from .. import __version__
@@ -51,7 +60,8 @@ from .core import (DOC_EXTS, HTML_EXTS, History, Response, TreeCache, ViewerCore
                    default_cache_dir, https_to_htex, is_doc_path, split_fragment)
 from .instance import (REPLY_OK, decode_message, encode_message, file_signature, instance_name,
                        local_dependencies, normalize_targets)
-from . import chrome, macwin
+from . import chrome, editing, macwin
+from .editor import EditorPane
 from .bookmarks import BookmarkStore
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
                      TabStrip, ZoomRow, svg_icon)
@@ -185,6 +195,7 @@ class HtexPage(QWebEnginePage):
 
     redirected = Signal(QUrl)
     start_request = Signal(str, str)        # 시작 페이지에서 누른 것: (go|open|action, 값)
+    open_elsewhere = Signal(QUrl)           # 편집 중 미리보기에서 다른 문서로 가는 링크 → 새 탭 (Q)
 
     def __init__(self, profile, parent=None, tab: Optional["Tab"] = None):
         super().__init__(profile, parent)
@@ -194,6 +205,13 @@ class HtexPage(QWebEnginePage):
     def acceptNavigationRequest(self, url: QUrl, nav_type, is_main_frame: bool) -> bool:  # noqa: N802
         scheme = url.scheme().lower()
         current = self.url().scheme().lower()
+        editor = self.tab.editor if self.tab is not None else None
+        if (editor is not None and is_main_frame
+                and nav_type == QWebEnginePage.NavigationType.NavigationTypeLinkClicked
+                and split_fragment(url.toString(QUrl.ComponentFormattingOption.FullyEncoded))[0]
+                != split_fragment(self.url().toString(QUrl.ComponentFormattingOption.FullyEncoded))[0]):
+            self.open_elsewhere.emit(url)
+            return False
         if scheme == "htexapp" and url.host().lower() == "start":
             req = start_request(url.toString(QUrl.ComponentFormattingOption.FullyEncoded))
             if req is not None:
@@ -263,6 +281,9 @@ class Tab(QWidget):
         self.zoom = 1.0
         self.pinned_source = False       # 원문 보기 탭
         self.crashed_url: Optional[str] = None
+        self.editor: Optional[EditorPane] = None      # 편집 중이면 왼쪽 칸 (Q)
+        self.splitter: Optional[QSplitter] = None
+        self.preview_refreshes = 0
         self.view = QWebEngineView(self)
         self.page = HtexPage(win.profile, self.view, tab=self)
         self.page.console_log = []
@@ -277,6 +298,7 @@ class Tab(QWidget):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 0, 0, 0)
         lay.addWidget(self.view)
+        self.lay = lay
 
         # 자동 새로고침 (로컬 문서만)
         self.watcher = QFileSystemWatcher(self)
@@ -387,6 +409,71 @@ class Tab(QWidget):
             return
         self.view.triggerPageAction(QWebEnginePage.WebAction.ReloadAndBypassCache)
 
+    # ------------------------------------------------------------ 편집 (Q)
+    def attach_editor(self, pane: EditorPane) -> None:
+        """왼쪽 원문 · 오른쪽 미리보기."""
+        self.editor = pane
+        sp = QSplitter(Qt.Orientation.Horizontal, self)
+        sp.setChildrenCollapsible(False)
+        sp.setHandleWidth(1)
+        self.lay.removeWidget(self.view)
+        sp.addWidget(pane)
+        sp.addWidget(self.view)
+        sp.setStretchFactor(0, 1)
+        sp.setStretchFactor(1, 1)
+        self.lay.addWidget(sp)
+        half = max(200, self.width() // 2)
+        sp.setSizes([half, half])
+        self.splitter = sp
+        pane.text_changed.connect(self._on_editor_text)
+        pane.created.connect(self._send_diagnostics)
+
+    def detach_editor(self) -> None:
+        pane, sp = self.editor, self.splitter
+        if pane is None:
+            return
+        self.editor = self.splitter = None
+        had_draft = pane.address in self.core.drafts
+        self.core.set_draft(pane.address, None)
+        self.view.setParent(self)
+        self.lay.addWidget(self.view)
+        pane.shutdown()
+        pane.deleteLater()
+        if sp is not None:
+            sp.deleteLater()
+        self.view.show()
+        if had_draft:
+            self.refresh_preview()
+
+    def _on_editor_text(self, text: str) -> None:
+        pane = self.editor
+        if pane is None:
+            return
+        self.core.set_draft(pane.address, text)
+        self.refresh_preview()
+
+    def refresh_preview(self) -> None:
+        """고친 원문으로 미리보기만 다시 그린다 (원격 문서를 다시 가져오지 않는다, 스크롤·슬라이더 유지)."""
+        url = self.current_url()
+        if not url.startswith(("htex:", "htexapp://doc-")):
+            return
+        self.preview_refreshes += 1
+
+        def go(state):
+            try:
+                self._restore = json.loads(state) if isinstance(state, str) else None
+            except ValueError:
+                self._restore = None
+            self.view.triggerPageAction(QWebEnginePage.WebAction.ReloadAndBypassCache)
+        self.page.runJavaScript(_SAVE_STATE_JS, 0, go)
+
+    def _send_diagnostics(self) -> None:
+        pane = self.editor
+        if pane is None:
+            return
+        rec = self.core.record_for(pane.address)
+        pane.set_diagnostics(rec.diagnostics if rec is not None else [])
+
     # ------------------------------------------------------------ 확대·테마
     def set_zoom(self, z: float) -> None:
         z = max(ZOOM_MIN, min(ZOOM_MAX, round(float(z), 3)))
@@ -430,6 +517,8 @@ class Tab(QWidget):
                                                                       "p": params}) + ")")
             self.page.runJavaScript(js, 0)
         self._update_watch()
+        if self.editor is not None:
+            self._send_diagnostics()
         self.load_finished.emit(self, ok)
 
     # ------------------------------------------------------------ 자동 새로고침
@@ -478,6 +567,19 @@ class Tab(QWidget):
             return
         self._watch_sig = sig
         self.auto_reloads += 1
+        pane = self.editor
+        if pane is not None and pane.local is not None and pane.local.path == self._watch_files[0]:
+            # 편집 중인 파일이 밖에서 바뀌었다: 고친 것이 없으면 편집기도 새 내용으로 (있으면 저장할 때 묻는다)
+            if not pane.dirty and editing.signature(pane.local.path) != pane.local.sig:
+                try:
+                    src = editing.open_local(pane.local.path)
+                except editing.EditError:
+                    src = None
+                if src is not None and src.text != pane.saved_text:
+                    pane.replace_text(src.text, src)
+                    self.core.set_draft(pane.address, None)
+                elif src is not None:
+                    pane.local = src
         self.reload(keep_state=True)
 
 
@@ -838,6 +940,8 @@ class ViewerWindow(QMainWindow):
         tab.page.start_request.connect(
             lambda kind, value, t=tab: QTimer.singleShot(0, lambda: self._on_start_request(t, kind, value)))
         tab.page.linkHovered.connect(lambda u, t=tab: t is self.current_tab() and self._on_hover(u))
+        tab.page.open_elsewhere.connect(
+            lambda u: QTimer.singleShot(0, lambda: self._open_in_new_tab(u)), Qt.ConnectionType.QueuedConnection)
         cur = self.tabs.currentIndex()
         idx = self.tabs.insertTab(cur + 1 if cur >= 0 else 0, tab, tr('새 탭'))
         self.tabs.setTabIcon(idx, self._doc_icon())
@@ -861,8 +965,12 @@ class ViewerWindow(QMainWindow):
         if self.tabs.count() == 1:
             self.close()                 # 마지막 탭을 닫으면 창을 닫는다 (브라우저와 같게)
             return
+        if isinstance(tab, Tab) and not self._confirm_leave_editor(tab):
+            return
         self.tabs.removeTab(index)
         if isinstance(tab, Tab):
+            if tab.editor is not None:
+                tab.detach_editor()
             tab.watcher.removePaths(tab.watcher.files() + tab.watcher.directories())
             tab.view.setPage(None)
             tab.page.deleteLater()
@@ -932,6 +1040,12 @@ class ViewerWindow(QMainWindow):
         self.act_bookmarks_bar = self._act(tr('북마크바 표시'), tr('북마크바 (Ctrl+Shift+B)'), ["Ctrl+Shift+B"],
                                            self.toggle_bookmarks_bar)
         self.act_bookmarks_bar.setCheckable(True)
+        self.act_edit = self._act(tr('원문 편집'), tr('이 문서 편집 (Ctrl+E)'), ["Ctrl+E"], self.toggle_edit)
+        self.act_edit.setCheckable(True)
+        self.act_save = self._act(tr('저장'), tr('저장 (Ctrl+S)'), kb(Std.Save) or ["Ctrl+S"], self.save)
+        self.act_save_as = self._act(tr('다른 이름으로 저장…'), tr('다른 이름으로 저장 (Ctrl+Shift+S)'),
+                                     ["Ctrl+Shift+S"] + kb(Std.SaveAs), self.save_as)
+        nb.edit.setDefaultAction(self.act_edit)
         nb.back.setDefaultAction(self.act_back)
         nb.forward.setDefaultAction(self.act_forward)
         nb.reload.setDefaultAction(self.act_reload)
@@ -958,7 +1072,7 @@ class ViewerWindow(QMainWindow):
         self.act_quit = self._act(tr('종료'), tr('종료'), kb(Std.Quit) or ["Ctrl+Q"], self._quit)
         self.act_quit.setMenuRole(QAction.MenuRole.QuitRole)
         self.act_find = self._act(tr('찾기…'), tr('페이지에서 찾기 (Ctrl+F)'), kb(Std.Find) or ["Ctrl+F"],
-                                  self.find_bar.open_bar)
+                                  self.find)
         self.act_find_next = self._act(tr('다음 찾기'), tr('다음 찾기'), ["F3"] + kb(Std.FindNext),
                                        lambda: self._find_step(True))
         self.act_find_prev = self._act(tr('이전 찾기'), tr('이전 찾기'), ["Shift+F3"] + kb(Std.FindPrevious),
@@ -993,6 +1107,10 @@ class ViewerWindow(QMainWindow):
         self.app_menu = m
         m.addAction(self.act_new_tab)
         m.addAction(self.act_open)
+        m.addSeparator()
+        m.addAction(self.act_edit)
+        m.addAction(self.act_save)
+        m.addAction(self.act_save_as)
         m.addSeparator()
         self.bookmarks_menu = m.addMenu(tr('북마크'))
         self.bookmarks_menu.aboutToShow.connect(self._fill_bookmarks_menu)
@@ -1038,11 +1156,12 @@ class ViewerWindow(QMainWindow):
         mb = self.menuBar()
         if chrome.is_mac():
             f = mb.addMenu(tr('파일'))
-            for a in (self.act_new_tab, self.act_open, None, self.act_close_tab, None, self.act_quit):
+            for a in (self.act_new_tab, self.act_open, None, self.act_save, self.act_save_as, None,
+                      self.act_close_tab, None, self.act_quit):
                 f.addSeparator() if a is None else f.addAction(a)
             e = mb.addMenu(tr('편집'))
-            for a in (self.act_find, self.act_find_next, self.act_find_prev):
-                e.addAction(a)
+            for a in (self.act_edit, None, self.act_find, self.act_find_next, self.act_find_prev):
+                e.addSeparator() if a is None else e.addAction(a)
             v = mb.addMenu(tr('보기'))
             for a in (self.act_bookmarks_bar, None, self.act_zoom_in, self.act_zoom_out,
                       self.act_zoom_reset, None, self.act_source):
@@ -1131,7 +1250,9 @@ class ViewerWindow(QMainWindow):
 
     # ------------------------------------------------------------ 홈·시작 페이지
     def go_home(self) -> None:
-        tab = self.current_tab() or self.new_tab(start_page=False)
+        tab = self.current_tab()
+        if tab is None or tab.editor is not None:
+            tab = self.new_tab(start_page=False, focus_address=False)
         if self.home_url.startswith(START_URL):
             tab.show_start()
             self._focus_address()
@@ -1335,6 +1456,10 @@ class ViewerWindow(QMainWindow):
         self.act_reload.setIcon(svg_icon("reload", c.icon))
         self.act_stop.setIcon(svg_icon("close", c.icon))
         self.act_home.setIcon(svg_icon("home", c.icon))
+        self.act_edit.setIcon(svg_icon("edit", c.icon))
+        for tab in self.tab_list():
+            if tab.editor is not None:
+                tab.editor.set_dark(self.is_dark())
         self.tab_strip.set_palette(c)
         self.omnibox.set_palette(c)
         self.bookmarks_bar.set_palette(c)
@@ -1346,8 +1471,8 @@ class ViewerWindow(QMainWindow):
         for w in app.topLevelWidgets() if app else []:
             if isinstance(w, ViewerWindow):
                 w.close()
-        if app:
-            app.quit()
+        if app and not any(isinstance(w, ViewerWindow) and w.isVisible() for w in app.topLevelWidgets()):
+            app.quit()                   # 저장하지 않은 편집 때문에 닫기를 취소한 창이 있으면 끝내지 않는다
 
     def _find_step(self, forward: bool) -> None:
         if not self.find_bar.isVisible():
@@ -1361,8 +1486,14 @@ class ViewerWindow(QMainWindow):
 
     def _update_actions(self) -> None:
         tab = self.current_tab()
-        self.act_back.setEnabled(bool(tab and tab.history.can_back()))
-        self.act_forward.setEnabled(bool(tab and tab.history.can_forward()))
+        editing_now = bool(tab and tab.editor is not None)
+        self.act_back.setEnabled(bool(tab and tab.history.can_back()) and not editing_now)
+        self.act_forward.setEnabled(bool(tab and tab.history.can_forward()) and not editing_now)
+        self.act_edit.setEnabled(editing_now or self.edit_target(tab) is not None)
+        self.act_edit.setChecked(editing_now)
+        self.act_edit.setToolTip(tr('편집 닫기 (Ctrl+E)') if editing_now else tr('이 문서 편집 (Ctrl+E)'))
+        self.act_save.setEnabled(editing_now)
+        self.act_save_as.setEnabled(editing_now)
         url = tab.current_url() if tab else ""
         self.act_source.setEnabled(url.startswith(("htex:", "htexapp://doc-")))
         loading = bool(tab and tab.loading)
@@ -1447,11 +1578,280 @@ class ViewerWindow(QMainWindow):
         src.pinned_source = True
         src.navigate_url(QUrl(url))
 
+    # ------------------------------------------------------------ 편집 (Q)
+    def edit_target(self, tab: Optional[Tab]) -> Optional[str]:
+        """그 탭에서 편집할 수 있는 문서 주소 (로컬 .htex·.tex·.md·.html, 불러온 원격 문서). 아니면 None."""
+        if tab is None or tab.pinned_source:
+            return None
+        url = split_fragment(tab.current_url())[0]
+        if url.startswith("htexapp://doc-"):
+            try:
+                path = self.core.local_path(url)
+            except ViewerError:
+                return None
+            return url if editing.editable(path) and path.is_file() else None
+        if url.startswith("htex:"):
+            rec = self.core.record_for(url)
+            return rec.address if rec is not None else None
+        return None
+
+    def toggle_edit(self) -> None:
+        tab = self.current_tab()
+        if tab is None:
+            return
+        if tab.editor is not None:
+            self.close_editor(tab)
+        else:
+            self.open_editor(tab)
+        self._update_actions()
+
+    def open_editor(self, tab: Tab) -> Optional[EditorPane]:
+        address = self.edit_target(tab)
+        if address is None:
+            self.status.showMessage(tr('이 페이지는 편집할 수 없습니다.'), 4000)
+            return None
+        local = None
+        if address.startswith("htexapp://doc-"):
+            try:
+                local = editing.open_local(self.core.local_path(address))
+            except (editing.EditError, ViewerError) as e:
+                self._warn(str(e) if isinstance(e, editing.EditError) else e.message)
+                return None
+            text = local.text
+        else:
+            rec = self.core.record_for(address)
+            text = rec.source if rec is not None else ""
+        pane = EditorPane(self.profile, address, text, local=local, dark=self.is_dark(), parent=tab)
+        pane.dirty_changed.connect(lambda _on, t=tab: self._on_editor_dirty(t))
+        tab.attach_editor(pane)
+        pane.focus_editor()
+        if local is None:
+            self.status.showMessage(tr('원격 문서는 서버에 저장할 수 없습니다. 고친 뒤 다른 이름으로 저장하면 '
+                                       '부르는 파일과 함께 내 컴퓨터에 저장합니다.'), 8000)
+        return pane
+
+    def close_editor(self, tab: Tab) -> bool:
+        if tab.editor is None:
+            return True
+        if not self._confirm_leave_editor(tab):
+            return False
+        tab.detach_editor()
+        self._on_tab_title(tab, tab.title())
+        tab.view.setFocus()
+        return True
+
+    def _on_editor_dirty(self, tab: Tab) -> None:
+        self._on_tab_title(tab, tab.title())
+
+    def _open_in_new_tab(self, url: QUrl) -> None:
+        tab = self.new_tab(start_page=False, focus_address=False)
+        tab.navigate_url(url)
+
+    def _warn(self, text: str, title: str = "") -> None:
+        QMessageBox.warning(self, title or APP_NAME, text)
+
+    def _text_now(self, pane: EditorPane, timeout_ms: int = 1500) -> str:
+        """편집기의 바로 지금 원문을 기다려 받는다 (닫기 전 저장처럼 곧바로 필요할 때)."""
+        from PySide6.QtCore import QEventLoop
+        box: dict = {}
+        loop = QEventLoop()
+        pane.current_text(lambda t: (box.__setitem__("t", t), loop.quit()))
+        if "t" not in box:
+            QTimer.singleShot(timeout_ms, loop.quit)
+            loop.exec()
+        return box.get("t", pane.text)
+
+    def _confirm_leave_editor(self, tab: Tab) -> bool:
+        """편집기를 닫아도 되나. 고친 것이 있으면 저장할지 묻는다."""
+        pane = tab.editor
+        if pane is None or not pane.dirty:
+            return True
+        text = self._text_now(pane)
+        pane.text = text
+        if text == pane.saved_text:
+            return True
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setWindowTitle(APP_NAME)
+        box.setText(tr('{name} 에 저장하지 않은 수정이 있습니다.', name=pane.name))
+        save = box.addButton(tr('저장') if pane.local is not None else tr('다른 이름으로 저장…'),
+                             QMessageBox.ButtonRole.AcceptRole)
+        discard = box.addButton(tr('저장 안 함'), QMessageBox.ButtonRole.DestructiveRole)
+        box.addButton(tr('취소'), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(save)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is discard:
+            return True
+        if clicked is save:
+            if pane.local is not None:
+                return self._save_local(tab, text)
+            self.save_as(tab)            # 원격: 가져오기를 마치고 저장한 뒤 다시 닫으면 된다
+        return False
+
+    def save(self, tab: Optional[Tab] = None) -> None:
+        tab = tab or self.current_tab()
+        pane = tab.editor if tab is not None else None
+        if pane is None:
+            return
+        if pane.local is None:
+            self.save_as(tab)
+            return
+        pane.current_text(lambda text, t=tab: self._save_local(t, text))
+
+    def _save_local(self, tab: Tab, text: str, force: bool = False) -> bool:
+        pane = tab.editor
+        if pane is None or pane.local is None:
+            return False
+        try:
+            new = editing.save_local(pane.local, text, None if pane.backed_up else editing.default_backup_dir(),
+                                     force=force)
+        except editing.Conflict:
+            ans = QMessageBox.question(
+                self, APP_NAME, tr('{name} 을(를) 다른 프로그램이 바꿨습니다. 편집기 내용으로 덮어쓸까요?',
+                                   name=pane.name),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel)
+            if ans != QMessageBox.StandardButton.Yes:
+                return False
+            return self._save_local(tab, text, force=True)
+        except editing.EditError as e:
+            self._warn(str(e))
+            return False
+        pane.backed_up = True
+        pane.mark_saved(text, new)
+        self.core.set_draft(pane.address, None)
+        self._on_tab_title(tab, tab.title())
+        self.status.showMessage(tr('저장했습니다: {path}', path=new.path), 4000)
+        return True
+
+    def save_as(self, tab: Optional[Tab] = None) -> None:
+        tab = tab or self.current_tab()
+        pane = tab.editor if tab is not None else None
+        if pane is None:
+            return
+        pane.current_text(lambda text, t=tab: self._save_as(t, text))
+
+    def _save_dir(self) -> Path:
+        try:
+            d = str(settings().value("edit/save_dir", "") or "")
+        except Exception:   # noqa: BLE001
+            d = ""
+        if d and Path(d).is_dir():
+            return Path(d)
+        from PySide6.QtCore import QStandardPaths
+        docs = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        return Path(docs) if docs and Path(docs).is_dir() else Path.home()
+
+    def _save_as(self, tab: Tab, text: str) -> None:
+        pane = tab.editor
+        if pane is None:
+            return
+        start = pane.local.path if pane.local is not None else self._save_dir() / pane.name
+        ext = Path(pane.name).suffix.lower() or ".htex"
+        path, _ = QFileDialog.getSaveFileName(
+            self, tr('다른 이름으로 저장'), str(start),
+            tr('같은 형식 (*{ext});;모든 파일 (*)', ext=ext))
+        if not path or tab.editor is not pane:
+            return
+        dest = Path(path)
+        if not dest.suffix:
+            dest = dest.with_suffix(ext)
+        try:
+            settings().setValue("edit/save_dir", str(dest.parent))
+        except Exception:   # noqa: BLE001
+            pass
+        if pane.local is not None:
+            try:
+                editing.atomic_write(dest, editing.encode_text(text, pane.local.bom, pane.local.newline))
+                src = editing.open_local(dest)
+            except (OSError, editing.EditError) as e:
+                self._warn(tr('저장하지 못했습니다: {name} ({e})', name=dest.name, e=e))
+                return
+            self._rebind_editor(tab, text, src)
+            return
+        # 원격 문서: 본문과 부르는 파일을 가져와 같은 상대 위치에 (작업 스레드에서)
+        self.status.showMessage(tr('부르는 파일을 가져오는 중…'))
+        QApplication.setOverrideCursor(Qt.CursorShape.BusyCursor)
+        address = pane.address
+        done = _Bridge(self)
+        done.done.connect(lambda result, _x, t=tab, d=dest, tx=text, b=done:
+                          (QApplication.restoreOverrideCursor(), b.deleteLater(),
+                           self._finish_remote_copy(t, d, tx, result)))
+
+        def work():
+            try:
+                result = editing.plan_remote_copy(self.core, address, text, dest.name)
+            except Exception as e:   # noqa: BLE001
+                result = e
+            done.done.emit(result, None)
+        self.handler.pool.submit(work)
+
+    def _finish_remote_copy(self, tab: Tab, dest: Path, text: str, result) -> None:
+        self.status.clearMessage()
+        if isinstance(result, Exception):
+            self._warn(tr('저장하지 못했습니다: {name} ({e})', name=dest.name, e=result))
+            return
+        if tab.editor is None or tab not in self.tab_list():
+            return
+        copy: editing.RemoteCopy = result
+        overwrite = True
+        existing = editing.existing_files(dest.parent, copy)
+        if existing:
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Question)
+            box.setWindowTitle(APP_NAME)
+            box.setText(tr('저장할 폴더에 같은 이름의 파일이 {n}개 있습니다.', n=len(existing)))
+            box.setDetailedText("\n".join(existing))
+            over = box.addButton(tr('덮어쓰기'), QMessageBox.ButtonRole.AcceptRole)
+            keep = box.addButton(tr('있는 파일은 두기'), QMessageBox.ButtonRole.ActionRole)
+            box.addButton(tr('취소'), QMessageBox.ButtonRole.RejectRole)
+            box.exec()
+            if box.clickedButton() not in (over, keep):
+                return
+            overwrite = box.clickedButton() is over
+        try:
+            written = editing.write_copy(dest.parent, copy, overwrite=overwrite)
+            src = editing.open_local(dest)
+        except editing.EditError as e:
+            self._warn(str(e))
+            return
+        if copy.failed:
+            QMessageBox.information(
+                self, APP_NAME, tr('파일 {n}개를 저장했습니다. 가져오지 못한 것:', n=len(written))
+                + "\n" + "\n".join(copy.failed[:20]))
+        self._rebind_editor(tab, text, src)
+
+    def _rebind_editor(self, tab: Tab, text: str, src: "editing.LocalSource") -> None:
+        """다른 이름으로 저장한 뒤: 탭은 저장한 로컬 파일을 보여 주고, 편집기는 그 파일을 이어서 고친다."""
+        pane = tab.editor
+        if pane is None:
+            return
+        old = pane.address
+        url = self.core.local_url(src.path)
+        pane.backed_up = True
+        pane.mark_saved(text, src, url)
+        if pane.text != text:              # 가져오는 동안 더 고쳤다: 그 내용으로 미리보기
+            self.core.set_draft(url, pane.text)
+        self.core.set_draft(old, None)
+        tab.navigate_url(QUrl(url))
+        self._on_tab_title(tab, tab.title())
+        self.status.showMessage(tr('저장했습니다: {path}', path=src.path), 5000)
+
+    def find(self) -> None:
+        """Ctrl+F: 편집기에 초점이 있으면 편집기 안 찾기·바꾸기, 아니면 페이지에서 찾기."""
+        tab = self.current_tab()
+        fw = QApplication.focusWidget()
+        if tab is not None and tab.editor is not None and fw is not None and tab.editor.isAncestorOf(fw):
+            tab.editor.open_search()
+            return
+        self.find_bar.open_bar()
+
     # ------------------------------------------------------------ 이동
     def navigate(self, text: str, tab: Optional[Tab] = None) -> None:
         tab = tab or self.current_tab()
-        if tab is None:
-            tab = self.new_tab(start_page=False)
+        if tab is None or tab.editor is not None:       # 편집 중인 탭은 그 문서에 둔다 (Q)
+            tab = self.new_tab(start_page=False, focus_address=False)
         if text.strip().startswith(START_URL):
             tab.show_start()
             return
@@ -1560,6 +1960,8 @@ class ViewerWindow(QMainWindow):
 
     def _on_tab_title(self, tab: Tab, title: str) -> None:
         i = self.tabs.indexOf(tab)
+        if tab.editor is not None and tab.editor.dirty:
+            title = "● " + (title or tab.editor.name)        # 저장하지 않은 편집 (Q)
         if i >= 0:
             shown = title or tr('새 탭')
             self.tabs.setTabText(i, shown)          # 막대가 폭에 맞춰 줄여 그린다
@@ -1627,6 +2029,15 @@ class ViewerWindow(QMainWindow):
             self.status.clearMessage()
 
     def closeEvent(self, ev) -> None:  # noqa: N802
+        for tab in self.tab_list():
+            if tab.editor is not None and tab.editor.dirty:
+                self.tabs.setCurrentWidget(tab)
+                if not self._confirm_leave_editor(tab):
+                    ev.ignore()
+                    return
+        for tab in self.tab_list():
+            if tab.editor is not None:
+                tab.detach_editor()
         for tab in self.tab_list():
             tab.watcher.removePaths(tab.watcher.files() + tab.watcher.directories())
         super().closeEvent(ev)

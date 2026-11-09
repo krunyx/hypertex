@@ -4,6 +4,7 @@
   <실행 파일>: dist/htex-viewer/htex-viewer(.exe), dist/HyperTeX.app/Contents/MacOS/htex-viewer, AppImage
   결과: <접두어>.png, <접두어>.json  (기본 접두어: dist/smoke)
 성공 조건: 문서 제목이 나오고, 상호작용 스크립트(window.HTEX)가 실행되고, MathML 이 있다.
+그다음 PDF 그림(--no-pdf 로 건너뜀)과 원문 편집기(--no-edit 로 건너뜀)도 확인한다.
 
 실행 파일 진입점(packaging/pyinstaller/htex_viewer_entry.py)이 HTEX_SMOKE_OUT 을 보고 동작한다.
 """
@@ -20,8 +21,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(exe: Path, doc: Path, out: str, timeout: float) -> dict:
+def run(exe: Path, doc: Path, out: str, timeout: float, edit: bool = False) -> dict:
     env = dict(os.environ)
+    if edit:
+        env["HTEX_SMOKE_EDIT"] = "1"
     env.setdefault("QT_QPA_PLATFORM", "offscreen")
     env["HTEX_SMOKE_OUT"] = out
     env["HTEX_SMOKE_TIMEOUT_MS"] = str(int(timeout * 1000 * 0.8))
@@ -51,6 +54,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=str(ROOT / "dist" / "smoke"))
     ap.add_argument("--timeout", type=float, default=60)
     ap.add_argument("--no-pdf", action="store_true", help="PDF 그림 확인을 건너뛴다")
+    ap.add_argument("--no-edit", action="store_true", help="원문 편집기 확인을 건너뛴다")
     a = ap.parse_args(argv)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     res = run(a.exe, a.doc.resolve(), a.out, a.timeout)
@@ -65,7 +69,19 @@ def main(argv=None) -> int:
     print("스모크 테스트:", "통과" if ok else "실패", f"(스크린숏 {a.out}.png)")
     if ok and not a.no_pdf:
         ok = check_pdf_figure(a.exe, a.out + "-pdf", a.timeout)
+    if ok and not a.no_edit:
+        ok = check_editor(a.exe, a.doc.resolve(), a.out + "-edit", a.timeout)
     return 0 if ok else 1
+
+
+def check_editor(exe: Path, doc: Path, out: str, timeout: float) -> bool:
+    """묶인 앱에서 원문 편집기(QWebChannel + htex/viewer/editor.js)가 뜨고 문서 줄이 보이는지."""
+    res = run(exe, doc, out, timeout, edit=True)
+    lines = res.get("editor_lines", -1)
+    ok = bool(res.get("ok")) and isinstance(lines, (int, float)) and lines > 0
+    print(json.dumps({"editor": res}, ensure_ascii=False, indent=2))
+    print("원문 편집기:", "통과" if ok else "실패", f"(줄 {lines}, 스크린숏 {out}.png)")
+    return ok
 
 
 def check_pdf_figure(exe: Path, out: str, timeout: float) -> bool:

@@ -11,6 +11,7 @@ Qt 쪽(app.py)은 요청 주소를 받아 `ViewerCore.respond(url, initiator)` �
 - 그림 주소  htexapp://picture/<문서키>?node=…&이름=값…   (규약 3절)
 - 조각 주소  htexapp://fragment/<문서키>?doc=…&label=…   (규약 4절, doc 은 문서키 문서 기준 상대 주소도 됨)
 - 스크립트   htexapp://asset/interact.js                    (G 의 htex/web/interact.js)
+             htexapp://asset/editor.js                      (Q 의 원문 편집기, htex/viewer/editor.js)
 - 원문 보기  htexapp://source/<문서키>                      (J: 원문을 escape 한 읽기 전용 HTML)
 
 테마 (J): core.theme 이 "light"/"dark" 이면 문서·오류·원문 페이지의 <html> 에 data-theme 을 넣는다
@@ -19,7 +20,11 @@ Qt 쪽(app.py)은 요청 주소를 받아 `ViewerCore.respond(url, initiator)` �
 
 보안 규칙
 - 원격은 https 만 (리다이렉트도). 크기 상한 5MB, 시간 제한.
-- 원격 문서를 해석할 때 파서의 로컬 파일 읽기 기준 폴더는 빈 임시 폴더 (원격 문서가 로컬 파일을 못 읽게).
+- 원격 문서를 해석할 때 파서의 로컬 파일 읽기 기준 폴더는 임시 폴더 (원격 문서가 로컬 파일을 못 읽게).
+  거기에는 그 문서가 상대 주소로 부르는 \\input·\\usemacros·\\usestyle·.bbl 을 같은 서버에서 가져와 둔다
+  (10단계 Q, remote_parse). 파서가 못 찾은 주소를 loader.MISSING 에 모으면 가져와서 다시 해석한다.
+
+편집 (10단계 Q): set_draft(주소, 원문) 이 있으면 load 는 파일·서버 대신 그 원문을 쓴다 (편집 중 미리보기).
 - 로컬 문서·이미지는 등록된 뿌리 아래에서만. 웹 페이지(http/https)나 원격 문서(htex:)에서 시작된 요청은
   로컬 주소에 닿지 못한다. 원격 문서의 조각·전사는 원격 문서만 가리킬 수 있다.
 - 문서 페이지에는 엄격한 CSP (스크립트는 htexapp: 출처만).
@@ -49,6 +54,7 @@ from typing import Any, Callable, Optional
 from ..i18n import tr, ui_language
 from .. import __version__
 from .. import images
+from ..loader import MISSING as _LOADER_MISSING
 from ..parser import parse_text
 
 USER_AGENT = f"HyperTeX-Viewer/{__version__} (HyperTeX 2.0; +htex)"
@@ -58,6 +64,8 @@ RENDER_LIMIT = 2.0          # 명세 7절: 문서당 렌더링 시간 상한
 TRANSCLUDE_BUDGET = 3.0     # 전사 전체에 쓰는 시간 (가져오기 포함)
 MAX_TRANSCLUSIONS = 20
 REMOTE_TTL = 300.0          # 원격 원문 메모리 보관 시간 (새로고침하면 무시)
+MAX_DEPS = 40               # 원격 문서 하나가 함께 가져오는 \input·\usemacros 등 파일 수 (10단계 Q)
+MAX_DEP_ROUNDS = 6          # 가져온 파일이 또 다른 파일을 부르는 깊이
 
 DOC_EXTS = (".htex", ".tex", ".md", ".markdown")        # .md 는 6단계(M): htex.markdown 이 트리로 바꾼다
 HTML_EXTS = (".html", ".htm", ".xhtml")                 # 로컬 HTML: 그대로 보여 준다 (아래 LOCAL_HTML_CSP)
@@ -81,6 +89,8 @@ CSP = ("default-src 'none'; script-src htexapp:; connect-src htexapp:; "
        "base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; "
        "frame-ancestors 'none'")
 META_CSP = CSP.replace("; frame-ancestors 'none'", "")   # <meta> 로는 frame-ancestors 를 못 준다
+
+EDITOR_JS = Path(__file__).resolve().parent / "editor.js"
 
 try:
     from ..web import INTERACT_JS_PATH as _INTERACT_JS      # G 의 상호작용 스크립트
@@ -533,16 +543,6 @@ class DocRecord:
         return _plain((self.tree.get("meta") or {}).get("title") or []) or ""
 
 
-def _empty_dir() -> Path:
-    global _EMPTY
-    try:
-        return _EMPTY
-    except NameError:
-        pass
-    _EMPTY = Path(tempfile.mkdtemp(prefix="htex-viewer-empty-"))
-    return _EMPTY
-
-
 # ====================================================================== 핵심
 class ViewerCore:
     def __init__(self, fetcher: Optional[Fetcher] = None, cache: Optional[TreeCache] = None,
@@ -567,6 +567,8 @@ class ViewerCore:
         self.records: "OrderedDict[str, DocRecord]" = OrderedDict()
         self.by_address: dict[str, str] = {}
         self._remote_text: dict[str, tuple[float, str, str]] = {}   # 주소 → (시각, 최종 주소, 원문)
+        self._dep_text: dict[str, tuple[float, Optional[str]]] = {}   # 원격 \input 등 → (시각, 원문|없음)
+        self.drafts: dict[str, str] = {}     # 문서 주소 → 편집 중인 원문 (Q)
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------ 로컬 뿌리
@@ -636,14 +638,19 @@ class ViewerCore:
         address = split_fragment(address)[0]
         if address.lower().startswith("htex:"):
             address = normalize_htex(address)
-            text, address = self._remote_source(address, reload)
+            draft = self.drafts.get(address)
+            if draft is None:
+                text, address = self._remote_source(address, reload)
+            else:
+                text = draft
             remote = True
-            base_dir, parse_url = _empty_dir(), address
+            base_dir, parse_url = None, address
         elif address.startswith("htexapp://doc-"):
             path = self.local_path(address)
             if path.suffix.lower() not in DOC_EXTS:
                 raise ViewerError("not-document", tr('HyperTeX 문서가 아닙니다: {name}', name=path.name), 415)
-            text = _read_local(path)
+            draft = self.drafts.get(address)
+            text = _read_local(path) if draft is None else draft
             remote = False
             base_dir, parse_url = path.parent, path.name
         else:
@@ -657,12 +664,16 @@ class ViewerCore:
                 self.records.move_to_end(key)
                 self.by_address[address] = key
                 return rec
-        tree = None if reload else self.cache.get(address, sha)
+        tree = None if (reload or draft is not None) else self.cache.get(address, sha)
         t0 = self.clock()
         if tree is None:
-            tree = run_with_limit(lambda: self.parse(text, url=parse_url, base_dir=base_dir),
-                                  self.render_limit)
-            self.cache.put(address, sha, tree, disk=remote)
+            if remote:
+                tree = self.remote_parse(address, text, reload=reload)[0]
+            else:
+                tree = run_with_limit(lambda: self.parse(text, url=parse_url, base_dir=base_dir),
+                                      self.render_limit)
+            if draft is None:
+                self.cache.put(address, sha, tree, disk=remote)
         rec = DocRecord(key, address, tree, remote, elapsed=self.clock() - t0, source=text)
         with self._lock:
             self.records[key] = rec
@@ -688,6 +699,76 @@ class ViewerCore:
             self._remote_text[final] = (now, final, text)
         return text, final
 
+    # ------------------------------------------------------------ 원격 문서가 부르는 파일 (Q)
+    def remote_parse(self, address: str, text: str, reload: bool = False) -> tuple[dict, dict[str, str]]:
+        """원격 문서 해석. 상대 주소로 부르는 \\input·\\usemacros·\\usestyle·.bbl 을 같은 서버에서 가져와
+        임시 폴더에 두고 해석한다. (트리, {상대 경로: 원문}) — 상대 경로는 실제로 찾은 이름(확장자 포함)."""
+        deps: dict[str, str] = {}
+        tried: set[str] = set()
+        tree: dict = {}
+        for _ in range(MAX_DEP_ROUNDS):
+            missing: list = []
+            with tempfile.TemporaryDirectory(prefix="htex-remote-") as d:
+                root = Path(d)
+                for name, body in deps.items():
+                    f = root / name
+                    f.parent.mkdir(parents=True, exist_ok=True)
+                    f.write_text(body, encoding="utf-8")
+
+                def work(root=root, missing=missing):
+                    tok = _LOADER_MISSING.set(missing)
+                    try:
+                        return self.parse(text, url=address, base_dir=root)
+                    finally:
+                        _LOADER_MISSING.reset(tok)
+                tree = run_with_limit(work, self.render_limit)
+            fresh = [(u, exts) for u, exts in missing if u not in tried]
+            if not fresh or len(deps) >= MAX_DEPS:
+                break
+            got = False
+            for u, exts in fresh:
+                tried.add(u)
+                for ext in exts or ("",):
+                    name = safe_relative(u + ext)
+                    if name is None or name in deps:
+                        break
+                    body = self._dependency(join_url(address, name), reload)
+                    if body is not None:
+                        deps[name] = body
+                        got = True
+                        break
+                if len(deps) >= MAX_DEPS:
+                    break
+            if not got:
+                break
+        return tree, deps
+
+    def _dependency(self, url: str, reload: bool) -> Optional[str]:
+        now = self.clock()
+        with self._lock:
+            hit = self._dep_text.get(url)
+        if hit and not reload and now - hit[0] < REMOTE_TTL:
+            return hit[1]
+        try:
+            res = self.fetcher.fetch(htex_to_https(url), accept="text/plain, text/x-tex, */*;q=0.1")
+            ctype = res.content_type.split(";")[0].strip().lower()
+            body = None if ctype in ("text/html", "application/xhtml+xml") else _decode(res.content)
+        except ViewerError:
+            body = None
+        with self._lock:
+            self._dep_text[url] = (now, body)
+        return body
+
+    # ------------------------------------------------------------ 편집 중 원문 (Q)
+    def set_draft(self, address: str, text: Optional[str]) -> None:
+        """편집 중인 원문. None 이면 지운다 (파일·서버의 원문으로 돌아간다)."""
+        address = split_fragment(address)[0]
+        with self._lock:
+            if text is None:
+                self.drafts.pop(address, None)
+            else:
+                self.drafts[address] = text
+
     def has_remote(self, address: str) -> bool:
         """그 원격 문서의 원문을 이미 가져와 메모리에 두었나 (시간이 지났어도)."""
         with self._lock:
@@ -708,6 +789,9 @@ class ViewerCore:
         base = split_fragment(url)[0]
         with self._lock:
             self._remote_text.pop(base, None)
+            if base.lower().startswith("htex:"):
+                for u in [u for u in self._dep_text if u.startswith(base.rsplit("/", 1)[0] + "/")]:
+                    self._dep_text.pop(u, None)
             key = self.by_address.pop(base, None)
             if key:
                 self.records.pop(key, None)
@@ -919,6 +1003,8 @@ class ViewerCore:
                                  "Content-Security-Policy": "default-src 'none'"})
             except OSError:
                 return _fail(404, tr('그림 파일이 없습니다.'))
+        if ext in HTML_EXTS and split_fragment(url)[0] in self.drafts:
+            return self._respond_local_file(path, ext, draft=self.drafts[split_fragment(url)[0]])
         if ext in HTML_EXTS or ext in ASSET_TYPES:
             return self._respond_local_file(path, ext)
         try:
@@ -972,12 +1058,16 @@ class ViewerCore:
             return Response(200, IMAGE_TYPES[ext], data, headers)
         return _fail(415, tr('보여 줄 수 없는 그림 형식입니다.'))
 
-    def _respond_local_file(self, path: Path, ext: str) -> Response:
-        """로컬 HTML 과 그것이 부르는 CSS·JS·글꼴 (M). 열어 둔 폴더 안만 (local_path 가 이미 확인)."""
+    def _respond_local_file(self, path: Path, ext: str, draft: Optional[str] = None) -> Response:
+        """로컬 HTML 과 그것이 부르는 CSS·JS·글꼴 (M). 열어 둔 폴더 안만 (local_path 가 이미 확인).
+        draft 는 편집 중인 HTML (Q)."""
         try:
-            if path.stat().st_size > MAX_BYTES:
-                return _fail(413, _too_large(MAX_BYTES))
-            data = path.read_bytes()
+            if draft is not None:
+                data = draft.encode("utf-8")
+            else:
+                if path.stat().st_size > MAX_BYTES:
+                    return _fail(413, _too_large(MAX_BYTES))
+                data = path.read_bytes()
         except OSError:
             return _fail(404, tr('파일이 없습니다.'))
         if ext in HTML_EXTS:
@@ -1023,6 +1113,12 @@ class ViewerCore:
         return f"htexapp://source/{rec.key}" if rec is not None else None
 
     def _respond_asset(self, path: str) -> Response:
+        if path.strip("/") == "editor.js":           # 원문 편집기 (Q, tools/editor 에서 묶음)
+            try:
+                return Response(200, "text/javascript", EDITOR_JS.read_bytes(),
+                                {"X-Content-Type-Options": "nosniff"})
+            except OSError:
+                return _fail(404, tr('없는 자원입니다.'))
         if path.strip("/") != "interact.js":
             return _fail(404, tr('없는 자원입니다.'))
         try:
@@ -1154,6 +1250,17 @@ def picture_svg(tree: dict, node_id: str, values: dict[str, float],
 
 
 # ====================================================================== 도우미
+def safe_relative(name: str) -> Optional[str]:
+    """원격 문서가 부르는 상대 주소 → 저장·임시 폴더 안의 상대 경로. 위로 나가거나 이상하면 None."""
+    name = urllib.parse.unquote(name.split("#", 1)[0].split("?", 1)[0]).replace("\\", "/")
+    if not name or name.startswith("/") or "\x00" in name or _SCHEME_RE.match(name) or ":" in name:
+        return None
+    parts = [p for p in name.split("/") if p not in ("", ".")]
+    if not parts or any(p == ".." for p in parts):
+        return None
+    return "/".join(parts)
+
+
 def _under(p: Path, root: Path) -> bool:
     return p == root or root in p.parents
 

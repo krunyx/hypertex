@@ -34,6 +34,10 @@ Google Chrome과 같은 배치다. 위에서부터 탭 줄, 도구줄(뒤로·�
 macOS 에서는 Chrome 처럼 탭 줄이 창 맨 위, 신호등 단추 옆에 놓인다. 탭 줄의 빈 곳을 끌면 창이 움직이고,
 더블클릭은 시스템 설정의 제목 막대 동작(확대·최소화)을 따른다. 보기 › "탭을 제목 막대에 표시"로 끌 수 있다.
 주소창 왼쪽 단추는 문서의 진단(오류·경고, 호환 모드)을, 오른쪽 ☆는 북마크를 보여 준다.
+주소창 오른쪽 ✎(Ctrl+E)는 원문 편집기다. 탭이 두 칸이 되어 왼쪽에서 원문을 고치면 오른쪽 미리보기가 곧바로 바뀌고,
+오류·경고는 원문 줄에 표시된다. 로컬 `.htex`·`.tex`·`.md`·`.html` 은 Ctrl+S 로 그 자리에 저장한다.
+원격 문서(`htex://`)는 서버에 쓸 수 없으므로 "다른 이름으로 저장"하면 그 문서가 부르는 `\input`·`\usemacros`·그림을
+함께 가져와 내 컴퓨터에 저장한다 (`notes/Q-questions.md`).
 테마(시스템·밝게·어둡게)와 홈 페이지 설정은 ⋮ 메뉴. 북마크는 사용자 데이터 폴더의 `bookmarks.json`.
 
 ### 뷰어 단축키 (macOS는 Ctrl 대신 Cmd)
@@ -48,6 +52,8 @@ macOS 에서는 Chrome 처럼 탭 줄이 창 맨 위, 신호등 단추 옆에 �
 | 뒤로 / 앞으로 / 새로고침 / 홈 | Alt+← / Alt+→ / Ctrl+R / Alt+Home |
 | 주소창 | Ctrl+L, Alt+D, F6 |
 | 북마크 추가 / 북마크바 보이기·숨기기 | Ctrl+D / Ctrl+Shift+B |
+| 원문 편집 열기·닫기 / 저장 / 다른 이름으로 저장 | Ctrl+E / Ctrl+S / Ctrl+Shift+S |
+| (편집기 안) 찾기·바꾸기 / 되돌리기 | Ctrl+F / Ctrl+Z |
 
 열어 둔 로컬 문서는 저장하면 자동으로 다시 그려진다.
 
@@ -86,7 +92,7 @@ python -m htex parse examples/oscillator.htex
 
 ```bash
 python -m pip install pytest jsonschema
-python -m pytest -q tests/unit          # 단위 테스트 801건
+python -m pytest -q tests/unit          # 단위 테스트 850여 건
 python tools/run_all.py                 # 테스트 문서 28건 → out/, manifest 기대값 검사
 python tools/compare.py                 # 파서 출력과 손으로 쓴 정답 트리 대조
 python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks Project, amsmath 시험 문서 …)
@@ -103,7 +109,8 @@ python tools/realworld.py --check       # 실제 원고 7건 (HoTT 책, Stacks P
 | `htex/html/` | 문서 트리 → HTML + MathML, 가환 그림(`cd.py`) |
 | `htex/tikz/` | TikZ·pgfplots 부분집합 → SVG |
 | `htex/web/` | `serve`, `build`, 상호작용 스크립트 interact.js |
-| `htex/viewer/` | PySide6 전용 뷰어 (Chrome 모양 창 `chrome.py`, 북마크, 시작 페이지, `htex://` 주소, 히스토리, 미리보기, 슬라이더) |
+| `htex/viewer/` | PySide6 전용 뷰어 (Chrome 모양 창 `chrome.py`, 북마크, 시작 페이지, `htex://` 주소, 히스토리, 미리보기, 슬라이더, 원문 편집기 `editor.py`·`editing.py`) |
+| `tools/editor/` | 원문 편집기 묶음(CodeMirror 6 → `htex/viewer/editor.js`)을 만드는 npm 설정 |
 | `docs/` | 명세 사본, 문서 트리 표현 규칙, 상호작용 규약 |
 | `notes/` | 구현 담당별 질문과 임시 가정 |
 
