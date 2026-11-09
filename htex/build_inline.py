@@ -30,7 +30,7 @@ ACCENTS = {"'": "́", "`": "̀", "^": "̂", "\"": "̈", "~": "̃",
 # 본문에서 인수와 함께 조용히 무시하는 명령 (자리만 차지하는 명령)
 IGNORED_WITH_ARG = {"HyperTeXversion"}
 IGNORED = {"textwidth", "linewidth", "nonumber", "notag", "hline", "centering", "noindent",
-           "and", "maketitle"}
+           "and", "maketitle", "newblock"}   # \newblock: BibTeX .bbl 의 항목 구분
 
 EXTERNAL_PREFIXES = ("arxiv:", "doi:", "isbn:", "htex://", "https://")
 

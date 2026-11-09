@@ -187,11 +187,13 @@ def _coords(eng, text: str) -> list:
     return out
 
 
-def _sample(eng, text: str, a: float, b: float, n: int, var: str, logx: bool) -> list:
+def _sample(eng, text: str, a: float, b: float, n: int, var: str, logx: bool,
+            parametric: bool = False) -> list:
+    """parametric: \\addplot ({x식}, {y식}) 꼴. 중괄호 {…} 와 expression {…} 안은 언제나 식 하나다
+    ({(1+x)*(1-x)} 처럼 괄호로 시작해도)."""
     t = strip_braces(text)
-    parts = split_top(t, ",") if t.startswith("(") is False else None
     xe = ye = None
-    if text.strip().startswith("("):
+    if parametric and text.strip().startswith("("):
         inner = text.strip()[1:-1]
         ps = split_top(inner, ",")
         if len(ps) != 2:
@@ -645,7 +647,7 @@ def _parse_addplot(eng, text: str, plus: bool, cyc: int, ao: dict, logx: bool) -
         pts = _sample(eng, inner, a, b, samples, st.variable, logx)
     elif rest.startswith("("):
         k = match(rest, 0)
-        pts = _sample(eng, rest[:k], a, b, samples, st.variable, logx)
+        pts = _sample(eng, rest[:k], a, b, samples, st.variable, logx, parametric=True)
     elif rest.startswith("gnuplot") or rest.startswith("shell") or rest.startswith("file"):
         eng.problem("\\addplot gnuplot/shell/file 은 지원하지 않는다")
         return None

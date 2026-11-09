@@ -200,3 +200,18 @@ def test_window_in_english(tmp_path):
     assert "Language" in r["menu"] and "Theme" in r["menu"] and "Find…" in r["menu"]
     korean = [t for t in r["menu"] + r["tips"] if HANGUL.search(t) and t != "한국어"]
     assert not korean, korean
+
+
+def test_theorem_names_follow_document_language():
+    en = parse_text(r"""\documentclass{hypertex}\begin{document}
+\begin{theorem}A.\end{theorem}\begin{lemma}B.\end{lemma}\begin{proposition}C.\end{proposition}
+\begin{definition}D.\end{definition}\newtheorem{conj}{Conjecture}\begin{conj}E.\end{conj}
+\end{document}""", url="t.htex")
+    html = re.sub(r"<style>.*?</style>", "", render(en), flags=re.S)
+    for word in ("Theorem", "Lemma", "Proposition", "Definition", "Conjecture"):
+        assert f'htex-thm-name">{word}' in html, word
+    assert not HANGUL.search(html.split("<body", 1)[1])
+    ko = parse_text(r"""\documentclass{hypertex}\begin{document}\begin{theorem}한글 정리 본문.\end{theorem}
+\begin{lemma}보조 내용.\end{lemma}\end{document}""", url="t.htex")
+    html = render(ko)
+    assert 'htex-thm-name">정리' in html and 'htex-thm-name">보조정리' in html

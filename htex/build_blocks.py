@@ -859,11 +859,21 @@ class BlockMixin:
         before = len(self.bibliography)
         node = None
         from .lexer import tokenize
-        for nm in names:
-            base = nm[:-4] if nm.endswith(".bbl") else nm
-            text = self.ctx.loader.read_text(base, tok.span, self.sink, extensions=(".bbl",))
-            if text is None:
-                continue
+        # LaTeX 는 문서 이름의 .bbl (paper.tex → paper.bbl) 을 만든다. 그것이 있으면 그것을, 없으면 \bibliography 이름들.
+        texts: list[str] = []
+        job = _jobname(self.ctx.source_url)
+        if job and job not in names:
+            from .diagnostics import Sink
+            text = self.ctx.loader.read_text(job, tok.span, Sink(), extensions=(".bbl",))
+            if text is not None:
+                texts.append(text)
+        if not texts:
+            for nm in names:
+                base = nm[:-4] if nm.endswith(".bbl") else nm
+                text = self.ctx.loader.read_text(base, tok.span, self.sink, extensions=(".bbl",))
+                if text is not None:
+                    texts.append(text)
+        for text in texts:
             toks = tokenize(text, self.sink)
             for i, t in enumerate(toks):
                 if t.type is T.CS and t.text == "begin":
@@ -882,6 +892,15 @@ class BlockMixin:
 
 
 # ---------------------------------------------------------------- 순수 도우미
+def _jobname(url: str) -> str:
+    """문서 주소의 파일 이름에서 확장자를 뺀 것 (LaTeX 의 \\jobname). 같은 폴더에서 찾는다."""
+    if not url:
+        return ""
+    path = url.split("#", 1)[0].split("?", 1)[0]
+    name = path.replace("\\", "/").rsplit("/", 1)[-1]
+    return name.rsplit(".", 1)[0] if "." in name else name
+
+
 def width_value(v: str) -> str:
     m = re.match(r"^\s*([0-9]*\.?[0-9]+)\s*\\(textwidth|linewidth|columnwidth)\s*$", v)
     if m:
