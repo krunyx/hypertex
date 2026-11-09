@@ -67,6 +67,10 @@ def main(argv=None) -> int:
     ok = bool(res.get("ok")) and res.get("title") and js.get("htex") == "object" and js.get("math", 0) > 0 \
         and Path(a.out + ".png").exists()
     print("스모크 테스트:", "통과" if ok else "실패", f"(스크린숏 {a.out}.png)")
+    # https: 운영체제 인증서 저장소(system)나 certifi 를 써야 다른 컴퓨터에서도 인증서를 확인한다
+    if ok and res.get("tls") not in ("system", "certifi"):
+        print("https 인증서: 실패 (tls =", res.get("tls"), ") — truststore·certifi 가 묶이지 않았다")
+        ok = False
     if ok and not a.no_pdf:
         ok = check_pdf_figure(a.exe, a.out + "-pdf", a.timeout)
     if ok and not a.no_edit:

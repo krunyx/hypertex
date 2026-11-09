@@ -22,7 +22,8 @@ dependencies = []
 [project.optional-dependencies]
 # 전용 뷰어 (htex view, htex-viewer). Essentials + WebEngine 만으로 충분하지만
 # PySide6 메타 패키지가 플랫폼별 휠 선택을 가장 안정적으로 해 준다.
-viewer = ["PySide6>=6.5"]
+# truststore·certifi: https 인증서 확인 (운영체제 인증서 저장소, 없으면 Mozilla 묶음). 묶인 앱에 꼭 필요하다.
+viewer = ["PySide6>=6.5", "truststore>=0.9; python_version>='3.10'", "certifi"]
 dev = ["jsonschema>=4", "pytest>=7"]
 # 빌드·배포 도구 (런타임 의존성 아님)
 build = ["build", "pyinstaller>=6.3", "Pillow>=10"]

@@ -64,6 +64,11 @@ def _install_smoke(out: str) -> None:
             def got(js_state):
                 res = {"ok": bool(state["loaded"]), "title": view.title(), "url": view.url().toString(),
                        "js": js_state, "frozen": bool(getattr(sys, "frozen", False))}
+                try:                             # https 인증서를 어디서 믿는지 (묶인 앱에 루트 인증서가 있나)
+                    from htex.viewer.core import tls_context
+                    res["tls"] = tls_context()[1]
+                except Exception as e:   # noqa: BLE001
+                    res["tls"] = f"error: {e}"
                 if os.environ.get("HTEX_SMOKE_EDIT") == "1" and hasattr(win, "toggle_edit"):
                     check_editor(win, res)       # 원문 편집기 (QWebChannel·editor.js 가 묶였나)
                     return

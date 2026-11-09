@@ -40,6 +40,7 @@ import posixpath
 import re
 import socket
 import sys
+import ssl
 import tempfile
 import threading
 import time
@@ -267,12 +268,44 @@ class HTTPSOnlyRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
+_TLS: Optional[tuple[ssl.SSLContext, str]] = None
+
+
+def tls_context() -> tuple[ssl.SSLContext, str]:
+    """인증서 확인에 쓸 TLS 설정과 그 출처 ("system" · "certifi" · "openssl").
+
+    묶인 앱(PyInstaller)의 파이썬은 빌드한 기계의 OpenSSL 인증서 경로를 가리켜 다른 컴퓨터에서는 루트 인증서가
+    하나도 없다 (macOS 에서 CERTIFICATE_VERIFY_FAILED). 그래서
+    1. truststore: 운영체제의 인증서 저장소 (macOS 키체인, Windows 인증서 저장소, 리눅스 시스템 묶음).
+       회사·기관 프록시가 넣은 루트 인증서도 브라우저처럼 믿는다.
+    2. 없으면 certifi 의 Mozilla 루트 인증서 묶음.
+    3. 그것도 없으면 파이썬 기본값."""
+    global _TLS
+    if _TLS is not None:
+        return _TLS
+    try:
+        import truststore
+        ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        _TLS = (ctx, "system")
+        return _TLS
+    except Exception:   # noqa: BLE001 — 없거나 이 운영체제에서 못 쓰면 다음 것
+        pass
+    ctx = ssl.create_default_context()
+    try:
+        import certifi
+        ctx.load_verify_locations(cafile=certifi.where())
+        _TLS = (ctx, "certifi")
+    except Exception:   # noqa: BLE001
+        _TLS = (ctx, "openssl")
+    return _TLS
+
+
 def default_opener() -> urllib.request.OpenerDirector:
     # HTTPS 와 리다이렉트만. build_opener 는 file: · ftp: · data: · http: 처리기를 넣으므로 직접 짠다.
     op = urllib.request.OpenerDirector()
     for h in (urllib.request.ProxyHandler(), urllib.request.UnknownHandler(),
               urllib.request.HTTPDefaultErrorHandler(), HTTPSOnlyRedirect(),
-              urllib.request.HTTPErrorProcessor(), urllib.request.HTTPSHandler()):
+              urllib.request.HTTPErrorProcessor(), urllib.request.HTTPSHandler(context=tls_context()[0])):
         op.add_handler(h)
     return op
 

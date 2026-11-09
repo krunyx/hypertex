@@ -53,6 +53,9 @@ EXCLUDES = ["PySide6." + m for m in EXCLUDE_QT] + [
 datas = collect_data_files("htex", includes=["**/*.js", "**/*.css", "**/*.json", "**/*.svg",
                                              "**/*.png", "**/*.txt", "**/*.html"])
 hiddenimports = collect_submodules("htex") + ["PySide6.QtPdf"]   # PDF 그림 (pdfimage 는 함수 안에서 부른다)
+# https 인증서 (core.tls_context 가 함수 안에서 부른다): 운영체제 저장소, 없으면 Mozilla 묶음
+hiddenimports += collect_submodules("truststore") + ["certifi"]
+datas += collect_data_files("certifi")
 
 a = Analysis(                                                       # noqa: F821
     [str(ROOT / "packaging" / "pyinstaller" / "htex_viewer_entry.py")],

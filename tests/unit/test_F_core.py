@@ -532,3 +532,22 @@ def test_default_interact_js_is_g_script():
     assert core.interact_js == INTERACT_JS_PATH
     if INTERACT_JS_PATH.exists():
         assert core.respond("htexapp://asset/interact.js").body == INTERACT_JS_PATH.read_bytes()
+
+
+def test_tls_context_trusts_roots(monkeypatch):
+    """묶인 앱에서도 https 인증서를 확인할 수 있게: 운영체제 저장소(truststore) 또는 certifi."""
+    import ssl
+    from htex.viewer import core as c
+    monkeypatch.setattr(c, "_TLS", None)
+    ctx, source = c.tls_context()
+    assert source in ("system", "certifi")
+    assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname
+    # truststore 를 못 쓰면 certifi 의 루트 인증서를 싣는다
+    import builtins
+    real = builtins.__import__
+    monkeypatch.setattr(builtins, "__import__",
+                        lambda n, *a, **k: (_ for _ in ()).throw(ImportError(n)) if n == "truststore" else real(n, *a, **k))
+    monkeypatch.setattr(c, "_TLS", None)
+    ctx, source = c.tls_context()
+    assert source == "certifi" and ctx.cert_store_stats()["x509_ca"] > 50
+    monkeypatch.setattr(c, "_TLS", None)
