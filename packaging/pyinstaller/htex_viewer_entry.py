@@ -108,6 +108,13 @@ def _install_smoke(out: str) -> None:
                     QTimer.singleShot(1500, finish)     # 상호작용 스크립트·그림이 자리 잡을 시간
             view.loadFinished.connect(on_load)
 
+            # 걸기 전에 이미 다 불러왔으면 loadFinished 가 다시 오지 않는다 (빠른 기계에서 가끔)
+            def already(rs):
+                u = view.url().toString()
+                if rs == "complete" and u and not u.startswith("about:"):
+                    on_load(True)
+            view.page().runJavaScript("document.readyState", 0, already)
+
         t = QTimer(app)
         t.timeout.connect(poll)
         t.start(50)
