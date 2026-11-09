@@ -27,6 +27,7 @@ def _main() -> int:
 def _install_smoke(out: str) -> None:
     """빌드 확인용 (packaging/smoke_test.py, CI). HTEX_SMOKE_OUT=결과 경로 접두어 이면
     첫 문서를 다 불러온 뒤 창 스크린숏(<접두어>.png)과 상태(<접두어>.json)를 남기고 끝낸다.
+    HTEX_SMOKE_EDIT=1 이면 원문 편집기를 열어 편집기 줄 수(editor_lines)도 남긴다.
 
     뷰어 코드 구조(창·탭·QApplication 하위 클래스)에 기대지 않도록 QApplication.exec 자체를 감싸고,
     화면의 첫 QWebEngineView 를 찾는다. QApplication 을 여기서 만들지는 않는다."""
@@ -61,9 +62,34 @@ def _install_smoke(out: str) -> None:
             win = view.window()
 
             def got(js_state):
+                res = {"ok": bool(state["loaded"]), "title": view.title(), "url": view.url().toString(),
+                       "js": js_state, "frozen": bool(getattr(sys, "frozen", False))}
+                if os.environ.get("HTEX_SMOKE_EDIT") == "1" and hasattr(win, "toggle_edit"):
+                    check_editor(win, res)       # 원문 편집기 (QWebChannel·editor.js 가 묶였나)
+                    return
                 win.grab().save(out + ".png")
-                write({"ok": bool(state["loaded"]), "title": view.title(), "url": view.url().toString(),
-                       "js": js_state, "frozen": bool(getattr(sys, "frozen", False))})
+                write(res)
+
+            def check_editor(win, res):
+                win.toggle_edit()
+                lines: list = []
+
+                def ask():
+                    from PySide6.QtWebEngineWidgets import QWebEngineView
+                    views = [w for w in app.allWidgets() if isinstance(w, QWebEngineView) and w.isVisible()]
+                    left = len(views)
+                    if not views:
+                        return done()
+                    for v in views:
+                        v.page().runJavaScript(
+                            "window.HtexEditor ? document.querySelectorAll('.cm-line').length : -1", 0,
+                            lambda n: (lines.append(n), len(lines) >= left and done()))
+
+                def done():
+                    res["editor_lines"] = max([n for n in lines if isinstance(n, (int, float))] or [-1])
+                    win.grab().save(out + ".png")
+                    write(res)
+                QTimer.singleShot(2500, ask)
             view.page().runJavaScript(
                 "JSON.stringify({htex: typeof window.HTEX, math: document.querySelectorAll('math').length,"
                 " svg: document.querySelectorAll('svg').length,"

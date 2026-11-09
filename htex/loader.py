@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import contextvars
 import re
 from pathlib import Path
 from typing import Optional
@@ -14,6 +15,10 @@ from .diagnostics import Sink, Span
 
 _FORBIDDEN = re.compile(r"^(javascript|data|file|http|ftp|vbscript):", re.IGNORECASE)
 _ABSOLUTE = re.compile(r"^(htex|https)://", re.IGNORECASE)
+
+# 찾지 못한 상대 주소를 모을 목록 (뷰어가 원격 문서의 \input 등을 가져오려고 파싱 동안 넣어 둔다, 10단계 Q).
+# 목록이 있으면 read_text 가 (주소, 시도한 확장자들) 을 더한다. 파서는 여전히 네트워크에 닿지 않는다.
+MISSING: "contextvars.ContextVar[Optional[list]]" = contextvars.ContextVar("htex_loader_missing", default=None)
 
 
 def classify(url: str) -> str:
@@ -58,5 +63,8 @@ class Loader:
                 return None
             if p.is_file():
                 return p.read_text(encoding="utf-8")
+        missing = MISSING.get()
+        if missing is not None:
+            missing.append((url, tuple(extensions)))
         sink.add("missing-resource", f"파일을 찾을 수 없다: {url}", span)
         return None

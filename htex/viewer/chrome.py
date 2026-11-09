@@ -101,6 +101,8 @@ ICON_PATHS = {
     "search": ("M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 "
                "16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 "
                "11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"),
+    "edit": ("M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34"
+             "-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"),
     "up": "M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z",
     "down": "M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z",
     "chevrons": ("M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM12 6l-1.41 1.41L15.17 12l-4.58 4.59L12 18l"
@@ -146,6 +148,8 @@ def stylesheet(c: Palette) -> str:
 #navbar QToolButton:hover, #tabstrip QToolButton#newtab:hover {{ background: {c.hover}; }}
 #navbar QToolButton:pressed, #tabstrip QToolButton#newtab:pressed {{ background: {c.pressed}; }}
 #navbar QToolButton:disabled {{ background: transparent; }}
+#navbar QToolButton:checked {{ background: {c.pressed}; }}
+QSplitter::handle {{ background: {c.border}; }}
 #navbar QToolButton::menu-indicator {{ image: none; width: 0; }}
 #bookmarks QToolButton {{ border-radius: 14px; padding: 0 8px; font-size: 12px; }}
 #bookmarks QToolButton:hover {{ background: {c.hover}; }}
@@ -708,7 +712,7 @@ class Omnibox(QFrame):
 
 
 class NavBar(QWidget):
-    """← → ⟳ ⌂ [주소창] ⋮"""
+    """← → ⟳ ⌂ [주소창] ✎ ⋮   (✎ 편집, 10단계 Q)"""
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -723,6 +727,8 @@ class NavBar(QWidget):
         self.reload = nav_button(self)
         self.home = nav_button(self)
         self.omnibox = Omnibox(self)
+        self.edit = nav_button(self)
+        self.edit.setObjectName("edit")
         self.menu = nav_button(self)
         self.menu.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.menu.setToolTip(tr('HyperTeX 설정 및 기타'))
@@ -731,6 +737,7 @@ class NavBar(QWidget):
         lay.addSpacing(4)
         lay.addWidget(self.omnibox, 1)
         lay.addSpacing(4)
+        lay.addWidget(self.edit)
         lay.addWidget(self.menu)
 
 

@@ -120,3 +120,14 @@ I와 J 사이의 약속:
 
 - 새 화면 글자는 한국어 원문으로 `tr("…")` 에 넣고 `htex/i18n_en.py` 에 영어를 더한다. `test_P_i18n.py` 가 빠진 것을 찾는다.
 - 테스트는 `HTEX_LANG=ko` 로 돈다 (`tests/unit/conftest.py`).
+
+
+## 10단계 담당 구역 (원문 편집)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| Q 편집 | 새 파일 `htex/viewer/editor.py`·`editing.py`·`editor.js`·`editor.LICENSE.txt`, `tools/editor/`, `htex/viewer/app.py`·`chrome.py`(✎ 단추·두 칸·저장), `htex/viewer/core.py`(편집 중 원문, 원격 문서가 부르는 파일), `htex/loader.py`(못 찾은 주소 모으기), `htex/i18n_en.py`, `packaging/`(편집기 확인), `README.md`, `tests/unit/test_Q_*.py`, `notes/Q-questions.md` | 로컬 문서를 고치면 미리보기가 바로 바뀌고 Ctrl+S 로 저장, 원격 문서는 부르는 파일과 함께 로컬에 저장, 묶인 앱 스모크 테스트에서도 편집기가 뜸, 기존 테스트 유지 |
+
+- 편집기 묶음은 `cd tools/editor && npm ci && npm run build` 로 다시 만든다 (버전은 `package.json`·`package-lock.json` 에 고정).
+  `htex/viewer/editor.js` 는 만든 결과를 그대로 넣어 둔다 (파이썬 설치·PyInstaller 는 npm 없이 쓴다).
+
