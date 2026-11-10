@@ -99,6 +99,10 @@ def register_schemes() -> None:
 
 
 def settings() -> QSettings:
+    """뷰어 설정. HTEX_DATA_DIR 가 있으면 그 안의 viewer.ini (테스트가 실제 사용자 설정을 건드리지 않게)."""
+    override = os.environ.get("HTEX_DATA_DIR")
+    if override:
+        return QSettings(str(Path(override) / "viewer.ini"), QSettings.Format.IniFormat)
     return QSettings(ORG_NAME, "Viewer")
 
 
