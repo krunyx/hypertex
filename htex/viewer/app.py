@@ -1543,13 +1543,24 @@ class ViewerWindow(QMainWindow):
             return ""
         return addr
 
+    @staticmethod
+    def _real_title(tab: Tab, title: str) -> bool:
+        """웹 엔진은 제목이 정해지기 전에 주소를 제목처럼 알려 준다 (윈도에서 특히). 그런 것은 제목이 아니다."""
+        t = (title or "").strip()
+        if not t:
+            return False
+        if t == tab.current_url() or "://" in t.split()[0] and t.split()[0] == t:
+            return False
+        return True
+
     def _record_visit(self, tab: Tab, ok: bool, title: bool = True) -> None:
         if not ok:
             return
         addr = self._visit_address(tab)
         if addr:
             # 주소가 막 바뀐 때의 tab.title() 은 앞 페이지 제목일 수 있어 쓰지 않는다
-            self.visits.record(addr, tab.title() if title else "")
+            t = tab.title() if title else ""
+            self.visits.record(addr, t if self._real_title(tab, t) else "")
 
     def show_history(self) -> Tab:
         """Ctrl+H (macOS Cmd+Y): 방문 기록 페이지. 이미 열린 기록 탭이 있으면 그리로 (Chrome 과 같다)."""
@@ -2489,7 +2500,7 @@ class ViewerWindow(QMainWindow):
 
     def _on_tab_title(self, tab: Tab, title: str) -> None:
         addr = self._visit_address(tab)
-        if addr and title:
+        if addr and self._real_title(tab, title):
             self.visits.set_title(addr, title)
         i = self.tabs.indexOf(tab)
         if tab.editor is not None and tab.editor.dirty:
