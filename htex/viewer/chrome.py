@@ -16,6 +16,7 @@ from __future__ import annotations
 from ..i18n import tr
 
 import sys
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -86,6 +87,8 @@ ICON_PATHS = {
     "star_filled": ("M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 "
                     "4.73L5.82 21z"),
     "folder": ("M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"),
+    "folder_open": ("M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"
+                    "m0 12H4V8h16v10z"),
     "doc": ("M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0"
             "-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"),
     "globe": ("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85"
@@ -600,11 +603,27 @@ def nav_button(parent: QWidget, size: int = 32) -> QToolButton:
     return b
 
 
+def dropped_paths(mime) -> list[str]:
+    """끌어다 놓은 데이터(QMimeData)에서 로컬 파일 경로만 꺼낸다 (폴더는 뺀다). 없으면 빈 목록."""
+    if mime is None or not mime.hasUrls():
+        return []
+    out: list[str] = []
+    for u in mime.urls():
+        if not u.isLocalFile():
+            continue
+        path = u.toLocalFile()
+        if path and not Path(path).is_dir():
+            out.append(path)
+    return out
+
+
 class AddressEdit(QLineEdit):
-    """주소 입력: 마우스로 처음 누르면 전체 선택 (Chrome), Esc 는 원래 주소로 되돌리기."""
+    """주소 입력: 마우스로 처음 누르면 전체 선택 (Chrome), Esc 는 원래 주소로 되돌리기.
+    로컬 파일을 끌어다 놓으면 files_dropped 로 알린다 (글자를 끌어다 놓는 것은 그대로)."""
 
     escaped = Signal()
     focus_changed = Signal(bool)
+    files_dropped = Signal(list)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -633,6 +652,26 @@ class AddressEdit(QLineEdit):
             self.escaped.emit()
             return
         super().keyPressEvent(e)
+
+    def dragEnterEvent(self, e) -> None:   # noqa: N802
+        if dropped_paths(e.mimeData()):
+            e.acceptProposedAction()
+            return
+        super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e) -> None:   # noqa: N802
+        if dropped_paths(e.mimeData()):
+            e.acceptProposedAction()
+            return
+        super().dragMoveEvent(e)
+
+    def dropEvent(self, e) -> None:   # noqa: N802
+        paths = dropped_paths(e.mimeData())
+        if paths:
+            e.acceptProposedAction()
+            self.files_dropped.emit(paths)
+            return
+        super().dropEvent(e)
 
 
 class Omnibox(QFrame):
@@ -712,7 +751,7 @@ class Omnibox(QFrame):
 
 
 class NavBar(QWidget):
-    """← → ⟳ ⌂ [주소창] ✎ ⋮   (✎ 편집, 10단계 Q)"""
+    """← → ⟳ ⌂ 📂 [주소창] ✎ ⋮   (✎ 편집, 10단계 Q · 📂 파일 열기, v0.8.0)"""
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -726,13 +765,15 @@ class NavBar(QWidget):
         self.forward = nav_button(self)
         self.reload = nav_button(self)
         self.home = nav_button(self)
+        self.open = nav_button(self)
+        self.open.setObjectName("openfile")
         self.omnibox = Omnibox(self)
         self.edit = nav_button(self)
         self.edit.setObjectName("edit")
         self.menu = nav_button(self)
         self.menu.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.menu.setToolTip(tr('HyperTeX 설정 및 기타'))
-        for w in (self.back, self.forward, self.reload, self.home):
+        for w in (self.back, self.forward, self.reload, self.home, self.open):
             lay.addWidget(w)
         lay.addSpacing(4)
         lay.addWidget(self.omnibox, 1)

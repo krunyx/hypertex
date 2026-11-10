@@ -131,3 +131,9 @@ I와 J 사이의 약속:
 - 편집기 묶음은 `cd tools/editor && npm ci && npm run build` 로 다시 만든다 (버전은 `package.json`·`package-lock.json` 에 고정).
   `htex/viewer/editor.js` 는 만든 결과를 그대로 넣어 둔다 (파이썬 설치·PyInstaller 는 npm 없이 쓴다).
 
+
+## 11단계 담당 구역 (v0.8.0 로컬 파일 열기)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| R 파일 열기 | `htex/viewer/chrome.py`(파일 단추·`dropped_paths`·주소창 놓기), `htex/viewer/app.py`(놓기 처리), `htex/__init__.py`(버전), `README.md`(뷰어 절), `tests/unit/test_R_*.py`, `notes/R-questions.md` | 주소창 왼쪽 파일 단추가 Ctrl+O 와 같은 동작, 창·주소창·페이지에 로컬 파일을 끌어다 놓으면 열림, 글자 끌어다 놓기는 그대로, 기존 테스트 유지 |
