@@ -874,21 +874,30 @@ class BookmarksBar(QWidget):
                 return True
         return super().eventFilter(obj, ev)
 
-    def _folder_menu(self, folder) -> QMenu:
-        m = QMenu(self)
+    def _folder_menu(self, folder, parent: Optional[QWidget] = None) -> QMenu:
+        """폴더 메뉴. 하위 폴더는 하위 메뉴로 (Chrome 처럼, v0.8.1)."""
+        m = QMenu(parent or self)
+        self._populate_folder_menu(m, folder)
+        return m
+
+    def _populate_folder_menu(self, m: QMenu, folder) -> None:
         if not folder.children:
             a = m.addAction(tr('(비어 있음)'))
             a.setEnabled(False)
         for ch in folder.children or []:
+            if ch.is_folder:
+                sub = m.addMenu(self._icon_for(ch), ch.title.replace("&", "&&"))
+                # 하위 메뉴는 처음 열 때 채운다 (가져온 북마크가 수천 개여도 메뉴가 빨리 뜨게)
+                sub.aboutToShow.connect(lambda sm=sub, f=ch: sm.actions() or self._populate_folder_menu(sm, f))
+                continue
             a = m.addAction(self._icon_for(ch), ch.title.replace("&", "&&"))
             a.setToolTip(ch.url)
             a.triggered.connect(lambda _=False, u=ch.url: self.open_requested.emit(u, False))
-        if folder.children:
+        links = [c for c in folder.children or [] if not c.is_folder]
+        if links:
             m.addSeparator()
-            a = m.addAction(tr('모두 새 탭에서 열기 ({a1})', a1=len(folder.children)))
-            a.triggered.connect(lambda _=False, f=folder: [self.open_requested.emit(c.url, True)
-                                                           for c in f.children or []])
-        return m
+            a = m.addAction(tr('모두 새 탭에서 열기 ({a1})', a1=len(links)))
+            a.triggered.connect(lambda _=False, ls=links: [self.open_requested.emit(c.url, True) for c in ls])
 
     def _item_menu(self, item, pos: QPoint) -> None:
         m = QMenu(self)
@@ -1096,8 +1105,9 @@ class BookmarkPopup(Popup):
         f_lab.setFixedWidth(40)
         self.folder = QComboBox(self)
         self.folder.addItem(tr('북마크바'), None)
-        for f in folders:
-            self.folder.addItem(f.title, f)
+        for f in folders:                       # Bookmark, 또는 (보일 이름, Bookmark) — 하위 폴더는 경로로
+            label, f = f if isinstance(f, tuple) else (f.title, f)
+            self.folder.addItem(label, f)
         if current_folder is not None:
             for i in range(self.folder.count()):
                 if self.folder.itemData(i) is current_folder:

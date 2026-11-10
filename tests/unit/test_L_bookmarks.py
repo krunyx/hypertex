@@ -58,11 +58,12 @@ def test_broken_file_is_kept_aside(tmp_path):
     assert st.bar == [] and (tmp_path / "bookmarks.json.broken").exists()
 
 
-def test_from_json_rejects_bad_items_and_nested_folders():
+def test_from_json_rejects_bad_items_and_keeps_nested_folders():
     assert Bookmark.from_json({"title": "x"}) is None
     f = Bookmark.from_json({"title": "f", "children": [{"title": "a", "url": "u"},
                                                        {"title": "g", "children": []}]})
-    assert f.is_folder and [c.url for c in f.children] == ["u"]
+    # v0.8.1(R): 폴더 안의 폴더를 둔다 (Chrome 처럼). 예전에는 버렸다.
+    assert f.is_folder and [c.url for c in f.children] == ["u", ""] and f.children[1].is_folder
     assert same_address(" https://a.org/ ", "https://a.org") and not same_address("a", "b")
 
 

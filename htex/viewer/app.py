@@ -62,6 +62,7 @@ from .instance import (REPLY_OK, decode_message, encode_message, file_signature,
                        local_dependencies, normalize_targets)
 from . import chrome, editing, macwin
 from .editor import EditorPane
+from . import bookmark_import
 from .bookmarks import BookmarkStore
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
                      TabStrip, ZoomRow, svg_icon)
@@ -1224,6 +1225,7 @@ class ViewerWindow(QMainWindow):
         m.clear()
         m.addAction(self.act_bookmark)
         m.addAction(self.act_bookmarks_bar)
+        self._add_import_menu(m)
         m.addSeparator()
         bar = self.bookmarks_bar
         if not self.bookmarks.bar:
@@ -1238,6 +1240,54 @@ class ViewerWindow(QMainWindow):
             else:
                 a = m.addAction(bar._icon_for(it), it.title.replace("&", "&&"))
                 a.triggered.connect(lambda _=False, u=it.url: self.open_bookmark(u, False))
+
+    # ------------------------------------------------------------ 북마크 가져오기 (v0.8.1)
+    def _add_import_menu(self, m: QMenu) -> None:
+        """북마크 › 북마크 가져오기 › [이 컴퓨터의 Chrome·Edge… 프로필] / HTML 파일에서…"""
+        sub = m.addMenu(tr('북마크 가져오기'))
+        try:
+            profiles = bookmark_import.find_profiles()
+        except OSError:
+            profiles = []
+        for prof in profiles:
+            sub.addAction(prof.label).triggered.connect(lambda _=False, p=prof: self.import_bookmarks_profile(p))
+        if profiles:
+            sub.addSeparator()
+        sub.addAction(tr('HTML 북마크 파일에서…')).triggered.connect(self.import_bookmarks_html)
+
+    def import_bookmarks_profile(self, prof) -> int:
+        try:
+            got = bookmark_import.read_chromium(prof.path)
+        except ValueError:
+            self._warn(tr('{name} 의 북마크를 읽지 못했습니다.', name=prof.label), tr('북마크 가져오기'))
+            return 0
+        return self._finish_import(got, prof.browser)
+
+    def import_bookmarks_html(self, path: Optional[str] = None) -> int:
+        if path is None:
+            path, _ = QFileDialog.getOpenFileName(self, tr('HTML 북마크 파일 가져오기'), str(Path.home()),
+                                                  tr('북마크 파일 (*.html *.htm);;모든 파일 (*)'))
+            if not path:
+                return 0
+        try:
+            got = bookmark_import.read_html_file(Path(path))
+        except (OSError, ValueError):
+            self._warn(tr('이 파일에서 북마크를 찾지 못했습니다: {name}', name=Path(path).name),
+                       tr('북마크 가져오기'))
+            return 0
+        return self._finish_import(got, Path(path).stem)
+
+    def _finish_import(self, got, source: str) -> int:
+        added = self.bookmarks.import_items(got.bar, got.other, source)
+        if added == 0:
+            msg = tr('새로 가져올 북마크가 없습니다 (모두 이미 있음).')
+        else:
+            msg = tr('북마크 {n}개를 가져왔습니다.', n=added)
+            if self.bookmarks_bar.isHidden():
+                self.toggle_bookmarks_bar()
+        self.status.showMessage(msg, 6000)
+        self.last_import_message = msg
+        return added
 
     def _sync_zoom_row(self) -> None:
         tab = self.current_tab()
@@ -1339,7 +1389,8 @@ class ViewerWindow(QMainWindow):
             self.bookmarks.add(tr('새 탭') if addr == START_URL else title, addr)
             hit = self.bookmarks.find(addr)
         folder, item = hit
-        pop = BookmarkPopup(self, item.title, self.bookmarks.folders(), folder, new)
+        choices = [(self.bookmarks.folder_path(f), f) for f in self.bookmarks.folders()]
+        pop = BookmarkPopup(self, item.title, choices, folder, new)
         pop.done_btn.clicked.connect(lambda: (self.bookmarks.update(
             item, title=pop.name.text(), folder=pop.folder.currentData()), pop.close()))
         pop.remove_btn.clicked.connect(lambda: (self.bookmarks.remove(item), pop.close()))

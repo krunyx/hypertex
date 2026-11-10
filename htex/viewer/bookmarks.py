@@ -6,7 +6,8 @@
      "bar": [ {"title": "HyperTeX", "url": "https://krunyx.com/hypertex/"},
               {"title": "논문", "children": [ {"title": "…", "url": "…"} ]} ]}
 
-- 항목은 북마크(`url` 있음) 또는 폴더(`children` 있음). 폴더는 한 단계만 (Chrome 북마크바처럼 쓰기에 충분).
+- 항목은 북마크(`url` 있음) 또는 폴더(`children` 있음). 폴더 안에 폴더를 둘 수 있다 (Chrome 처럼, v0.8.1).
+  너무 깊은 것은 MAX_DEPTH 단계에서 자른다 (그 아래 폴더는 버리지 않고 북마크만 위로 올린다).
 - `url` 은 주소 표시줄에 넣는 것과 같은 꼴로 둔다: htex://…, https://…, 로컬 파일 경로.
   (htexapp://doc-<키>/ 는 실행마다 바뀌므로 저장하지 않는다. 뷰어가 display_address 로 바꿔 넘긴다.)
 - 파일이 깨졌으면 지우지 않고 `bookmarks.json.broken` 으로 옮긴 뒤 빈 목록으로 시작한다.
@@ -24,6 +25,7 @@ from pathlib import Path
 from typing import Callable, Iterator, Optional
 
 VERSION = 1
+MAX_DEPTH = 8          # 폴더 깊이 (북마크바 = 0)
 
 # 처음 실행할 때 북마크바에 넣는 것 (사용자가 지우면 다시 생기지 않는다)
 DEFAULT_BOOKMARKS = [
@@ -64,8 +66,10 @@ class Bookmark:
         if not isinstance(d, dict):
             return None
         title = str(d.get("title") or "")[:300]
-        if isinstance(d.get("children"), list) and depth == 0:
-            kids = [b for b in (Bookmark.from_json(c, 1) for c in d["children"]) if b and not b.is_folder]
+        if isinstance(d.get("children"), list):
+            if depth >= MAX_DEPTH:
+                return None
+            kids = [b for b in (Bookmark.from_json(c, depth + 1) for c in d["children"]) if b]
             return Bookmark(title or tr('새 폴더'), children=kids)
         url = d.get("url")
         if not isinstance(url, str) or not url.strip():
@@ -140,21 +144,33 @@ class BookmarkStore:
     # ------------------------------------------------------------ 읽기
     def snapshot(self) -> list[Bookmark]:
         """다른 스레드(시작 페이지 응답)에서 읽을 복사본."""
+        def copy(b: Bookmark) -> Bookmark:
+            return Bookmark(b.title, b.url, None if b.children is None else [copy(c) for c in b.children])
         with self._lock:
-            return [Bookmark(b.title, b.url, None if b.children is None
-                             else [Bookmark(c.title, c.url) for c in b.children]) for b in self.bar]
+            return [copy(b) for b in self.bar]
+
+    def iter_folders(self) -> Iterator[tuple[int, Bookmark]]:
+        """(깊이, 폴더) 모두, 위에서부터 차례로. 북마크바 바로 아래 폴더의 깊이가 0."""
+        def walk(items: list[Bookmark], depth: int) -> Iterator[tuple[int, Bookmark]]:
+            for b in items:
+                if b.is_folder:
+                    yield depth, b
+                    yield from walk(b.children or [], depth + 1)
+        yield from walk(self.bar, 0)
 
     def folders(self) -> list[Bookmark]:
-        return [b for b in self.bar if b.is_folder]
+        """모든 폴더 (하위 폴더 포함, 위에서부터 차례로)."""
+        return [f for _, f in self.iter_folders()]
 
     def iter_all(self) -> Iterator[tuple[Optional[Bookmark], Bookmark]]:
-        """(들어 있는 폴더 또는 None, 북마크) 모두."""
-        for b in self.bar:
-            if b.is_folder:
-                for c in b.children or []:
-                    yield b, c
-            else:
-                yield None, b
+        """(들어 있는 폴더 또는 None, 북마크) 모두. 하위 폴더 안의 것까지."""
+        def walk(items: list[Bookmark], parent: Optional[Bookmark]):
+            for b in items:
+                if b.is_folder:
+                    yield from walk(b.children or [], b)
+                else:
+                    yield parent, b
+        yield from walk(self.bar, None)
 
     def find(self, url: str) -> Optional[tuple[Optional[Bookmark], Bookmark]]:
         if not url:
@@ -181,10 +197,15 @@ class BookmarkStore:
         self._changed()
         return b
 
-    def add_folder(self, title: str, index: Optional[int] = None) -> Bookmark:
+    def add_folder(self, title: str, index: Optional[int] = None,
+                   parent: Optional[Bookmark] = None) -> Bookmark:
+        """parent 를 주면 그 폴더 안에 (너무 깊으면 북마크바에)."""
         f = Bookmark((title or tr('새 폴더')).strip()[:300] or tr('새 폴더'), children=[])
         with self._lock:
-            self.bar.insert(len(self.bar) if index is None else max(0, min(index, len(self.bar))), f)
+            if parent is not None and (not parent.is_folder or self.depth_of(parent) + 1 >= MAX_DEPTH):
+                parent = None
+            target = parent.children if parent is not None else self.bar
+            target.insert(len(target) if index is None else max(0, min(index, len(target))), f)
         self._changed()
         return f
 
@@ -193,12 +214,10 @@ class BookmarkStore:
             if item in self.bar:
                 self.bar.remove(item)
             else:
-                for f in self.folders():
-                    if item in (f.children or []):
-                        f.children.remove(item)
-                        break
-                else:
+                parent = self.parent_of(item)
+                if parent is None:
                     return False
+                parent.children.remove(item)
         self._changed()
         return True
 
@@ -231,7 +250,74 @@ class BookmarkStore:
         self._changed()
 
     def parent_of(self, item: Bookmark) -> Optional[Bookmark]:
+        """item 이 들어 있는 폴더 (북마크바에 있거나 없으면 None). 같은 객체로 찾는다."""
         for f in self.folders():
-            if item in (f.children or []):
+            if any(c is item for c in f.children or []):
                 return f
         return None
+
+    def depth_of(self, folder: Bookmark) -> int:
+        """폴더의 깊이 (북마크바 바로 아래 = 0, 없으면 -1)."""
+        for d, f in self.iter_folders():
+            if f is folder:
+                return d
+        return -1
+
+    def folder_path(self, folder: Bookmark) -> str:
+        """화면에 보일 폴더 경로: "논문 › 2026"."""
+        names = []
+        cur: Optional[Bookmark] = folder
+        while cur is not None:
+            names.append(cur.title)
+            cur = self.parent_of(cur)
+        return " › ".join(reversed(names))
+
+    # ------------------------------------------------------------ 가져오기
+    def import_items(self, bar_items: list[Bookmark], other_items: list[Bookmark], source: str) -> int:
+        """다른 브라우저의 북마크를 들인다. 들인 북마크 수를 돌려준다 (이미 있는 주소는 건너뛴다).
+
+        Chrome 의 가져오기처럼: 북마크바가 비었거나 처음 넣어 둔 기본 북마크뿐이면 북마크바 항목을 그대로
+        북마크바에 놓고, 아니면 "<source>에서 가져옴" 폴더 하나에 넣는다. 북마크바 밖의 것(Chrome 의
+        "기타 북마크")은 그 안의 "기타 북마크" 폴더로.
+        """
+        seen = {b.url.strip().rstrip("/") for _, b in self.iter_all()}
+        count = 0
+
+        def fresh(items: list[Bookmark], depth: int) -> list[Bookmark]:
+            nonlocal count
+            out: list[Bookmark] = []
+            for b in items:
+                if b.is_folder:
+                    kids = fresh(b.children or [], depth + 1)
+                    if not kids:
+                        continue
+                    if depth >= MAX_DEPTH:      # 너무 깊으면 북마크만 위로
+                        out.extend(kids)
+                    else:
+                        out.append(Bookmark(b.title[:300] or tr('새 폴더'), children=kids))
+                else:
+                    key = b.url.strip().rstrip("/")
+                    if not key or key in seen:
+                        continue
+                    seen.add(key)
+                    out.append(Bookmark((b.title or b.url).strip()[:300], b.url.strip()[:4000]))
+                    count += 1
+            return out
+
+        default_urls = {d["url"].rstrip("/") for d in DEFAULT_BOOKMARKS}
+        with self._lock:
+            only_defaults = all(not b.is_folder and b.url.rstrip("/") in default_urls for b in self.bar)
+            direct = only_defaults
+            top = fresh(bar_items, 0 if direct else 1)
+            other_depth = 1 if direct else 2
+            other = fresh(other_items, other_depth)
+            if other:
+                top.append(Bookmark(tr('기타 북마크'), children=other))
+            if not top:
+                return 0
+            if direct:
+                self.bar.extend(top)
+            else:
+                self.bar.append(Bookmark(tr('{source}에서 가져옴', source=source), children=top))
+        self._changed()
+        return count
