@@ -137,3 +137,11 @@ I와 J 사이의 약속:
 | 담당 | 수정 가능한 파일 | 완료 기준 |
 | --- | --- | --- |
 | R 파일 열기 | `htex/viewer/chrome.py`(파일 단추·`dropped_paths`·주소창 놓기), `htex/viewer/app.py`(놓기 처리), `htex/__init__.py`(버전), `README.md`(뷰어 절), `tests/unit/test_R_*.py`, `notes/R-questions.md` | 주소창 왼쪽 파일 단추가 Ctrl+O 와 같은 동작, 창·주소창·페이지에 로컬 파일을 끌어다 놓으면 열림, 글자 끌어다 놓기는 그대로, 기존 테스트 유지 |
+
+
+## 12단계 담당 구역 (v0.8.1 북마크 가져오기·세션·인쇄)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| R 브라우저 기본 | 새 파일 `htex/viewer/bookmark_import.py`·`session.py`, `htex/viewer/bookmarks.py`(중첩 폴더·가져오기), `htex/viewer/chrome.py`(폴더 메뉴), `htex/viewer/app.py`(가져오기·세션·닫은 탭·인쇄·PDF), `htex/html/style.py`(인쇄 색), `htex/i18n_en.py`, `htex/__init__.py`(버전), `README.md`, `tests/unit/test_R_*.py`, `tests/unit/test_L_bookmarks.py`(중첩 폴더 검사), `notes/R-questions.md` | Chrome·HTML 북마크 가져오기, 다시 켤 때 이전 탭, Ctrl+Shift+T, Ctrl+P·PDF로 저장(어두운 테마도 흰 종이), 기존 테스트 유지 |
+

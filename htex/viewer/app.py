@@ -1115,6 +1115,10 @@ class ViewerWindow(QMainWindow):
         self.act_save = self._act(tr('저장'), tr('저장 (Ctrl+S)'), kb(Std.Save) or ["Ctrl+S"], self.save)
         self.act_save_as = self._act(tr('다른 이름으로 저장…'), tr('다른 이름으로 저장 (Ctrl+Shift+S)'),
                                      ["Ctrl+Shift+S"] + kb(Std.SaveAs), self.save_as)
+        self.act_print = self._act(tr('인쇄…'), tr('인쇄 (Ctrl+P)'), kb(Std.Print) or ["Ctrl+P"],
+                                   lambda: self.print_page())
+        self.act_save_pdf = self._act(tr('PDF로 저장…'), tr('이 페이지를 PDF 파일로 저장'), [],
+                                      lambda: self.save_pdf(), add=False)
         nb.edit.setDefaultAction(self.act_edit)
         nb.back.setDefaultAction(self.act_back)
         nb.forward.setDefaultAction(self.act_forward)
@@ -1185,6 +1189,8 @@ class ViewerWindow(QMainWindow):
         m.addAction(self.act_edit)
         m.addAction(self.act_save)
         m.addAction(self.act_save_as)
+        m.addAction(self.act_print)
+        m.addAction(self.act_save_pdf)
         m.addSeparator()
         self.bookmarks_menu = m.addMenu(tr('북마크'))
         self.bookmarks_menu.aboutToShow.connect(self._fill_bookmarks_menu)
@@ -1245,6 +1251,7 @@ class ViewerWindow(QMainWindow):
         if chrome.is_mac():
             f = mb.addMenu(tr('파일'))
             for a in (self.act_new_tab, self.act_open, None, self.act_save, self.act_save_as, None,
+                      self.act_print, self.act_save_pdf, None,
                       self.act_close_tab, self.act_reopen_tab, None, self.act_quit):
                 f.addSeparator() if a is None else f.addAction(a)
             e = mb.addMenu(tr('편집'))
@@ -1930,6 +1937,77 @@ class ViewerWindow(QMainWindow):
         self._on_tab_title(tab, tab.title())
         self.status.showMessage(tr('저장했습니다: {path}', path=new.path), 4000)
         return True
+
+    # ------------------------------------------------------------ 인쇄·PDF (v0.8.1)
+    def _printable(self, tab: Optional[Tab]) -> bool:
+        if tab is None or tab.is_start() or tab.is_blank():
+            self.status.showMessage(tr('이 페이지는 인쇄할 수 없습니다.'), 4000)
+            return False
+        return True
+
+    def print_page(self, printer=None, tab: Optional[Tab] = None) -> bool:
+        """Ctrl+P: 인쇄 대화상자를 띄워 지금 탭(편집 중이면 미리보기 칸)을 인쇄한다.
+        printer 를 주면 대화상자 없이 그 프린터로 (테스트·PDF 프린터)."""
+        tab = tab or self.current_tab()
+        if not self._printable(tab):
+            return False
+        from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+        if printer is None:
+            printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+            printer.setDocName(tab.title() or APP_NAME)
+            dlg = QPrintDialog(printer, self)
+            dlg.setWindowTitle(tr('인쇄'))
+            if dlg.exec() != QPrintDialog.DialogCode.Accepted:
+                return False
+        self._printing = (tab, printer)            # 끝날 때까지 프린터를 붙들어 둔다
+        if not getattr(tab, "_print_hooked", False):
+            tab.view.printFinished.connect(lambda ok, t=tab: self._print_done(t, ok))
+            tab._print_hooked = True
+        self.status.showMessage(tr('인쇄 준비 중…'))
+        tab.view.print(printer)
+        return True
+
+    def _print_done(self, tab: Tab, ok: bool) -> None:
+        self._printing = None
+        self.last_print_ok = ok
+        self.status.showMessage(tr('인쇄를 보냈습니다.') if ok else tr('인쇄하지 못했습니다.'), 5000)
+
+    def _page_layout(self):
+        """종이: 미국·캐나다 로캘은 Letter, 그 밖에는 A4. 여백 15mm."""
+        from PySide6.QtCore import QLocale, QMarginsF
+        from PySide6.QtGui import QPageLayout, QPageSize
+        letter = QLocale.system().territory() in (QLocale.Country.UnitedStates, QLocale.Country.Canada)
+        size = QPageSize(QPageSize.PageSizeId.Letter if letter else QPageSize.PageSizeId.A4)
+        return QPageLayout(size, QPageLayout.Orientation.Portrait, QMarginsF(15, 15, 15, 15),
+                           QPageLayout.Unit.Millimeter)
+
+    def save_pdf(self, path: Optional[str] = None, tab: Optional[Tab] = None) -> bool:
+        """지금 탭을 PDF 파일로 (Chrome 인쇄의 "PDF로 저장"). path 가 없으면 저장 위치를 묻는다."""
+        tab = tab or self.current_tab()
+        if not self._printable(tab):
+            return False
+        if path is None:
+            name = (tab.title() or "document").strip()
+            name = "".join(c for c in name if c not in '\\/:*?"<>|').strip() or "document"
+            path, _ = QFileDialog.getSaveFileName(self, tr('PDF로 저장'), str(self._save_dir() / f"{name}.pdf"),
+                                                  tr('PDF 파일 (*.pdf)'))
+            if not path:
+                return False
+            if not path.lower().endswith(".pdf"):
+                path += ".pdf"
+        if not getattr(tab, "_pdf_hooked", False):
+            tab.page.pdfPrintingFinished.connect(self._pdf_done)
+            tab._pdf_hooked = True
+        self.status.showMessage(tr('PDF 만드는 중…'))
+        tab.page.printToPdf(path, self._page_layout())
+        return True
+
+    def _pdf_done(self, path: str, ok: bool) -> None:
+        self.last_pdf = (path, ok)
+        if ok:
+            self.status.showMessage(tr('PDF로 저장했습니다: {name}', name=Path(path).name), 6000)
+        else:
+            self.status.showMessage(tr('PDF로 저장하지 못했습니다: {name}', name=Path(path).name), 8000)
 
     def save_as(self, tab: Optional[Tab] = None) -> None:
         tab = tab or self.current_tab()
