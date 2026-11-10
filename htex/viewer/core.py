@@ -596,6 +596,8 @@ class ViewerCore:
         self.theme = ""              # "", "light", "dark" (J)
         # 시작 페이지(htexapp://start/)에 보일 북마크 목록을 주는 함수 (L, 창이 정한다). 없으면 빈 목록.
         self.start_bookmarks: Optional[Callable[[], list]] = None
+        # 방문 기록 페이지(htexapp://start/history)에 보일 기록을 찾는 함수 (R, 창이 정한다). 없으면 빈 목록.
+        self.history_search: Optional[Callable[[str], list]] = None
         self.roots: dict[str, Path] = {}
         self.records: "OrderedDict[str, DocRecord]" = OrderedDict()
         self.by_address: dict[str, str] = {}
@@ -1118,6 +1120,17 @@ class ViewerCore:
     def _respond_start(self, parts) -> Response:
         """새 탭·홈 페이지 (L). /go·/open·/action 은 창이 가로채므로 여기까지 오면 404."""
         from . import startpage
+        if parts.path.rstrip("/") == "/history":
+            from . import historypage
+            q = (urllib.parse.parse_qs(parts.query).get("q") or [""])[0].strip()[:200]
+            try:
+                visits = list(self.history_search(q)) if self.history_search else []
+            except Exception:   # noqa: BLE001 - 기록 페이지도 언제나 뜬다
+                visits = []
+            page = historypage.render(visits, q, self.theme)
+            return Response(200, "text/html", page.encode("utf-8"),
+                            {"Content-Security-Policy": startpage.CSP, "X-Content-Type-Options": "nosniff",
+                             "Referrer-Policy": "no-referrer", "Cache-Control": "no-store"})
         if parts.path not in ("", "/"):
             return _fail(404, tr('알 수 없는 주소입니다.'))
         try:

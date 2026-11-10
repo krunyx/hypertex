@@ -54,6 +54,7 @@ macOS 에서는 Chrome 처럼 탭 줄이 창 맨 위, 신호등 단추 옆에 �
 | --- | --- |
 | 새 탭 / 탭 닫기 / 탭 전환 | Ctrl+T / Ctrl+W / Ctrl+Tab, Ctrl+1…9 |
 | 닫은 탭 다시 열기 | Ctrl+Shift+T |
+| 방문 기록 (날짜별 목록·검색·지우기) | Ctrl+H (macOS Cmd+Y) |
 | 링크를 새 탭으로 / 탭 닫기 | 링크 가운데 클릭 또는 Ctrl+클릭 / 탭 가운데 클릭 |
 | 찾기 | Ctrl+F, 다음 Enter·F3, 이전 Shift+Enter |
 | 확대 / 축소 / 원래 크기 | Ctrl+= / Ctrl+- / Ctrl+0 |
