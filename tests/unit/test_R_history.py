@@ -186,3 +186,71 @@ def test_history_in_window(tmp_path):
     assert r["after_forget"] == ["a.htex"]
     assert r["opened"] == "가 문서"
     assert r["cleared"]
+
+
+# ---------------------------------------------------------------- 제목·주소 신호의 차례 (윈도에서 발견)
+class _StubTab:
+    def __init__(self):
+        self.url = ""
+        self.page_title = ""
+        self.loading = False
+        self.pinned_source = False
+        self.crashed_url = None
+
+    def current_url(self):
+        return self.url
+
+    def title(self):
+        return self.page_title
+
+
+class _StubWin:
+    """ViewerWindow 의 기록 메서드만 빌려 쓴다 (주소 = 탭 주소 그대로)."""
+    def __init__(self, store):
+        self.visits = store
+
+    def _visit_address(self, tab):
+        return tab.url if tab.url.startswith("/") else ""
+
+
+def _bind(win):
+    from htex.viewer.app import ViewerWindow
+    for name in ("_record_visit", "_visit_title_changed", "_real_title"):
+        setattr(win, name, getattr(ViewerWindow, name).__get__(win) if name != "_real_title"
+                else ViewerWindow._real_title)
+    return win
+
+
+def _go(win, tab, url, title, title_first):
+    """한 페이지로 가기: 불러오기 시작 → (제목, 주소) 또는 (주소, 제목) → 불러오기 끝."""
+    tab.loading = True
+    if title_first:
+        tab.page_title = title
+        win._visit_title_changed(tab, title)
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+    else:
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+        tab.page_title = url                         # 엔진이 먼저 주소를 제목처럼
+        win._visit_title_changed(tab, url)
+        tab.page_title = title
+        win._visit_title_changed(tab, title)
+    tab.loading = False
+
+
+@pytest.mark.parametrize("title_first", [False, True])
+def test_titles_match_pages_in_either_signal_order(title_first):
+    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    st = VisitStore(clock=lambda: 1_000_000.0)
+    win = _bind(_StubWin(st))
+    tab = _StubTab()
+    _go(win, tab, "/d/a.htex", "가 문서", title_first)
+    _go(win, tab, "/d/b.htex", "나 문서", title_first)
+    _go(win, tab, "/d/c.htex", "다 문서", title_first)
+    assert [(v.url, v.title) for v in st.search()] == [
+        ("/d/c.htex", "다 문서"), ("/d/b.htex", "나 문서"), ("/d/a.htex", "가 문서")]
+    # 불러온 뒤 페이지가 제목을 바꾸면(웹 페이지) 그 방문의 제목이 바뀐다
+    tab.page_title = "다 문서 (2)"
+    win._visit_title_changed(tab, "다 문서 (2)")
+    assert st.search()[0].title == "다 문서 (2)" and st.search()[1].title == "나 문서"

@@ -132,6 +132,14 @@ def set_startup_mode(mode: str) -> None:
             pass
 
 
+def tab_visit_title(store: "visitslib.VisitStore", url: str) -> str:
+    """기록에 남은 그 주소의 가장 최근 제목."""
+    for v in reversed(store.visits[-50:]):
+        if v.url == url:
+            return v.title
+    return ""
+
+
 def auto_update_enabled() -> bool:
     try:
         return str(settings().value("update/auto", "true")) not in ("false", "0", "False")
@@ -1553,14 +1561,43 @@ class ViewerWindow(QMainWindow):
             return False
         return True
 
+    # 제목과 주소 신호의 차례는 운영체제마다 다르다 (윈도는 새 페이지의 제목이 주소보다 먼저 올 때가 있다).
+    # 그래서 탭마다 "마지막으로 남긴 방문"과 "아직 주인 없는 제목"을 들고 맞춘다:
+    #   _visit_addr   이 탭이 마지막으로 남긴 방문의 주소
+    #   _visit_titled 그 방문에 진짜 제목을 넣었는가
+    #   _pending_title 주소가 바뀌기 전에 온 새 페이지 제목
     def _record_visit(self, tab: Tab, ok: bool, title: bool = True) -> None:
         if not ok:
             return
         addr = self._visit_address(tab)
-        if addr:
-            # 주소가 막 바뀐 때의 tab.title() 은 앞 페이지 제목일 수 있어 쓰지 않는다
-            t = tab.title() if title else ""
-            self.visits.record(addr, t if self._real_title(tab, t) else "")
+        if not addr:
+            return
+        if not title:                                    # 주소가 바뀐 순간
+            if addr == getattr(tab, "_visit_addr", None):
+                return                                   # 같은 문서 안 이동(#조각)·같은 주소
+            pending = getattr(tab, "_pending_title", None) or ""
+            self.visits.record(addr, pending)
+            tab._visit_addr, tab._visit_titled, tab._pending_title = addr, bool(pending), None
+            return
+        # 불러오기가 끝났을 때: 이때의 제목이 가장 믿을 만하다
+        t = tab.title()
+        self.visits.record(addr, t if self._real_title(tab, t) else "")
+        tab._visit_addr = addr
+        if self._real_title(tab, t):
+            tab._visit_titled, tab._pending_title = True, None
+
+    def _visit_title_changed(self, tab: Tab, title: str) -> None:
+        if not self._real_title(tab, title):
+            return
+        addr = self._visit_address(tab)
+        cur = getattr(tab, "_visit_addr", None)
+        if addr and addr == cur and not (tab.loading and getattr(tab, "_visit_titled", False)
+                                         and title != tab_visit_title(self.visits, cur)):
+            self.visits.set_title(addr, title)
+            tab._visit_titled = True
+        else:
+            # 주소가 아직 앞 페이지(또는 시작 페이지)인데 온 제목 = 새 페이지 제목. 주소가 바뀌면 쓴다.
+            tab._pending_title = title
 
     def show_history(self) -> Tab:
         """Ctrl+H (macOS Cmd+Y): 방문 기록 페이지. 이미 열린 기록 탭이 있으면 그리로 (Chrome 과 같다)."""
@@ -2499,9 +2536,7 @@ class ViewerWindow(QMainWindow):
         self.setWindowTitle(f"{title} — {APP_NAME}" if title else APP_NAME)
 
     def _on_tab_title(self, tab: Tab, title: str) -> None:
-        addr = self._visit_address(tab)
-        if addr and self._real_title(tab, title):
-            self.visits.set_title(addr, title)
+        self._visit_title_changed(tab, title)
         i = self.tabs.indexOf(tab)
         if tab.editor is not None and tab.editor.dirty:
             title = "● " + (title or tab.editor.name)        # 저장하지 않은 편집 (Q)
