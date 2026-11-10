@@ -37,6 +37,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
+import time
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -65,6 +67,7 @@ from .editor import EditorPane
 from . import bookmark_import
 from . import session as sessionlib
 from . import visits as visitslib
+from . import updates as updateslib
 from .historypage import HISTORY_URL
 from .bookmarks import BookmarkStore, default_data_dir
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
@@ -127,6 +130,20 @@ def set_startup_mode(mode: str) -> None:
             settings().setValue("startup/mode", mode)
         except Exception:   # noqa: BLE001
             pass
+
+
+def auto_update_enabled() -> bool:
+    try:
+        return str(settings().value("update/auto", "true")) not in ("false", "0", "False")
+    except Exception:   # noqa: BLE001
+        return True
+
+
+def set_auto_update(on: bool) -> None:
+    try:
+        settings().setValue("update/auto", "true" if on else "false")
+    except Exception:   # noqa: BLE001
+        pass
 
 
 def default_session_path() -> Path:
@@ -289,6 +306,11 @@ class HtexPage(QWebEnginePage):
 # ====================================================================== 탭
 _SAVE_STATE_JS = ("JSON.stringify({x: window.scrollX, y: window.scrollY, "
                   "p: (window.HTEX && window.HTEX.getParams) ? window.HTEX.getParams() : {}})")
+
+
+class UpdateRelay(QObject):
+    """업데이트 확인 스레드 → 창 (Qt 신호는 받는 쪽 스레드에서 처리된다)."""
+    done = Signal(object, bool)          # (UpdateInfo | None | UpdateError, 사용자가 누른 확인인가)
 
 
 class FileDropFilter(QObject):
@@ -1177,6 +1199,20 @@ class ViewerWindow(QMainWindow):
         self.omnibox.star.clicked.connect(self.bookmark_page)
         self.omnibox.info.clicked.connect(self.show_page_info)
         self.omnibox.zoom.clicked.connect(lambda: self.set_zoom(1.0))
+        # 새 버전 단추 (v0.8.2): 새 버전이 있을 때만 ⋮ 왼쪽에 (Chrome 의 "업데이트" 알약)
+        self.update_btn = QToolButton(nb)
+        self.update_btn.setObjectName("updatebtn")
+        self.update_btn.setText(tr('업데이트'))
+        self.update_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.update_btn.setFixedHeight(28)
+        self.update_btn.clicked.connect(self.open_update_page)
+        self.update_btn.hide()
+        lay = nb.layout()
+        lay.insertWidget(lay.indexOf(nb.menu), self.update_btn)
+        self.update_info: "Optional[updateslib.UpdateInfo]" = None
+        self.update_checking = False
+        self._update_relay = UpdateRelay(self)
+        self._update_relay.done.connect(self._on_update_result)
 
     def _build_menus(self) -> None:
         """⋮ 메뉴 (Chrome 의 앱 메뉴). macOS 는 같은 동작을 화면 위 메뉴 막대에도 둔다."""
@@ -1218,6 +1254,12 @@ class ViewerWindow(QMainWindow):
         self.act_reset_home = self._act(tr('홈을 새 탭 페이지로'), tr('홈 단추가 시작 페이지를 열게 한다'), [],
                                         lambda: self.set_home(START_URL), add=False)
         self.act_about = self._act(tr('HyperTeX 정보'), tr('버전 정보'), [], self.show_about, add=False)
+        self.act_check_update = self._act(tr('업데이트 확인'), tr('새 버전이 있는지 지금 확인'), [],
+                                          lambda: self.open_update_page() if self.update_info else
+                                          self.check_updates(manual=True), add=False)
+        self.act_auto_update = QAction(tr('업데이트 자동 확인'), self, checkable=True)
+        self.act_auto_update.setChecked(auto_update_enabled())
+        self.act_auto_update.toggled.connect(set_auto_update)
         self.act_about.setMenuRole(QAction.MenuRole.AboutRole)
 
         self.theme_group = QActionGroup(self)
@@ -1293,6 +1335,10 @@ class ViewerWindow(QMainWindow):
             lm.addAction(a)
         self.language_menu = lm
         m.addSeparator()
+        um = m.addMenu(tr('업데이트'))
+        um.addAction(self.act_check_update)
+        um.addAction(self.act_auto_update)
+        self.update_menu = um
         m.addAction(self.act_about)
         m.addAction(self.act_quit)
         self.navbar.menu.setMenu(m)
@@ -1330,7 +1376,10 @@ class ViewerWindow(QMainWindow):
             w = mb.addMenu(tr('창'))
             for a in (self.act_next_tab, self.act_prev_tab):
                 w.addAction(a)
-            mb.addMenu(tr('도움말')).addAction(self.act_about)
+            hm_ = mb.addMenu(tr('도움말'))
+            hm_.addAction(self.act_about)
+            hm_.addAction(self.act_check_update)
+            hm_.addAction(self.act_auto_update)
         else:
             mb.hide()
 
@@ -1728,6 +1777,74 @@ class ViewerWindow(QMainWindow):
 
         pop.show_under(self.omnibox.info, align_right=False)
         self.last_popup = pop
+
+    # ------------------------------------------------------------ 새 버전 알림 (v0.8.2)
+    def check_updates(self, manual: bool = False, url: Optional[str] = None) -> bool:
+        """GitHub 최신 릴리스를 스레드에서 확인한다. 결과는 _on_update_result."""
+        if self.update_checking:
+            return False
+        self.update_checking = True
+        if manual:
+            self.status.showMessage(tr('업데이트 확인 중…'))
+        relay = self._update_relay
+
+        def work() -> None:
+            try:
+                res = updateslib.latest(__version__, url)
+            except updateslib.UpdateError as e:
+                res = e
+            except Exception as e:   # noqa: BLE001 - 어떤 실패도 "확인 못 함"으로 (스레드가 조용히 죽지 않게)
+                res = updateslib.UpdateError(str(e))
+            relay.done.emit(res, manual)
+
+        threading.Thread(target=work, name="htex-update-check", daemon=True).start()
+        return True
+
+    def check_updates_if_due(self) -> bool:
+        """켤 때: 자동 확인이 켜져 있고 마지막 확인에서 하루가 지났으면."""
+        if not auto_update_enabled() or not updateslib.auto_check_allowed():
+            return False
+        try:
+            last = float(settings().value("update/last_check", 0) or 0)
+        except (TypeError, ValueError):
+            last = 0.0
+        if not updateslib.due(last, time.time()):
+            return False
+        return self.check_updates(manual=False)
+
+    def _on_update_result(self, res, manual: bool) -> None:
+        self.update_checking = False
+        if isinstance(res, updateslib.UpdateError):
+            self.last_update_result = "error"
+            if manual:
+                self.status.showMessage(tr('업데이트를 확인하지 못했습니다. 인터넷 연결을 확인하세요.'), 6000)
+            return
+        try:
+            settings().setValue("update/last_check", time.time())
+        except Exception:   # noqa: BLE001
+            pass
+        self.update_info = res
+        if res is None:
+            self.last_update_result = "latest"
+            self.update_btn.hide()
+            if manual:
+                self.status.showMessage(tr('최신 버전입니다 ({v}).', v=__version__), 5000)
+            return
+        self.last_update_result = res.version
+        self.update_btn.setToolTip(tr('새 버전 {v} 을 받을 수 있습니다 (지금 {cur})', v=res.version, cur=__version__))
+        self.update_btn.show()
+        self.act_check_update.setText(tr('새 버전 {v} 받기…', v=res.version))
+        self.status.showMessage(tr('새 버전 {v} 을 받을 수 있습니다.', v=res.version), 8000)
+
+    def open_update_page(self) -> None:
+        info = self.update_info
+        if info is None:
+            return
+        cur = self.current_tab()
+        if cur is not None and cur.is_blank() and cur.editor is None:
+            self.navigate(info.page, tab=cur)
+        else:
+            self.new_tab(info.page, focus_address=False)
 
     def show_about(self) -> None:
         pop = Popup(self, 360)
@@ -2708,6 +2825,7 @@ def run(targets: "list[str] | str | None" = None, argv: Optional[list[str]] = No
         win.current_tab().show_start()
         win._focus_address()
     win._session_dirty()
+    QTimer.singleShot(5000, win.check_updates_if_due)     # 켜고 조금 뒤, 하루 한 번 (v0.8.2)
     try:
         return app.exec()
     finally:

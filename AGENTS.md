@@ -145,3 +145,10 @@ I와 J 사이의 약속:
 | --- | --- | --- |
 | R 브라우저 기본 | 새 파일 `htex/viewer/bookmark_import.py`·`session.py`, `htex/viewer/bookmarks.py`(중첩 폴더·가져오기), `htex/viewer/chrome.py`(폴더 메뉴), `htex/viewer/app.py`(가져오기·세션·닫은 탭·인쇄·PDF), `htex/html/style.py`(인쇄 색), `htex/i18n_en.py`, `htex/__init__.py`(버전), `README.md`, `tests/unit/test_R_*.py`, `tests/unit/test_L_bookmarks.py`(중첩 폴더 검사), `notes/R-questions.md` | Chrome·HTML 북마크 가져오기, 다시 켤 때 이전 탭, Ctrl+Shift+T, Ctrl+P·PDF로 저장(어두운 테마도 흰 종이), 기존 테스트 유지 |
 
+
+## 13단계 담당 구역 (v0.8.2 수식 복사·방문 기록·새 버전 알림)
+
+| 담당 | 수정 가능한 파일 | 완료 기준 |
+| --- | --- | --- |
+| R 브라우저 기본 | 새 파일 `htex/viewer/visits.py`·`historypage.py`·`updates.py`, `htex/web/interact.js`(수식 복사), `htex/viewer/startpage.py`(`/forget`), `htex/viewer/core.py`(기록 페이지), `htex/viewer/app.py`·`chrome.py`, `htex/i18n_en.py`, `htex/__init__.py`(버전), `README.md`, `tests/unit/test_R_*.py`·`conftest.py`, `notes/R-questions.md` | 수식 우클릭·골라서 복사가 LaTeX, Ctrl+H 기록 페이지, 새 버전 단추, 기존 테스트 유지 |
+

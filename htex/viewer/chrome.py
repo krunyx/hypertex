@@ -145,6 +145,9 @@ def stylesheet(c: Palette) -> str:
     return f"""
 #tabstrip {{ background: {c.frame}; }}
 #navbar, #bookmarks {{ background: {c.toolbar}; }}
+#navbar QToolButton#updatebtn {{ background: {c.accent}; color: {c.toolbar}; border: none; border-radius: 14px;
+    padding: 0 12px; font-weight: 600; }}
+#navbar QToolButton#updatebtn:hover {{ background: {c.accent}; color: {c.toolbar}; }}
 #bookmarks {{ border-bottom: 1px solid {c.border}; }}
 #navbar QToolButton, #bookmarks QToolButton, #tabstrip QToolButton#newtab {{
   border: none; border-radius: 16px; padding: 0; background: transparent; color: {c.fg}; }}
