@@ -45,12 +45,15 @@ macOS 에서는 Chrome 처럼 탭 줄이 창 맨 위, 신호등 단추 옆에 �
 ⋮ › 북마크 › 북마크 가져오기 에서 이 컴퓨터의 Chrome·Edge·Brave·Whale·Vivaldi·Chromium 프로필을 고르면
 그 북마크를 폴더 구조 그대로 가져오고, 다른 브라우저(Safari·Firefox 등)는 내보낸 HTML 북마크 파일로 가져온다.
 이미 있는 주소는 건너뛰므로 여러 번 가져와도 겹치지 않는다 (`notes/R-questions.md` 3절).
+다시 켜면 지난번 탭을 그대로 다시 연다 (⋮ › 시작할 때 › 새 탭 페이지 열기 로 끌 수 있다). 파일을 열며 켜면
+이전 탭 뒤에 그 파일이 열린다. 닫은 탭은 Ctrl+Shift+T 로 원래 자리에 다시 연다.
 
 ### 뷰어 단축키 (macOS는 Ctrl 대신 Cmd)
 
 | 동작 | 키 |
 | --- | --- |
 | 새 탭 / 탭 닫기 / 탭 전환 | Ctrl+T / Ctrl+W / Ctrl+Tab, Ctrl+1…9 |
+| 닫은 탭 다시 열기 | Ctrl+Shift+T |
 | 링크를 새 탭으로 / 탭 닫기 | 링크 가운데 클릭 또는 Ctrl+클릭 / 탭 가운데 클릭 |
 | 찾기 | Ctrl+F, 다음 Enter·F3, 이전 Shift+Enter |
 | 확대 / 축소 / 원래 크기 | Ctrl+= / Ctrl+- / Ctrl+0 |
