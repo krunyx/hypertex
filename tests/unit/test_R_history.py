@@ -118,6 +118,11 @@ SCRIPT = textwrap.dedent(r'''
     wait_until(lambda: len(visits.visits) == 2)
     res["recorded"] = [(Path(v.url).name, v.title) for v in visits.search()]
     res["menu"] = w.act_history.text() in [a.text() for a in w.app_menu.actions()]
+    # 엔진이 주소를 제목처럼 알려 주어도(윈도) 기록 제목이 되지 않는다
+    tab = w.current_tab()
+    w._on_tab_title(tab, tab.current_url())
+    w._on_tab_title(tab, "htexapp://doc-0123/b.htex")
+    res["url_title_ignored"] = visits.search()[0].title
 
     t = w.show_history()
     wait_until(lambda: t.title() == "방문 기록")
@@ -175,6 +180,7 @@ def test_history_in_window(tmp_path):
 
     assert r["recorded"] == [["b.htex", "나 문서"], ["a.htex", "가 문서"]]
     assert r["menu"]
+    assert r["url_title_ignored"] == "나 문서"
     assert r["rows"] == ["나 문서", "가 문서"] and r["not_recorded"] and r["same_tab"]
     assert r["search"] == ["나 문서"]
     assert r["after_forget"] == ["a.htex"]
