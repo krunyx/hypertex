@@ -288,4 +288,9 @@ EN: dict[str, str] = {
     '이 파일에서 북마크를 찾지 못했습니다: {name}': 'No bookmarks found in this file: {name}',
     '새로 가져올 북마크가 없습니다 (모두 이미 있음).': 'No new bookmarks to import (all are already here).',
     '북마크 {n}개를 가져왔습니다.': 'Imported {n} bookmarks.',
+    '닫은 탭 다시 열기': 'Reopen closed tab',
+    '닫은 탭 다시 열기 (Ctrl+Shift+T)': 'Reopen closed tab (Ctrl+Shift+T)',
+    '시작할 때': 'On startup',
+    '이전 탭 다시 열기': 'Continue where you left off',
+    '새 탭 페이지 열기': 'Open the New Tab page',
 }

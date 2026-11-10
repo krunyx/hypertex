@@ -63,7 +63,8 @@ from .instance import (REPLY_OK, decode_message, encode_message, file_signature,
 from . import chrome, editing, macwin
 from .editor import EditorPane
 from . import bookmark_import
-from .bookmarks import BookmarkStore
+from . import session as sessionlib
+from .bookmarks import BookmarkStore, default_data_dir
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
                      TabStrip, ZoomRow, svg_icon)
 from .startpage import START_URL, parse_request as start_request
@@ -103,6 +104,27 @@ def settings() -> QSettings:
 
 LANGUAGES = (("auto", "시스템 언어"), ("ko", "한국어"), ("en", "English"))   # 이름은 쓸 때 tr()
 _language_applied = False
+
+
+def startup_mode() -> str:
+    """시작할 때: 이전 탭 다시 열기(기본) 또는 새 탭 페이지."""
+    try:
+        v = str(settings().value("startup/mode", sessionlib.STARTUP_CONTINUE) or "")
+    except Exception:   # noqa: BLE001
+        v = ""
+    return v if v in sessionlib.STARTUP_MODES else sessionlib.STARTUP_CONTINUE
+
+
+def set_startup_mode(mode: str) -> None:
+    if mode in sessionlib.STARTUP_MODES:
+        try:
+            settings().setValue("startup/mode", mode)
+        except Exception:   # noqa: BLE001
+            pass
+
+
+def default_session_path() -> Path:
+    return default_data_dir() / "session.json"
 
 
 def apply_language_setting() -> str:
@@ -794,6 +816,15 @@ class ViewerWindow(QMainWindow):
         self.tabs = TabStack(self.tab_strip.bar, self)
         self.tabs.tabCloseRequested.connect(lambda i: self.close_tab(i))
         self.tabs.currentChanged.connect(self._on_current_changed)
+        # 세션 (v0.8.1): run() 이 session_path 를 주면 탭이 바뀔 때마다 조금 뒤 저장한다
+        self.session_path: Optional[Path] = None
+        self.closed_tabs: list[tuple[int, str]] = []     # (자리, 주소) — Ctrl+Shift+T
+        self._session_timer = QTimer(self)
+        self._session_timer.setSingleShot(True)
+        self._session_timer.setInterval(800)
+        self._session_timer.timeout.connect(self.save_session)
+        self.tabs.currentChanged.connect(lambda _i: self._session_dirty())
+        self.tabs.tabBar().tabMoved.connect(lambda _a, _b: self._session_dirty())
         self.tab_strip.new_btn.clicked.connect(lambda: self.new_tab())
         self.tab_strip.bar.new_tab_requested.connect(lambda: self.new_tab())
         self.tab_strip.bar.context_requested.connect(self._tab_menu)
@@ -967,6 +998,8 @@ class ViewerWindow(QMainWindow):
         tab.zoom_changed.connect(self._on_tab_zoom)
         tab.loading_changed.connect(self._on_tab_loading)
         tab.icon_changed.connect(self._update_tab_icon)
+        tab.url_changed.connect(lambda *_: self._session_dirty())
+        tab.title_changed.connect(lambda *_: self._session_dirty())
         # 탐색 판정(acceptNavigationRequest) 안에서 다시 탐색하면 엔진 상태가 꼬이므로 한 박자 미룬다
         tab.page.start_request.connect(
             lambda kind, value, t=tab: QTimer.singleShot(0, lambda: self._on_start_request(t, kind, value)))
@@ -998,7 +1031,13 @@ class ViewerWindow(QMainWindow):
             return
         if isinstance(tab, Tab) and not self._confirm_leave_editor(tab):
             return
+        if isinstance(tab, Tab):
+            addr = self._bookmark_address(tab)
+            if addr:
+                self.closed_tabs.append((index, addr))
+                del self.closed_tabs[:-sessionlib.MAX_CLOSED]
         self.tabs.removeTab(index)
+        self._session_dirty()
         if isinstance(tab, Tab):
             if tab.editor is not None:
                 tab.detach_editor()
@@ -1100,6 +1139,8 @@ class ViewerWindow(QMainWindow):
         self.act_prev_tab = self._act(tr('이전 탭'), tr('이전 탭'),
                                       ["Ctrl+Shift+Tab", "Ctrl+Backtab", "Ctrl+PgUp"] + kb(Std.PreviousChild),
                                       lambda: self.cycle_tab(-1))
+        self.act_reopen_tab = self._act(tr('닫은 탭 다시 열기'), tr('닫은 탭 다시 열기 (Ctrl+Shift+T)'),
+                                        ["Ctrl+Shift+T"], self.reopen_closed_tab)
         for n in range(1, 10):
             self._act(tr('탭 {n}', n=n), tr('탭 {n}', n=n), [f"Ctrl+{n}"], lambda _=False, n=n: self.select_tab(n))
         self.act_quit = self._act(tr('종료'), tr('종료'), kb(Std.Quit) or ["Ctrl+Q"], self._quit)
@@ -1163,6 +1204,20 @@ class ViewerWindow(QMainWindow):
         hm = m.addMenu(tr('홈 페이지'))
         hm.addAction(self.act_set_home)
         hm.addAction(self.act_reset_home)
+        sm = m.addMenu(tr('시작할 때'))
+        self.startup_group = QActionGroup(self)
+        self.startup_group.setExclusive(True)
+        self.startup_actions: dict[str, QAction] = {}
+        cur_start = startup_mode()
+        for key, label in ((sessionlib.STARTUP_CONTINUE, tr('이전 탭 다시 열기')),
+                           (sessionlib.STARTUP_NEW_TAB, tr('새 탭 페이지 열기'))):
+            a = QAction(label, self, checkable=True)
+            a.setChecked(key == cur_start)
+            a.triggered.connect(lambda _=False, k=key: set_startup_mode(k))
+            self.startup_group.addAction(a)
+            self.startup_actions[key] = a
+            sm.addAction(a)
+        self.startup_menu = sm
         # 잘못 고른 언어에서도 찾을 수 있게 한국어 화면에서는 두 말로
         lm = m.addMenu("언어 · Language" if ui_language() == "ko" else "Language")
         self.language_group = QActionGroup(self)
@@ -1190,7 +1245,7 @@ class ViewerWindow(QMainWindow):
         if chrome.is_mac():
             f = mb.addMenu(tr('파일'))
             for a in (self.act_new_tab, self.act_open, None, self.act_save, self.act_save_as, None,
-                      self.act_close_tab, None, self.act_quit):
+                      self.act_close_tab, self.act_reopen_tab, None, self.act_quit):
                 f.addSeparator() if a is None else f.addAction(a)
             e = mb.addMenu(tr('편집'))
             for a in (self.act_edit, None, self.act_find, self.act_find_next, self.act_find_prev):
@@ -1310,7 +1365,74 @@ class ViewerWindow(QMainWindow):
             others.setEnabled(self.tabs.count() > 1)
             right = m.addAction(tr('오른쪽 탭 닫기'), lambda: self.close_tabs_right(index))
             right.setEnabled(index < self.tabs.count() - 1)
+        m.addSeparator()
+        m.addAction(self.act_reopen_tab)
+        self.act_reopen_tab.setEnabled(bool(self.closed_tabs))
         m.exec(pos)
+
+    # ------------------------------------------------------------ 세션·닫은 탭 (v0.8.1)
+    def reopen_closed_tab(self) -> Optional[Tab]:
+        """Ctrl+Shift+T: 마지막으로 닫은 탭을 원래 자리에 다시 연다."""
+        if not self.closed_tabs:
+            return None
+        index, addr = self.closed_tabs.pop()
+        tab = self.new_tab(start_page=False, focus_address=False)
+        cur = self.tabs.indexOf(tab)
+        want = max(0, min(index, self.tabs.count() - 1))
+        if cur != want:
+            self.tabs.tabBar().moveTab(cur, want)
+        if addr.startswith(START_URL):
+            tab.show_start()
+        else:
+            self.navigate(addr, tab=tab)
+        return tab
+
+    def _session_dirty(self) -> None:
+        if self.session_path is not None:
+            self._session_timer.start()
+
+    def current_session(self) -> "sessionlib.Session":
+        tabs: list[sessionlib.SessionTab] = []
+        active = 0
+        cur = self.current_tab()
+        for t in self.tab_list():
+            if t.pinned_source:
+                continue
+            addr = self._bookmark_address(t)
+            if not addr:
+                continue
+            if t is cur:
+                active = len(tabs)
+            tabs.append(sessionlib.SessionTab(addr, t.title()))
+        return sessionlib.Session(tabs[:sessionlib.MAX_TABS], active if active < len(tabs) else 0)
+
+    def save_session(self) -> bool:
+        self._session_timer.stop()
+        if self.session_path is None:
+            return False
+        return sessionlib.save(self.session_path, self.current_session())
+
+    def restore_session(self, sess: "sessionlib.Session") -> int:
+        """저장한 탭을 연다. 첫 탭은 지금(빈) 탭에. 연 탭 수를 돌려준다."""
+        opened: list[Tab] = []
+        for i, st in enumerate(sess.tabs):
+            cur = self.current_tab()
+            if i == 0 and cur is not None and cur.is_blank():
+                tab = cur
+            else:
+                tab = self.new_tab(start_page=False, focus_address=False, background=True)
+                # 새 탭은 지금 탭 오른쪽에 들어가므로 차례를 맞춘다
+                idx = self.tabs.indexOf(tab)
+                if idx != len(opened):
+                    self.tabs.tabBar().moveTab(idx, len(opened))
+            if st.url.startswith(START_URL):
+                tab.show_start()
+            else:
+                self.navigate(st.url, tab=tab)
+            opened.append(tab)
+        if opened:
+            self.tabs.setCurrentWidget(opened[min(sess.active, len(opened) - 1)])
+        return len(opened)
 
     def duplicate_tab(self, index: int) -> None:
         tab = self.tabs.widget(index)
@@ -2151,6 +2273,8 @@ class ViewerWindow(QMainWindow):
                 if not self._confirm_leave_editor(tab):
                     ev.ignore()
                     return
+        self.save_session()                 # 창을 닫을 때의 탭을 다음에 다시 연다
+        self.session_path = None            # 닫는 동안 탭이 사라지며 덮어쓰지 않게
         for tab in self.tab_list():
             if tab.editor is not None:
                 tab.detach_editor()
@@ -2391,11 +2515,20 @@ def run(targets: "list[str] | str | None" = None, argv: Optional[list[str]] = No
     win.show()
     initial = norm + file_filter.pending
     file_filter.pending = []
+    # 이전 탭 다시 열기 (v0.8.1): 파일을 열며 켰어도 이전 탭을 먼저 열고 그 뒤에 (Chrome 과 같다)
+    restored = 0
+    if os.environ.get("HTEX_VIEWER_SESSION", "1") not in ("0", "false", "no"):
+        win.session_path = default_session_path()
+        if startup_mode() == sessionlib.STARTUP_CONTINUE:
+            sess = sessionlib.load(win.session_path)
+            if not sess.is_trivial(START_URL):
+                restored = win.restore_session(sess)
     if initial:
         win.open_targets(initial, raise_window=False)
-    elif win.current_tab() is not None and win.current_tab().is_blank():
+    elif not restored and win.current_tab() is not None and win.current_tab().is_blank():
         win.current_tab().show_start()
         win._focus_address()
+    win._session_dirty()
     try:
         return app.exec()
     finally:
