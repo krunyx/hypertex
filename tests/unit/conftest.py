@@ -12,6 +12,8 @@ os.environ["HTEX_LANG"] = "ko"
 # (켜 두면 run() 을 부르는 테스트들이 서로의 탭을 다시 연다). 세션을 시험하는 테스트는 둘 다 직접 준다.
 os.environ["HTEX_DATA_DIR"] = tempfile.mkdtemp(prefix="htex-test-data-")
 os.environ["HTEX_VIEWER_SESSION"] = "0"
+# 새 버전 확인(인터넷)을 하지 않는다 (v0.8.2). 확인을 시험하는 테스트는 HTEX_UPDATE_URL 로 file: 응답을 준다.
+os.environ["HTEX_UPDATE_CHECK"] = "0"
 
 
 def pytest_make_parametrize_id(config, val, argname):
