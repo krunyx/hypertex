@@ -2,9 +2,16 @@
 from __future__ import annotations
 
 import os
+import tempfile
 
 # 화면 글자는 한국어 원문 기준으로 시험한다 (영어는 test_P_i18n.py 가 따로). 하위 프로세스도 물려받는다.
 os.environ["HTEX_LANG"] = "ko"
+
+# 뷰어 테스트가 실제 사용자 데이터(북마크·세션·설정)를 읽거나 쓰지 않게 (v0.8.1). macOS·윈도는 데이터 폴더가
+# HOME·XDG 변수를 따르지 않으므로 HOME 만 바꾸는 것으로는 부족하다. 세션 복원은 기본으로 끈다
+# (켜 두면 run() 을 부르는 테스트들이 서로의 탭을 다시 연다). 세션을 시험하는 테스트는 둘 다 직접 준다.
+os.environ["HTEX_DATA_DIR"] = tempfile.mkdtemp(prefix="htex-test-data-")
+os.environ["HTEX_VIEWER_SESSION"] = "0"
 
 
 def pytest_make_parametrize_id(config, val, argname):

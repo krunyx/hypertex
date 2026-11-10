@@ -36,7 +36,12 @@ DEFAULT_BOOKMARKS = [
 
 
 def default_data_dir() -> Path:
-    """플랫폼별 사용자 데이터 폴더 (캐시와 달리 지우면 안 되는 것)."""
+    """플랫폼별 사용자 데이터 폴더 (캐시와 달리 지우면 안 되는 것). 북마크·세션·(HTEX_DATA_DIR 이면) 설정.
+
+    환경 변수 HTEX_DATA_DIR 가 있으면 그 폴더를 쓴다 (테스트 격리, 휴대용 설치)."""
+    override = os.environ.get("HTEX_DATA_DIR")
+    if override:
+        return Path(override)
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "HyperTeX"
     if os.name == "nt":

@@ -87,7 +87,8 @@ PHASE = textwrap.dedent(r'''
 def _env(d: Path) -> dict:
     return dict(os.environ, QT_QPA_PLATFORM="offscreen", QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox",
                 XDG_CACHE_HOME=str(d / "cache"), XDG_CONFIG_HOME=str(d / "config"),
-                XDG_DATA_HOME=str(d / "data"), HOME=str(d / "home"), HTEX_LANG="ko")
+                XDG_DATA_HOME=str(d / "data"), HOME=str(d / "home"), HTEX_LANG="ko",
+                HTEX_DATA_DIR=str(d / "data"), HTEX_VIEWER_SESSION="1")
 
 
 def _phase(d: Path, work: Path, step: str, *targets: str) -> dict:
@@ -114,7 +115,7 @@ def test_restart_restores_tabs(tmp_path):
     assert r1["startup_checked"] == ["continue"]                     # 기본은 이전 탭 다시 열기
     assert r1["after_close"] == ["a.htex", "b.htex"]
     assert r1["reopened"] == ["a.htex", "b.htex", "c.htex"] and r1["reopened_index"] == 2
-    saved = json.loads((d / "data" / "hypertex" / "session.json").read_text(encoding="utf-8"))
+    saved = json.loads((d / "data" / "session.json").read_text(encoding="utf-8"))
     assert [Path(t["url"]).name for t in saved["tabs"]] == ["a.htex", "b.htex"] and saved["active"] == 1
 
     # 2) 대상 없이 다시 켜면 같은 탭, 같은 지금 탭. 이번에는 "새 탭 페이지 열기"로 바꾸고 끈다.
