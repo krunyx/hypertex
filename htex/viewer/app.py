@@ -262,6 +262,29 @@ _SAVE_STATE_JS = ("JSON.stringify({x: window.scrollX, y: window.scrollY, "
                   "p: (window.HTEX && window.HTEX.getParams) ? window.HTEX.getParams() : {}})")
 
 
+class FileDropFilter(QObject):
+    """페이지 위로 끌어온 로컬 파일을 웹 엔진 대신 창이 열게 한다 (v0.8.0)."""
+
+    def __init__(self, win: "ViewerWindow", parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self.win = win
+
+    def eventFilter(self, obj, ev):  # noqa: N802
+        t = ev.type()
+        if t == QEvent.Type.ChildAdded and isinstance(ev.child(), QWidget):
+            ev.child().installEventFilter(self)     # 렌더 위젯을 다시 만들 때 (렌더 프로세스 재시작 등)
+            return False
+        if t in (QEvent.Type.DragEnter, QEvent.Type.DragMove, QEvent.Type.Drop):
+            paths = chrome.dropped_paths(ev.mimeData())
+            if not paths:
+                return False
+            ev.acceptProposedAction()
+            if t == QEvent.Type.Drop:
+                self.win.open_dropped(paths)
+            return True
+        return False
+
+
 class Tab(QWidget):
     """웹 뷰 하나 + 그 탭의 히스토리·확대 배율·자동 새로고침 감시."""
 
@@ -285,6 +308,12 @@ class Tab(QWidget):
         self.splitter: Optional[QSplitter] = None
         self.preview_refreshes = 0
         self.view = QWebEngineView(self)
+        # 로컬 파일 놓기는 창이 받는다 (ViewerWindow.open_dropped). 웹 엔진의 안쪽 위젯이 놓기를 먼저 받으므로
+        # 그 위젯(과 나중에 새로 생기는 것)에서 파일 놓기만 가로챈다. 글자 끌어다 놓기는 페이지가 그대로 받는다.
+        self._drop_filter = FileDropFilter(win, self)
+        self.view.installEventFilter(self._drop_filter)
+        for child in self.view.findChildren(QWidget):
+            child.installEventFilter(self._drop_filter)
         self.page = HtexPage(win.profile, self.view, tab=self)
         self.page.console_log = []
         # 탐색 판정 중에 다시 탐색하면 엔진이 멈출 수 있어 한 박자 미룬다
@@ -725,6 +754,7 @@ class ViewerWindow(QMainWindow):
                  cwd: Optional[Path] = None, bookmarks: Optional[BookmarkStore] = None,
                  titlebar_tabs: Optional[bool] = None):
         super().__init__()
+        self.setAcceptDrops(True)             # 로컬 파일 끌어다 놓기 (v0.8.0)
         apply_language_setting()
         self.core = core or ViewerCore(cache=TreeCache(default_cache_dir()))
         self.cwd = cwd or Path.cwd()
@@ -1050,6 +1080,8 @@ class ViewerWindow(QMainWindow):
         nb.forward.setDefaultAction(self.act_forward)
         nb.reload.setDefaultAction(self.act_reload)
         nb.home.setDefaultAction(self.act_home)
+        nb.open.setDefaultAction(self.act_open)
+        self.omnibox.edit.files_dropped.connect(self.open_dropped)
         self.omnibox.star.clicked.connect(self.bookmark_page)
         self.omnibox.info.clicked.connect(self.show_page_info)
         self.omnibox.zoom.clicked.connect(lambda: self.set_zoom(1.0))
@@ -1451,6 +1483,7 @@ class ViewerWindow(QMainWindow):
         nb = self.navbar
         for btn, name in ((nb.back, "back"), (nb.forward, "forward"), (nb.home, "home"), (nb.menu, "more")):
             btn.setIcon(svg_icon(name, c.icon))
+        self.act_open.setIcon(svg_icon("folder_open", c.icon))
         self.act_back.setIcon(svg_icon("back", c.icon))
         self.act_forward.setIcon(svg_icon("forward", c.icon))
         self.act_reload.setIcon(svg_icon("reload", c.icon))
@@ -1877,6 +1910,38 @@ class ViewerWindow(QMainWindow):
                 self.navigate(path, tab)
             else:
                 self.new_tab(path)
+
+    def open_dropped(self, paths: list) -> None:
+        """끌어다 놓은 로컬 파일 열기: 첫 파일은 지금 탭에(편집 중이면 새 탭), 나머지는 새 탭에 차례로."""
+        paths = [str(p) for p in paths if p]
+        if not paths:
+            return
+        self.navigate(paths[0])
+        for p in paths[1:]:
+            self.new_tab(p, background=True)
+        self.activateWindow()
+        self.raise_()
+
+    # 창 어디에 놓아도(페이지·탭 줄·북마크바) 파일을 연다. 페이지 보기는 놓기를 받지 않게 해서 창까지 올라오게 한다.
+    def dragEnterEvent(self, e) -> None:   # noqa: N802
+        if chrome.dropped_paths(e.mimeData()):
+            e.acceptProposedAction()
+        else:
+            super().dragEnterEvent(e)
+
+    def dragMoveEvent(self, e) -> None:   # noqa: N802
+        if chrome.dropped_paths(e.mimeData()):
+            e.acceptProposedAction()
+        else:
+            super().dragMoveEvent(e)
+
+    def dropEvent(self, e) -> None:   # noqa: N802
+        paths = chrome.dropped_paths(e.mimeData())
+        if paths:
+            e.acceptProposedAction()
+            self.open_dropped(paths)
+        else:
+            super().dropEvent(e)
 
     def back(self) -> None:
         if self.current_tab():
