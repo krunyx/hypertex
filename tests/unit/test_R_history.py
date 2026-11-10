@@ -113,10 +113,31 @@ SCRIPT = textwrap.dedent(r'''
         QTimer.singleShot(int(t * 1000), loop.quit); loop.exec(); return box.get("v")
 
     pause(0.3)
+    # 신호 차례 기록 (윈도에서만 가끔 실패해, 실패하면 이 기록을 보인다)
+    events = []
+    def spy(name, orig):
+        def f(tab, *a):
+            events.append([name, Path(tab.current_url()).name, a[0] if a and isinstance(a[0], str) else (a[0] if a else None),
+                           tab.loading, getattr(tab, "_visit_addr", None) and Path(tab._visit_addr).name,
+                           getattr(tab, "_pending_title", None), [(Path(v.url).name, v.title) for v in visits.visits]])
+            return orig(tab, *a)
+        return f
+    w._on_tab_title = spy("title", w._on_tab_title)
+    w._on_tab_url = spy("url", w._on_tab_url)
+    w._on_tab_loaded = spy("loaded", w._on_tab_loaded)
+    for t0 in w.tab_list():
+        for sig, nm in ((t0.title_changed, "_on_tab_title"), (t0.url_changed, "_on_tab_url"),
+                        (t0.load_finished, "_on_tab_loaded")):
+            try:
+                sig.disconnect()
+            except Exception:
+                pass
+            sig.connect(getattr(w, nm))
     w.navigate(str(WORK / "a.htex")); wait_until(lambda: w.current_tab().title() == "가 문서")
     w.navigate(str(WORK / "b.htex")); wait_until(lambda: w.current_tab().title() == "나 문서")
     wait_until(lambda: len(visits.visits) == 2)
     res["recorded"] = [(Path(v.url).name, v.title) for v in visits.search()]
+    res["events"] = events
     res["menu"] = w.act_history.text() in [a.text() for a in w.app_menu.actions()]
     # 엔진이 주소를 제목처럼 알려 주어도(윈도) 기록 제목이 되지 않는다
     tab = w.current_tab()
@@ -153,6 +174,10 @@ SCRIPT = textwrap.dedent(r'''
     wait_until(lambda: t.title() == "가 문서")
     res["opened"] = t.title()
 
+    # 기록 페이지 제목("방문 기록")이 다음 문서의 기록 제목으로 새지 않는다
+    wait_until(lambda: visits.visits and visits.visits[-1].title == "가 문서")
+    res["after_reopen"] = [(Path(v.url).name, v.title) for v in visits.visits]
+
     # 모두 지우기 (확인 상자 없이)
     w.clear_history(confirm=False)
     res["cleared"] = visits.visits == [] and not (WORK / "history.jsonl").read_text(encoding="utf-8").strip()
@@ -178,11 +203,96 @@ def test_history_in_window(tmp_path):
     assert out.exists(), proc.stderr[-3000:]
     r = json.loads(out.read_text(encoding="utf-8"))
 
-    assert r["recorded"] == [["b.htex", "나 문서"], ["a.htex", "가 문서"]]
+    assert r["recorded"] == [["b.htex", "나 문서"], ["a.htex", "가 문서"]], json.dumps(r["events"], ensure_ascii=False)
     assert r["menu"]
     assert r["url_title_ignored"] == "나 문서"
     assert r["rows"] == ["나 문서", "가 문서"] and r["not_recorded"] and r["same_tab"]
     assert r["search"] == ["나 문서"]
     assert r["after_forget"] == ["a.htex"]
     assert r["opened"] == "가 문서"
+    assert r["after_reopen"] == [["a.htex", "가 문서"]], json.dumps(r["events"], ensure_ascii=False)
     assert r["cleared"]
+
+
+# ---------------------------------------------------------------- 제목·주소 신호의 차례 (윈도에서 발견)
+class _StubTab:
+    def __init__(self):
+        self.url = ""
+        self.page_title = ""
+        self.loading = False
+        self.pinned_source = False
+        self.crashed_url = None
+
+    def current_url(self):
+        return self.url
+
+    def title(self):
+        return self.page_title
+
+
+class _StubWin:
+    """ViewerWindow 의 기록 메서드만 빌려 쓴다 (주소 = 탭 주소 그대로)."""
+    def __init__(self, store):
+        self.visits = store
+
+    def _visit_address(self, tab):
+        return tab.url if tab.url.startswith("/") else ""
+
+
+def _bind(win):
+    from htex.viewer.app import ViewerWindow
+    for name in ("_record_visit", "_visit_title_changed", "_real_title"):
+        setattr(win, name, getattr(ViewerWindow, name).__get__(win) if name != "_real_title"
+                else ViewerWindow._real_title)
+    return win
+
+
+def _go(win, tab, url, title, order):
+    """한 페이지로 가기. order: "url" 주소 먼저 / "title" 제목 먼저 /
+    "late" 엔진은 제목을 알지만 신호는 다음 페이지로 옮긴 뒤에 온다 (윈도 CI 에서 본 차례)."""
+    title_first = order == "title"
+    if order == "late":
+        tab.loading = True
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+        tab.page_title = title                       # 제목은 정해졌지만 신호는 아직
+        tab.late_signal = title
+        tab.loading = False
+        return
+    tab.loading = True
+    if getattr(tab, "late_signal", None):            # 앞 페이지의 늦은 신호는 새 페이지로 간 뒤 온다
+        pass
+    if title_first:
+        tab.page_title = title
+        win._visit_title_changed(tab, title)
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+    else:
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+        late = getattr(tab, "late_signal", None)
+        if late:                                     # 앞 페이지 제목 신호가 이제야
+            win._visit_title_changed(tab, late)
+            tab.late_signal = None
+        tab.page_title = url                         # 엔진이 먼저 주소를 제목처럼
+        win._visit_title_changed(tab, url)
+        tab.page_title = title
+        win._visit_title_changed(tab, title)
+    tab.loading = False
+
+
+@pytest.mark.parametrize("order", ["url", "title", "late"])
+def test_titles_match_pages_in_either_signal_order(order):
+    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    st = VisitStore(clock=lambda: 1_000_000.0)
+    win = _bind(_StubWin(st))
+    tab = _StubTab()
+    _go(win, tab, "/d/a.htex", "가 문서", order)
+    _go(win, tab, "/d/b.htex", "나 문서", "url" if order == "late" else order)
+    _go(win, tab, "/d/c.htex", "다 문서", order if order != "late" else "url")
+    assert [(v.url, v.title) for v in st.search()] == [
+        ("/d/c.htex", "다 문서"), ("/d/b.htex", "나 문서"), ("/d/a.htex", "가 문서")]
+    # 불러온 뒤 페이지가 제목을 바꾸면(웹 페이지) 그 방문의 제목이 바뀐다
+    tab.page_title = "다 문서 (2)"
+    win._visit_title_changed(tab, "다 문서 (2)")
+    assert st.search()[0].title == "다 문서 (2)" and st.search()[1].title == "나 문서"
