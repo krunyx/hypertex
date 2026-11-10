@@ -113,10 +113,31 @@ SCRIPT = textwrap.dedent(r'''
         QTimer.singleShot(int(t * 1000), loop.quit); loop.exec(); return box.get("v")
 
     pause(0.3)
+    # 신호 차례 기록 (윈도에서만 가끔 실패해, 실패하면 이 기록을 보인다)
+    events = []
+    def spy(name, orig):
+        def f(tab, *a):
+            events.append([name, Path(tab.current_url()).name, a[0] if a and isinstance(a[0], str) else (a[0] if a else None),
+                           tab.loading, getattr(tab, "_visit_addr", None) and Path(tab._visit_addr).name,
+                           getattr(tab, "_pending_title", None), [(Path(v.url).name, v.title) for v in visits.visits]])
+            return orig(tab, *a)
+        return f
+    w._on_tab_title = spy("title", w._on_tab_title)
+    w._on_tab_url = spy("url", w._on_tab_url)
+    w._on_tab_loaded = spy("loaded", w._on_tab_loaded)
+    for t0 in w.tab_list():
+        for sig, nm in ((t0.title_changed, "_on_tab_title"), (t0.url_changed, "_on_tab_url"),
+                        (t0.load_finished, "_on_tab_loaded")):
+            try:
+                sig.disconnect()
+            except Exception:
+                pass
+            sig.connect(getattr(w, nm))
     w.navigate(str(WORK / "a.htex")); wait_until(lambda: w.current_tab().title() == "가 문서")
     w.navigate(str(WORK / "b.htex")); wait_until(lambda: w.current_tab().title() == "나 문서")
     wait_until(lambda: len(visits.visits) == 2)
     res["recorded"] = [(Path(v.url).name, v.title) for v in visits.search()]
+    res["events"] = events
     res["menu"] = w.act_history.text() in [a.text() for a in w.app_menu.actions()]
     # 엔진이 주소를 제목처럼 알려 주어도(윈도) 기록 제목이 되지 않는다
     tab = w.current_tab()
@@ -153,6 +174,10 @@ SCRIPT = textwrap.dedent(r'''
     wait_until(lambda: t.title() == "가 문서")
     res["opened"] = t.title()
 
+    # 기록 페이지 제목("방문 기록")이 다음 문서의 기록 제목으로 새지 않는다
+    wait_until(lambda: visits.visits and visits.visits[-1].title == "가 문서")
+    res["after_reopen"] = [(Path(v.url).name, v.title) for v in visits.visits]
+
     # 모두 지우기 (확인 상자 없이)
     w.clear_history(confirm=False)
     res["cleared"] = visits.visits == [] and not (WORK / "history.jsonl").read_text(encoding="utf-8").strip()
@@ -178,13 +203,14 @@ def test_history_in_window(tmp_path):
     assert out.exists(), proc.stderr[-3000:]
     r = json.loads(out.read_text(encoding="utf-8"))
 
-    assert r["recorded"] == [["b.htex", "나 문서"], ["a.htex", "가 문서"]]
+    assert r["recorded"] == [["b.htex", "나 문서"], ["a.htex", "가 문서"]], json.dumps(r["events"], ensure_ascii=False)
     assert r["menu"]
     assert r["url_title_ignored"] == "나 문서"
     assert r["rows"] == ["나 문서", "가 문서"] and r["not_recorded"] and r["same_tab"]
     assert r["search"] == ["나 문서"]
     assert r["after_forget"] == ["a.htex"]
     assert r["opened"] == "가 문서"
+    assert r["after_reopen"] == [["a.htex", "가 문서"]], json.dumps(r["events"], ensure_ascii=False)
     assert r["cleared"]
 
 

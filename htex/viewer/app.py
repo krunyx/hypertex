@@ -1571,6 +1571,8 @@ class ViewerWindow(QMainWindow):
             return
         addr = self._visit_address(tab)
         if not addr:
+            if not title:                                # 기록하지 않는 페이지(시작·기록 페이지)로 옮겼다
+                tab._pending_title = None
             return
         if not title:                                    # 주소가 바뀐 순간
             if addr == getattr(tab, "_visit_addr", None):
@@ -2508,6 +2510,8 @@ class ViewerWindow(QMainWindow):
         self.tabs.setTabIcon(i, icon)
 
     def _on_tab_loading(self, tab: Tab, on: bool) -> None:
+        if on:
+            tab._pending_title = None        # 미뤄 둔 제목은 이번 불러오기의 것만 (앞 페이지 제목이 새지 않게)
         i = self.tabs.indexOf(tab)
         if i >= 0:
             self.tab_strip.bar.set_loading(i, on)
