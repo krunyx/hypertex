@@ -64,6 +64,8 @@ from . import chrome, editing, macwin
 from .editor import EditorPane
 from . import bookmark_import
 from . import session as sessionlib
+from . import visits as visitslib
+from .historypage import HISTORY_URL
 from .bookmarks import BookmarkStore, default_data_dir
 from .chrome import (DARK, LIGHT, BookmarkPopup, BookmarksBar, NavBar, PageArea, Popup, TabStack,
                      TabStrip, ZoomRow, svg_icon)
@@ -800,6 +802,13 @@ def shared_profile() -> QWebEngineProfile:
     return _profile
 
 
+def _load_visits() -> "visitslib.VisitStore":
+    try:
+        return visitslib.VisitStore.load(default_data_dir() / "history.jsonl")
+    except Exception:   # noqa: BLE001 - 기록을 못 읽어도 뷰어는 뜬다
+        return visitslib.VisitStore()
+
+
 def _load_bookmarks() -> BookmarkStore:
     try:
         return BookmarkStore.load()
@@ -810,6 +819,7 @@ def _load_bookmarks() -> BookmarkStore:
 class ViewerWindow(QMainWindow):
     def __init__(self, core: Optional[ViewerCore] = None, profile: Optional[QWebEngineProfile] = None,
                  cwd: Optional[Path] = None, bookmarks: Optional[BookmarkStore] = None,
+                 visits: "Optional[visitslib.VisitStore]" = None,
                  titlebar_tabs: Optional[bool] = None):
         super().__init__()
         self.setAcceptDrops(True)             # 로컬 파일 끌어다 놓기 (v0.8.0)
@@ -839,6 +849,9 @@ class ViewerWindow(QMainWindow):
         # ---- 북마크
         self.bookmarks = bookmarks if bookmarks is not None else _load_bookmarks()
         self.core.start_bookmarks = self.bookmarks.snapshot
+        # 방문 기록 (v0.8.2): 북마크와 같은 사용자 데이터 폴더
+        self.visits = visits if visits is not None else _load_visits()
+        self.core.history_search = self.visits.search
         self.bookmarks.on_change(self._on_bookmarks_changed)
         try:
             self.home_url = str(settings().value("view/home", START_URL) or START_URL)
@@ -1178,6 +1191,8 @@ class ViewerWindow(QMainWindow):
         self.act_prev_tab = self._act(tr('이전 탭'), tr('이전 탭'),
                                       ["Ctrl+Shift+Tab", "Ctrl+Backtab", "Ctrl+PgUp"] + kb(Std.PreviousChild),
                                       lambda: self.cycle_tab(-1))
+        self.act_history = self._act(tr('방문 기록'), tr('방문 기록 (Ctrl+H)'),
+                                     ["Ctrl+Y"] if chrome.is_mac() else ["Ctrl+H"], self.show_history)
         self.act_reopen_tab = self._act(tr('닫은 탭 다시 열기'), tr('닫은 탭 다시 열기 (Ctrl+Shift+T)'),
                                         ["Ctrl+Shift+T"], self.reopen_closed_tab)
         for n in range(1, 10):
@@ -1227,6 +1242,7 @@ class ViewerWindow(QMainWindow):
         m.addAction(self.act_print)
         m.addAction(self.act_save_pdf)
         m.addSeparator()
+        m.addAction(self.act_history)
         self.bookmarks_menu = m.addMenu(tr('북마크'))
         self.bookmarks_menu.aboutToShow.connect(self._fill_bookmarks_menu)
         m.addSeparator()
@@ -1306,7 +1322,8 @@ class ViewerWindow(QMainWindow):
             self.act_titlebar_tabs.toggled.connect(self._set_titlebar_tabs_pref)
             v.addAction(self.act_titlebar_tabs)
             g = mb.addMenu(tr('이동'))
-            for a in (self.act_back, self.act_forward, self.act_reload, self.act_home, None, self.act_focus):
+            for a in (self.act_back, self.act_forward, self.act_reload, self.act_home, None, self.act_focus,
+                      None, self.act_history):
                 g.addSeparator() if a is None else g.addAction(a)
             bm = mb.addMenu(tr('북마크'))
             bm.aboutToShow.connect(lambda: self._fill_bookmarks_menu(bm))
@@ -1423,10 +1440,7 @@ class ViewerWindow(QMainWindow):
         want = max(0, min(index, self.tabs.count() - 1))
         if cur != want:
             self.tabs.tabBar().moveTab(cur, want)
-        if addr.startswith(START_URL):
-            tab.show_start()
-        else:
-            self.navigate(addr, tab=tab)
+        self.navigate(addr, tab=tab)
         return tab
 
     def _session_dirty(self) -> None:
@@ -1467,14 +1481,51 @@ class ViewerWindow(QMainWindow):
                 idx = self.tabs.indexOf(tab)
                 if idx != len(opened):
                     self.tabs.tabBar().moveTab(idx, len(opened))
-            if st.url.startswith(START_URL):
-                tab.show_start()
-            else:
-                self.navigate(st.url, tab=tab)
+            self.navigate(st.url, tab=tab)
             opened.append(tab)
         if opened:
             self.tabs.setCurrentWidget(opened[min(sess.active, len(opened) - 1)])
         return len(opened)
+
+    # ------------------------------------------------------------ 방문 기록 (v0.8.2)
+    def _visit_address(self, tab: Tab) -> str:
+        addr = self._bookmark_address(tab)
+        if not addr or addr.startswith(START_URL) or tab.pinned_source or tab.crashed_url:
+            return ""
+        return addr
+
+    def _record_visit(self, tab: Tab, ok: bool, title: bool = True) -> None:
+        if not ok:
+            return
+        addr = self._visit_address(tab)
+        if addr:
+            # 주소가 막 바뀐 때의 tab.title() 은 앞 페이지 제목일 수 있어 쓰지 않는다
+            self.visits.record(addr, tab.title() if title else "")
+
+    def show_history(self) -> Tab:
+        """Ctrl+H (macOS Cmd+Y): 방문 기록 페이지. 이미 열린 기록 탭이 있으면 그리로 (Chrome 과 같다)."""
+        for t in self.tab_list():
+            if t.current_url().startswith(HISTORY_URL):
+                self.tabs.setCurrentWidget(t)
+                t.reload()
+                return t
+        cur = self.current_tab()
+        if cur is not None and cur.is_blank() and cur.editor is None:
+            tab = cur
+        else:
+            tab = self.new_tab(start_page=False, focus_address=False)
+        tab.view.setUrl(QUrl(HISTORY_URL))
+        return tab
+
+    def clear_history(self, tab: Optional[Tab] = None, confirm: bool = True) -> bool:
+        if confirm:
+            ans = QMessageBox.question(self, tr('방문 기록 삭제'), tr('방문 기록을 모두 지울까요? 되돌릴 수 없습니다.'))
+            if ans != QMessageBox.StandardButton.Yes:
+                return False
+        self.visits.clear()
+        if tab is not None and tab.current_url().startswith(HISTORY_URL):
+            tab.reload()
+        return True
 
     def duplicate_tab(self, index: int) -> None:
         tab = self.tabs.widget(index)
@@ -1525,6 +1576,11 @@ class ViewerWindow(QMainWindow):
             self.navigate(value, tab=tab)
         elif kind == "action" and value == "open-file":
             self.open_file()
+        elif kind == "forget":                       # 기록 페이지의 × (v0.8.2)
+            self.visits.remove(int(value))
+            tab.reload()
+        elif kind == "action" and value == "history-clear":
+            self.clear_history(tab)
 
     # ------------------------------------------------------------ 북마크
     def _bookmark_address(self, tab: Optional[Tab] = None) -> str:
@@ -1535,6 +1591,8 @@ class ViewerWindow(QMainWindow):
         url = tab.current_url()
         if not url or url == "about:blank" or url.startswith(("htexapp://source/", "htexapp://crashed")):
             return ""
+        if url.startswith(HISTORY_URL):
+            return HISTORY_URL
         if url.startswith(START_URL):
             return START_URL
         return urllib.parse.unquote(self.core.display_address(url))
@@ -2171,6 +2229,9 @@ class ViewerWindow(QMainWindow):
         tab = tab or self.current_tab()
         if tab is None or tab.editor is not None:       # 편집 중인 탭은 그 문서에 둔다 (Q)
             tab = self.new_tab(start_page=False, focus_address=False)
+        if text.strip().startswith(HISTORY_URL):
+            tab.view.setUrl(QUrl(text.strip()))
+            return
         if text.strip().startswith(START_URL):
             tab.show_start()
             return
@@ -2310,6 +2371,9 @@ class ViewerWindow(QMainWindow):
         self.setWindowTitle(f"{title} — {APP_NAME}" if title else APP_NAME)
 
     def _on_tab_title(self, tab: Tab, title: str) -> None:
+        addr = self._visit_address(tab)
+        if addr and title:
+            self.visits.set_title(addr, title)
         i = self.tabs.indexOf(tab)
         if tab.editor is not None and tab.editor.dirty:
             title = "● " + (title or tab.editor.name)        # 저장하지 않은 편집 (Q)
@@ -2322,6 +2386,7 @@ class ViewerWindow(QMainWindow):
 
     def _on_tab_url(self, tab: Tab, url: str) -> None:
         self._update_tab_icon(tab)
+        self._record_visit(tab, True, title=False)     # 주소가 바뀌면 바로 (제목은 정해지면 _on_tab_title)
         if tab is self.current_tab():
             if not self.address.hasFocus():
                 self.address.setText(self._shown_address(tab))
@@ -2340,6 +2405,7 @@ class ViewerWindow(QMainWindow):
 
     def _on_tab_loaded(self, tab: Tab, ok: bool) -> None:
         self._update_tab_icon(tab)
+        self._record_visit(tab, ok)
         if tab is self.current_tab():
             self._show_diag(tab, ok)
             self._update_actions()

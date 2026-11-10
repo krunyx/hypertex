@@ -90,7 +90,8 @@ def open_url(target: str) -> str:
 
 
 def parse_request(url: str) -> Optional[tuple[str, str]]:
-    """시작 페이지가 보낸 요청 → (종류, 값). 종류: "go" | "open" | "action". 아니면 None."""
+    """시작 페이지가 보낸 요청 → (종류, 값). 종류: "go" | "open" | "action" | "forget"(기록 지우기, v0.8.2).
+    아니면 None."""
     parts = urllib.parse.urlsplit(url)
     if parts.scheme.lower() != "htexapp" or parts.netloc.lower() != START_HOST:
         return None
@@ -102,6 +103,9 @@ def parse_request(url: str) -> Optional[tuple[str, str]]:
     if path == "/open":
         v = (q.get("u") or [""])[0].strip()
         return ("open", v) if v else None
+    if path == "/forget":
+        v = (q.get("id") or [""])[0].strip()
+        return ("forget", v) if v.isdigit() else None
     if path == "/action":
         v = (q.get("do") or [""])[0].strip()
         return ("action", v) if v else None
