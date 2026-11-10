@@ -307,4 +307,6 @@ EN: dict[str, str] = {
     'PDF 만드는 중…': 'Creating PDF…',
     'PDF로 저장했습니다: {name}': 'Saved as PDF: {name}',
     'PDF로 저장하지 못했습니다: {name}': 'Could not save as PDF: {name}',
+    '수식을 LaTeX로 복사': 'Copy equation as LaTeX',
+    'LaTeX 원문을 복사했습니다.': 'Copied the LaTeX source.',
 }

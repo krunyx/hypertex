@@ -342,6 +342,9 @@ class Tab(QWidget):
         for child in self.view.findChildren(QWidget):
             child.installEventFilter(self._drop_filter)
         self.page = HtexPage(win.profile, self.view, tab=self)
+        # 우클릭 메뉴: 기본 메뉴 + 수식이면 "수식을 LaTeX로 복사" (v0.8.2)
+        self.view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self._context_menu)
         self.page.console_log = []
         # 탐색 판정 중에 다시 탐색하면 엔진이 멈출 수 있어 한 박자 미룬다
         self.page.redirected.connect(self.navigate_url, Qt.ConnectionType.QueuedConnection)
@@ -396,6 +399,34 @@ class Tab(QWidget):
 
 
     # ------------------------------------------------------------ 이동
+    def _context_menu(self, pos) -> None:
+        """페이지 스크립트가 우클릭한 수식의 원문을 기억해 둔다 (interact.js 의 HTEX.contextMath)."""
+        gpos = self.view.mapToGlobal(pos)
+        if self.view.lastContextMenuRequest() is not None:
+            menu = self.view.createStandardContextMenu()
+        else:                               # 우클릭 정보가 없으면 기본 메뉴를 만들 수 없다 (엔진이 멈춘다)
+            menu = QMenu(self.view)
+            WA = QWebEnginePage.WebAction
+            for wa in (WA.Back, WA.Forward, WA.Reload, None, WA.Copy, WA.SelectAll):
+                menu.addSeparator() if wa is None else menu.addAction(self.page.action(wa))
+
+        def show(tex) -> None:
+            if isinstance(tex, str) and tex.strip():
+                first = menu.actions()[0] if menu.actions() else None
+                act = QAction(tr('수식을 LaTeX로 복사'), menu)
+                act.triggered.connect(lambda _=False, t=tex.strip(): self.copy_text(t))
+                menu.insertAction(first, act)
+                menu.insertSeparator(first)
+            self.last_context_menu = menu
+            if menu.actions():
+                menu.popup(gpos)
+
+        self.page.runJavaScript("(window.HTEX && HTEX.contextMath) ? HTEX.contextMath() : null", 0, show)
+
+    def copy_text(self, text: str) -> None:
+        QGuiApplication.clipboard().setText(text)
+        self.window_ref.status.showMessage(tr('LaTeX 원문을 복사했습니다.'), 3000)
+
     def current_url(self) -> str:
         return self.view.url().toString(QUrl.ComponentFormattingOption.FullyEncoded)
 

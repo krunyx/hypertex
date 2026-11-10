@@ -639,6 +639,104 @@
     window.addEventListener("resize", function () { if (popFor && pop && !pop.hidden) place(pop, popFor); });
   }
 
+  /* ------------------------------------------------------------------ 수식 원문 복사 (v0.8.2 R)
+   * MathML 의 <annotation encoding="application/x-tex"> 와 수식 행의 data-tex 에 원문이 있다.
+   * - 수식을 우클릭하면 그 원문을 기억해 둔다: 뷰어의 "수식을 LaTeX로 복사" 메뉴가 HTEX.contextMath() 로 읽는다.
+   * - 수식이 섞인 곳을 골라 복사하면 일반 글자(text/plain)에서 수식을 $…$, $$…$$ 로 바꾼다
+   *   (그대로 두면 MathML 의 글자가 뒤섞여 복사된다). text/html 은 브라우저가 만드는 그대로. */
+  var TEX_ANN = 'annotation[encoding="application/x-tex"]';
+  var contextMath = null;
+
+  function hasTopAmp(tex) {
+    var depth = 0;
+    for (var i = 0; i < tex.length; i++) {
+      var c = tex.charAt(i);
+      if (c === "\\") { i++; continue; }
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+      else if (c === "&" && depth === 0) return true;
+    }
+    return false;
+  }
+
+  /* 노드가 든 수식: {tex, display} 또는 null. 수식 행(가운데 정렬 식·align 한 줄)이 먼저 */
+  function mathOf(node) {
+    var el = node && (node.nodeType === 1 ? node : node.parentElement);
+    if (!el || !el.closest) return null;
+    var row = el.closest("tr.htex-eqrow");
+    if (row && row.hasAttribute("data-tex") && !el.closest(".htex-eqno")) {
+      return { tex: row.getAttribute("data-tex"), display: true, el: row };
+    }
+    var m = el.closest("math");
+    if (!m) return null;
+    var ann = m.querySelector(TEX_ANN);
+    if (!ann) return null;
+    return { tex: ann.textContent, display: m.getAttribute("display") === "block", el: m };
+  }
+
+  function wrapTex(info) {
+    var t = (info.tex || "").trim();
+    if (!info.display) return "$" + t + "$";
+    if (hasTopAmp(t)) return "$$\\begin{aligned}" + t + "\\end{aligned}$$";
+    return "$$" + t + "$$";
+  }
+
+  /* 고른 부분의 일반 글자. 수식이 없으면 null (브라우저 기본 동작) */
+  function selectionText(sel) {
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+    var range = sel.getRangeAt(0);
+    var a = mathOf(range.startContainer), b = mathOf(range.endContainer);
+    if (a && b && a.el === b.el) return wrapTex(a);          // 수식 하나 안에서 고름 → 그 수식 전체
+    var box = document.createElement("div");
+    box.appendChild(range.cloneContents());
+    if (!box.querySelector("math, tr.htex-eqrow")) return null;
+    var i, rows = box.querySelectorAll("tr.htex-eqrow[data-tex]");
+    for (i = 0; i < rows.length; i++) {
+      var p = document.createElement("p");
+      p.textContent = wrapTex({ tex: rows[i].getAttribute("data-tex"), display: true });
+      var table = rows[i].closest("table");
+      (table || rows[i]).parentNode.insertBefore(p, table || rows[i]);
+      rows[i].parentNode.removeChild(rows[i]);
+    }
+    var tables = box.querySelectorAll("table.htex-eqtable");
+    for (i = 0; i < tables.length; i++) if (!tables[i].querySelector("tr")) tables[i].parentNode.removeChild(tables[i]);
+    var maths = box.querySelectorAll("math");
+    for (i = 0; i < maths.length; i++) {
+      var ann = maths[i].querySelector(TEX_ANN);
+      // 고른 범위가 수식 한가운데서 시작·끝나면 복제본에 원문이 없을 수 있다: 원래 수식에서
+      var src = ann ? ann.textContent : (i === 0 && a ? a.tex : (i === maths.length - 1 && b ? b.tex : ""));
+      var disp = maths[i].getAttribute("display") === "block";
+      maths[i].parentNode.replaceChild(document.createTextNode(src ? wrapTex({ tex: src, display: disp }) : ""), maths[i]);
+    }
+    // innerText 는 화면에 붙어 있어야 줄바꿈을 지킨다: 보이지 않는 곳에 잠깐
+    box.style.cssText = "position:fixed;left:-99999px;top:0;white-space:pre-wrap;opacity:0;pointer-events:none";
+    document.body.appendChild(box);
+    var text = box.innerText;
+    document.body.removeChild(box);
+    return text.replace(/\n{3,}/g, "\n\n").replace(/^\s+|\s+$/g, "");
+  }
+
+  function setupMathCopy() {
+    document.addEventListener("contextmenu", function (ev) {
+      var info = mathOf(ev.target);
+      contextMath = info ? info.tex : null;
+    }, true);
+    document.addEventListener("copy", function (ev) {
+      var text = null;
+      try { text = selectionText(window.getSelection()); } catch (e) { text = null; }
+      if (text === null || !ev.clipboardData) return;
+      var html = "";
+      try {
+        var sel = window.getSelection(), div = document.createElement("div");
+        div.appendChild(sel.getRangeAt(0).cloneContents());
+        html = div.innerHTML;
+      } catch (e) { html = ""; }
+      ev.clipboardData.setData("text/plain", text);
+      if (html) ev.clipboardData.setData("text/html", html);
+      ev.preventDefault();
+    });
+  }
+
   /* ------------------------------------------------------------------ 시작 */
   function init() {
     pictureEndpoint = meta("htex-picture-endpoint");
@@ -647,6 +745,7 @@
     injectStyle();
     setupSliders();
     setupPreviews();
+    setupMathCopy();
   }
 
   window.HTEX = {
@@ -654,6 +753,8 @@
     setParam: function (name, value) { return setParam(name, value, null); },
     getParams: getParams,
     closePreview: hidePreview,
+    contextMath: function () { return contextMath; },
+    selectionTeX: function () { return selectionText(window.getSelection()); },
     _formatNumber: formatNumber,
     _niceStep: niceStep
   };
