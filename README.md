@@ -58,6 +58,7 @@ macOS 에서는 Chrome 처럼 탭 줄이 창 맨 위, 신호등 단추 옆에 �
 | 찾기 | Ctrl+F, 다음 Enter·F3, 이전 Shift+Enter |
 | 확대 / 축소 / 원래 크기 | Ctrl+= / Ctrl+- / Ctrl+0 |
 | 파일 열기 | Ctrl+O, 또는 파일을 창에 끌어다 놓기 |
+| 인쇄 / PDF로 저장 | Ctrl+P / ⋮ › PDF로 저장… (어두운 테마여도 흰 종이에) |
 | 원본(.htex) 보기 | Ctrl+U |
 | 뒤로 / 앞으로 / 새로고침 / 홈 | Alt+← / Alt+→ / Ctrl+R / Alt+Home |
 | 주소창 | Ctrl+L, Alt+D, F6 |

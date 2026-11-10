@@ -172,7 +172,9 @@ code.htex-error{background:var(--err-bg);padding:0 .2em;border-radius:.2em}
 .htex-diag-warning .htex-diag-sev{color:var(--warn)}
 .htex-diag-pos{color:var(--muted)}
 @media print{
-  :root{--fg:#000;--bg:#fff}
+  /* 화면 테마(어둡게)와 상관없이 흰 종이에 검은 글자 (v0.8.1). data-theme 규칙보다 앞서게 같은 선택자를 함께 쓴다 */
+  :root,:root[data-theme],:root:not([data-theme="light"]){--fg:#000;--bg:#fff;--muted:#444;--rule:#bbb;
+    --accent:#1f5fa8;--panel:#f3f3ef;--err:#c4161c;--err-bg:#fdecec;--warn:#8a5a00;color-scheme:light}
   details{border:0;padding:0}
   .htex-diagnostics,.htex-fnback{display:none}
 }
