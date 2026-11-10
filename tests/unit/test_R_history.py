@@ -247,9 +247,21 @@ def _bind(win):
     return win
 
 
-def _go(win, tab, url, title, title_first):
-    """한 페이지로 가기: 불러오기 시작 → (제목, 주소) 또는 (주소, 제목) → 불러오기 끝."""
+def _go(win, tab, url, title, order):
+    """한 페이지로 가기. order: "url" 주소 먼저 / "title" 제목 먼저 /
+    "late" 엔진은 제목을 알지만 신호는 다음 페이지로 옮긴 뒤에 온다 (윈도 CI 에서 본 차례)."""
+    title_first = order == "title"
+    if order == "late":
+        tab.loading = True
+        tab.url = url
+        win._record_visit(tab, True, title=False)
+        tab.page_title = title                       # 제목은 정해졌지만 신호는 아직
+        tab.late_signal = title
+        tab.loading = False
+        return
     tab.loading = True
+    if getattr(tab, "late_signal", None):            # 앞 페이지의 늦은 신호는 새 페이지로 간 뒤 온다
+        pass
     if title_first:
         tab.page_title = title
         win._visit_title_changed(tab, title)
@@ -258,6 +270,10 @@ def _go(win, tab, url, title, title_first):
     else:
         tab.url = url
         win._record_visit(tab, True, title=False)
+        late = getattr(tab, "late_signal", None)
+        if late:                                     # 앞 페이지 제목 신호가 이제야
+            win._visit_title_changed(tab, late)
+            tab.late_signal = None
         tab.page_title = url                         # 엔진이 먼저 주소를 제목처럼
         win._visit_title_changed(tab, url)
         tab.page_title = title
@@ -265,15 +281,15 @@ def _go(win, tab, url, title, title_first):
     tab.loading = False
 
 
-@pytest.mark.parametrize("title_first", [False, True])
-def test_titles_match_pages_in_either_signal_order(title_first):
+@pytest.mark.parametrize("order", ["url", "title", "late"])
+def test_titles_match_pages_in_either_signal_order(order):
     pytest.importorskip("PySide6.QtWebEngineWidgets")
     st = VisitStore(clock=lambda: 1_000_000.0)
     win = _bind(_StubWin(st))
     tab = _StubTab()
-    _go(win, tab, "/d/a.htex", "가 문서", title_first)
-    _go(win, tab, "/d/b.htex", "나 문서", title_first)
-    _go(win, tab, "/d/c.htex", "다 문서", title_first)
+    _go(win, tab, "/d/a.htex", "가 문서", order)
+    _go(win, tab, "/d/b.htex", "나 문서", "url" if order == "late" else order)
+    _go(win, tab, "/d/c.htex", "다 문서", order if order != "late" else "url")
     assert [(v.url, v.title) for v in st.search()] == [
         ("/d/c.htex", "다 문서"), ("/d/b.htex", "나 문서"), ("/d/a.htex", "가 문서")]
     # 불러온 뒤 페이지가 제목을 바꾸면(웹 페이지) 그 방문의 제목이 바뀐다

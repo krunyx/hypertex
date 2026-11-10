@@ -1575,9 +1575,17 @@ class ViewerWindow(QMainWindow):
                 tab._pending_title = None
             return
         if not title:                                    # 주소가 바뀐 순간
-            if addr == getattr(tab, "_visit_addr", None):
+            prev = getattr(tab, "_visit_addr", None)
+            if addr == prev:
                 return                                   # 같은 문서 안 이동(#조각)·같은 주소
             pending = getattr(tab, "_pending_title", None) or ""
+            tab._late_title = None
+            if not pending and prev and not getattr(tab, "_visit_titled", False):
+                # 앞 페이지의 제목 신호가 아직 오지 않았다 (윈도): 지금 엔진이 아는 제목은 앞 페이지 것
+                t = tab.title()
+                if self._real_title(tab, t):
+                    self.visits.set_title(prev, t)
+                    tab._late_title = t                  # 이 제목이 늦게 와도 새 페이지에 붙이지 않는다
             self.visits.record(addr, pending)
             tab._visit_addr, tab._visit_titled, tab._pending_title = addr, bool(pending), None
             return
@@ -1590,6 +1598,9 @@ class ViewerWindow(QMainWindow):
 
     def _visit_title_changed(self, tab: Tab, title: str) -> None:
         if not self._real_title(tab, title):
+            return
+        if title == getattr(tab, "_late_title", None) and not getattr(tab, "_visit_titled", False):
+            tab._late_title = None                       # 앞 페이지의 늦은 제목 신호 (이미 앞 방문에 넣었다)
             return
         addr = self._visit_address(tab)
         cur = getattr(tab, "_visit_addr", None)
